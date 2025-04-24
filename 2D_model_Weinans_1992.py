@@ -1,10 +1,11 @@
 from __future__ import print_function
-#from fenics import *
+from fenics import *
 import sys
-import fenics
+import pyvista as pv
 
 N=40 
-mesh=UnitSquareMesh.create(N,N,CellType.Type.quadrilateral)
+#mesh=UnitSquareMesh.create(N,N,CellType.Type.quadrilateral)
+mesh = UnitSquareMesh(N,N)
 
 V=VectorFunctionSpace(mesh,"P",1)  
 V_ele=FunctionSpace(mesh,"DG",0) 
@@ -169,3 +170,14 @@ while t<=T :
         t=T+1
     else:
         t=t+dt 
+else:
+    print("Simulation completed")
+    print("Final density values: ", updated_rho_val)
+    print("Number of converged cells: ", sum(cnt_cell_converged))
+    print("Total number of cells: ", cnt_cells)
+    print("Final time: ", t)
+    filename = 'Weinans_40_40/Density_100.pvd'
+    reader = pv.get_reader(filename)
+    reader.set_active_time_point(0)
+    grid = reader.read()[0]
+    grid.plot(scalars='f_3514',show_edges=True, show_scalar_bar=True, clim=[0, 1], cpos='xy', show_grid=True)
