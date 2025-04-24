@@ -2,10 +2,11 @@ from __future__ import print_function
 from fenics import *
 import sys
 import pyvista as pv
+import time
+start_time = time.time()
 
-N=40 
-#mesh=UnitSquareMesh.create(N,N,CellType.Type.quadrilateral)
-mesh = UnitSquareMesh(N,N)
+N=40
+mesh = UnitSquareMesh(N,N, 'left')
 
 V=VectorFunctionSpace(mesh,"P",1)  
 V_ele=FunctionSpace(mesh,"DG",0) 
@@ -172,6 +173,7 @@ while t<=T :
         t=t+dt 
 else:
     print("Simulation completed")
+    print("--- %s seconds ---" % (time.time() - start_time))
     print("Final density values: ", updated_rho_val)
     print("Number of converged cells: ", sum(cnt_cell_converged))
     print("Total number of cells: ", cnt_cells)
