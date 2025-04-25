@@ -1,6 +1,7 @@
 import pyvista as pv
 
-filename = 'Weinans/Density_100.pvd'
+filename = 'Point_model/Weinans_40_40/Density_100.pvd'
+
 reader = pv.get_reader(filename)
 reader.set_active_time_point(0)
 

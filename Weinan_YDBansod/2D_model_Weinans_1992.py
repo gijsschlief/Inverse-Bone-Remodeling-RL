@@ -12,7 +12,7 @@ V=VectorFunctionSpace(mesh,"P",1)
 V_ele=FunctionSpace(mesh,"DG",0) 
 
 cnt_cell_converged=[]  
-FName_str="Weinans/Density_"
+FName_str="Weinans_40_40/Density_"
 
 rho0=0.8  
 rho_val=[] 
@@ -168,8 +168,6 @@ while t<=T :
     
     mu, lmbda=calculate_Lame_coefficients(E0)    
     if sum(cnt_cell_converged)==cnt_cells:
-        fName=FName_str+100+FExt_str
-        File(fName)<<updated_rho
         t=T+1
     else:
         t=t+dt 
@@ -180,3 +178,8 @@ else:
     print("Number of converged cells: ", sum(cnt_cell_converged))
     print("Total number of cells: ", cnt_cells)
     print("Final time: ", t)
+    filename = 'Weinans_40_40/Density_100.pvd'
+    reader = pv.get_reader(filename)
+    reader.set_active_time_point(0)
+    grid = reader.read()[0]
+    grid.plot(scalars='f_3514',show_edges=True, show_scalar_bar=True, clim=[0, 1], cpos='xy', show_grid=True)

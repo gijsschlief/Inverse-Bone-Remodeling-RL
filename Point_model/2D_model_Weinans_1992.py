@@ -12,7 +12,7 @@ V=VectorFunctionSpace(mesh,"P",1)
 V_ele=FunctionSpace(mesh,"DG",0) 
 
 cnt_cell_converged=[]  
-FName_str="Weinans/Density_"
+FName_str="Point_model/Weinans_40_40/Density_"
 
 rho0=0.8  
 rho_val=[] 
@@ -102,7 +102,7 @@ v=TestFunction(V)
 d=u.geometric_dimension()
 
 a = 2*mu*inner(epsilon(u),epsilon(v))*dx + lmbda*dot(div(u),div(v))*dx
-L=dot(f,v)*dx+v[1]*F*ds(1)
+L=dot(f,v)*dx
 
 def calculate_SED(epsilon_val,sigma_val):                
     SED_val=0.5*inner(sigma_val,epsilon_val)    
@@ -168,8 +168,6 @@ while t<=T :
     
     mu, lmbda=calculate_Lame_coefficients(E0)    
     if sum(cnt_cell_converged)==cnt_cells:
-        fName=FName_str+100+FExt_str
-        File(fName)<<updated_rho
         t=T+1
     else:
         t=t+dt 
