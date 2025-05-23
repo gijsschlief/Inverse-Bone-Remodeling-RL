@@ -1,0 +1,27 @@
+[tool.poetry]
+name = "bone-remodeling"
+version = "0.1.0"
+description = "Package used to solve the inverse bone remodeling problem using reinforcement learning."
+authors = ["gijsschlief <160142703+gijsschlief@users.noreply.github.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fenics = "^2019.1.0"
+pyvista = "^0.45.2"
+torch = "^2.7.0"
+torchvision = "^0.22.0"
+stable-baselines3 = {extras = ["extra"], version = "^2.6.0"}
+scikit-image = "^0.25.2"
+gym = "^0.26.2"
+matplotlib = "^3.10.3"
+numpy = "^2.2.6"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.5"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
