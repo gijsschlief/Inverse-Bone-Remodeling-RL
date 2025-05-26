@@ -1,5 +1,6 @@
 import pytest
 import torch
+import numpy as np
 
 @pytest.fixture
 def dummy_force_map():

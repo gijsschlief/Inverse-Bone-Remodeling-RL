@@ -1,3 +1,5 @@
+import numpy as np
+
 def calculate_similarity(A, B, method="mse"):
     """
     Calculate similarity or distance between two matrices A and B using the specified method.
@@ -13,6 +15,12 @@ def calculate_similarity(A, B, method="mse"):
     """
     if A.shape != B.shape:
         raise ValueError("Matrices A and B must have the same shape.")
+    elif not isinstance(A, np.ndarray) or not isinstance(B, np.ndarray):
+        raise TypeError("Both A and B must be numpy arrays.")
+    elif A is None or B is None:
+        raise ValueError("Matrices A and B cannot be None.")
+    elif A .size == 0 or B.size == 0:
+        raise ValueError("Matrices A and B cannot be empty.")
 
     if method == "mse":
         # Mean Squared Error
