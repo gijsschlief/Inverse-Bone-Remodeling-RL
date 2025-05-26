@@ -162,3 +162,6 @@ def test_calculate_similarity_cosine_opposite():
     B = -A  # Opposite to A
     result = calculate_similarity(A, B, method="cosine")
     assert np.isclose(result, -1.0), f"Expected -1 for cosine similarity of opposite matrices, got {result}"
+
+if __name__ == "__main__":
+    pytest.main([__file__])
