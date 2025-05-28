@@ -52,8 +52,6 @@ def forward_model_input_test(
         return "ValueError", "initial_density values must be between 0 and 1."
     if not (0 <= force_profile).all():
         return "ValueError", "force_profile values must be non-negative."
-    if not (0 <= rho_min) or not (rho_max <= 1.74):
-        return "ValueError", "rho_min must be non-negative and rho_max must be less than or equal to 1.74."
     if not (0 <= dt <= 1):
         return "ValueError", "dt must be between 0 and 1."
     if not (0 <= time_steps <= 1000):

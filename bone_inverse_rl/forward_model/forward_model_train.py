@@ -39,7 +39,7 @@ def forward_model_train(
             raise Exception(f"Unhandled error type: {error_type} - {error_message}")
 
     # If inputs are valid, proceed with the forward model computation
-
+    raise NotImplementedError
     # Placeholder for the actual forward model computation
 
     final_density = initial_density.copy()
