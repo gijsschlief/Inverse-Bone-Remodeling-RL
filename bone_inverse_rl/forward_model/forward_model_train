@@ -1,0 +1,44 @@
+from __future__ import print_function
+import numpy as np
+from bone_inverse_rl.forward_model.forward_model_input_test import input_test
+
+def forward_model_train(force_profile, initial_density, time_steps, dt, parameters):
+    """
+    Calculate the bone density profile based on the force locations on the model.
+
+    Parameters:
+        force_profile (np.ndarray): Force profile matrix.
+        initial_density (np.ndarray): Initial bone density matrix.
+        time_steps (int): Number of time steps for the simulation.
+        dt (float): Time step size.
+        parameters (dict): Parameters for the forward model, including:
+            - 'file_location': Location of the data files.
+            - 'rho_min': Minimum bone density.
+            - 'rho_max': Maximum bone density.
+
+    Returns:
+        np.ndarray: Updated bone density profile after the simulation.
+    """
+    error_message = forward_model_input_test = forward_model_input_test(
+        force_profile, initial_density, time_steps, dt, parameters
+    )
+    if error_message is not None:
+        raise ValueError(error_message)
+
+    final_density = initial_density.copy()
+
+    return final_density
+
+if __name__ == "__main__":
+    force_profile = np.random.rand(10, 10)  # Example force profile
+    initial_density = np.full((10, 10), 0.8)  # Initial density matrix
+    time_steps = 100  # Number of time steps
+    dt = 1.0  # Time step size
+    parameters = {
+        'file_location': 'bone_inverse_rl/data/raw',
+        'rho_min': 0.01,
+        'rho_max': 1.74,
+    }
+
+    final_density = forward_model_train(force_profile, initial_density, time_steps, dt, parameters)
+    print("Final Density:", final_density)
