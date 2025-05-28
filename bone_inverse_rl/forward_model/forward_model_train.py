@@ -1,8 +1,15 @@
 from __future__ import print_function
 import numpy as np
-from bone_inverse_rl.forward_model.forward_model_input_test import input_test
+from bone_inverse_rl.forward_model.forward_model_input_test import forward_model_input_test
+from typing import Dict, Union
 
-def forward_model_train(force_profile, initial_density, time_steps, dt, parameters):
+def forward_model_train(
+    force_profile: np.ndarray,
+    initial_density: np.ndarray,
+    time_steps: int,
+    dt: float,
+    parameters: Dict[str, Union[str, float]]
+) -> np.ndarray:
     """
     Calculate the bone density profile based on the force locations on the model.
 
@@ -11,7 +18,7 @@ def forward_model_train(force_profile, initial_density, time_steps, dt, paramete
         initial_density (np.ndarray): Initial bone density matrix.
         time_steps (int): Number of time steps for the simulation.
         dt (float): Time step size.
-        parameters (dict): Parameters for the forward model, including:
+        parameters (Dict[str, Union[str, float]]): Parameters for the forward model, including:
             - 'file_location': Location of the data files.
             - 'rho_min': Minimum bone density.
             - 'rho_max': Maximum bone density.
@@ -19,11 +26,21 @@ def forward_model_train(force_profile, initial_density, time_steps, dt, paramete
     Returns:
         np.ndarray: Updated bone density profile after the simulation.
     """
-    error_message = forward_model_input_test = forward_model_input_test(
+    error = forward_model_input_test(
         force_profile, initial_density, time_steps, dt, parameters
     )
-    if error_message is not None:
-        raise ValueError(error_message)
+    if error is not None:
+        error_type, error_message = error
+        if error_type == "ValueError":
+            raise ValueError(error_message)
+        elif error_type == "TypeError":
+            raise TypeError(error_message)
+        else:
+            raise Exception(f"Unhandled error type: {error_type} - {error_message}")
+
+    # If inputs are valid, proceed with the forward model computation
+
+    # Placeholder for the actual forward model computation
 
     final_density = initial_density.copy()
 
