@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 
 class NeuralNetwork(nn.Module):
@@ -18,3 +19,28 @@ class NeuralNetwork(nn.Module):
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits.view(-1, 10, 10)  # Reshape output to 10x10
+    
+    def save_model(self, file_path):
+        """Save the model to the specified file path."""
+        torch.save(self.state_dict(), file_path)
+
+    def load_model(self, file_path):
+        """Load the model from the specified file path."""
+        self.load_state_dict(torch.load(file_path))
+        self.eval()  # Set the model to evaluation mode after loading
+
+    def __str__(self):
+        """Return a string representation of the model architecture."""
+        return f"NeuralNetwork(\n  {self.linear_relu_stack}\n)"
+    
+    def __repr__(self):
+        """Return a detailed string representation of the model."""
+        return f"NeuralNetwork(\n  {self.linear_relu_stack}\n)"
+    
+    def __call__(self, x):
+        """Call the forward method of the model."""
+        return self.forward(x)
+    
+    def __len__(self):
+        """Return the number of layers in the model."""
+        return len(self.linear_relu_stack)
