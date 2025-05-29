@@ -13,7 +13,7 @@ def forward_model_input_test(
     This function tests if the inputs are valid for the forward model and provides error and warning methods for invalid inputs.
 
     Parameters:
-        force_profile (np.ndarray): Force profile matrix.
+        force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left and right and n is the exact location in that row.
         initial_density (np.ndarray): Initial bone density matrix.
         time_steps (int): Number of time steps for the simulation.
         dt (Union[int, float]): Time step size.
@@ -46,12 +46,14 @@ def forward_model_input_test(
         return "TypeError", "rho_max must be a number."
     if rho_min < 0 or rho_max <= rho_min:
         return "ValueError", "rho_min must be non-negative and rho_max must be greater than rho_min."
-    if force_profile.shape != initial_density.shape:
-        return "ValueError", "force_profile and initial_density must have the same shape."
-    if not (0 <= initial_density).all() or not (initial_density <= 1).all():
-        return "ValueError", "initial_density values must be between 0 and 1."
-    if not (0 <= force_profile).all():
-        return "ValueError", "force_profile values must be non-negative."
+    if force_profile.shape[0] != 3 or force_profile.shape[1] != max(initial_density.shape):
+        return "ValueError", "force_profile must have 3 rows and columns equal to the maximum of initial_density dimensions."
+    if np.isnan(force_profile).any():
+        return "ValueError", "force_profile contains NaN values."
+    if np.isnan(initial_density).any():
+        return "ValueError", "initial_density contains NaN values."
+    if not (rho_min <= initial_density).all() or not (initial_density <= rho_max).all():
+        return "ValueError", "initial_density values must be between rho_min and rho_max."
     if not (0 <= dt <= 1):
         return "ValueError", "dt must be between 0 and 1."
     if not (0 <= time_steps <= 1000):

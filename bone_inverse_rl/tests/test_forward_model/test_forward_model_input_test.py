@@ -3,8 +3,8 @@ import pytest
 from bone_inverse_rl.forward_model.forward_model_input_test import forward_model_input_test
 
 def test_forward_model_input_test_valid_inputs():
-    force_profile = np.random.rand(10, 10)
-    initial_density = np.full((10, 10), 0.8)
+    initial_density = np.full((5, 7), 0.8)  # Any shape larger than 2x2
+    force_profile = np.random.rand(3, max(initial_density.shape))  # 3 rows and columns matching max(rows, cols) of initial_density
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -31,7 +31,7 @@ def test_forward_model_input_test_invalid_force_profile_type():
     assert error == ("TypeError", "force_profile must be a numpy array."), "Expected TypeError for invalid force_profile type."
 
 def test_forward_model_input_test_invalid_initial_density_type():
-    force_profile = np.random.rand(10, 10)
+    force_profile = np.random.rand(3, 10)  # 3 rows and columns matching max(rows, cols) of initial_density
     initial_density = "invalid_type"  # Not a numpy array
     time_steps = 100
     dt = 1.0
@@ -45,8 +45,8 @@ def test_forward_model_input_test_invalid_initial_density_type():
     assert error == ("TypeError", "initial_density must be a numpy array."), "Expected TypeError for invalid initial_density type."
 
 def test_forward_model_input_test_invalid_time_steps_type():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))  # 3 rows and columns matching max(rows, cols) of initial_density
     time_steps = "invalid_type"  # Not an integer
     dt = 1.0
     parameters = {
@@ -59,8 +59,8 @@ def test_forward_model_input_test_invalid_time_steps_type():
     assert error == ("ValueError", "time_steps must be a positive integer."), "Expected ValueError for invalid time_steps type."
 
 def test_forward_model_input_test_invalid_dt_type():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = "invalid_type"  # Not a number
     parameters = {
@@ -73,8 +73,8 @@ def test_forward_model_input_test_invalid_dt_type():
     assert error == ("ValueError", "dt must be a positive number."), "Expected ValueError for invalid dt type."
 
 def test_forward_model_input_test_invalid_file_location_type():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -87,8 +87,8 @@ def test_forward_model_input_test_invalid_file_location_type():
     assert error == ("TypeError", "file_location must be a string."), "Expected TypeError for invalid file_location type."
 
 def test_forward_model_input_test_invalid_rho_min_type():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -101,8 +101,8 @@ def test_forward_model_input_test_invalid_rho_min_type():
     assert error == ("TypeError", "rho_min must be a number."), "Expected TypeError for invalid rho_min type."
 
 def test_forward_model_input_test_invalid_rho_max_type():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -115,8 +115,8 @@ def test_forward_model_input_test_invalid_rho_max_type():
     assert error == ("TypeError", "rho_max must be a number."), "Expected TypeError for invalid rho_max type."
 
 def test_forward_model_input_test_invalid_rho_min_value():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -129,8 +129,8 @@ def test_forward_model_input_test_invalid_rho_min_value():
     assert error == ("ValueError", "rho_min must be non-negative and rho_max must be greater than rho_min."), "Expected ValueError for invalid rho_min value."
 
 def test_forward_model_input_test_invalid_rho_max_value():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -143,8 +143,8 @@ def test_forward_model_input_test_invalid_rho_max_value():
     assert error == ("ValueError", "rho_min must be non-negative and rho_max must be greater than rho_min."), "Expected ValueError for invalid rho_max value."
 
 def test_forward_model_input_test_invalid_force_profile_shape():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((5, 5), 0.8)  # Different shape
+    force_profile = np.random.rand(3, max(initial_density.shape)+1)
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -154,11 +154,11 @@ def test_forward_model_input_test_invalid_force_profile_shape():
     }
     
     error = forward_model_input_test(force_profile, initial_density, time_steps, dt, parameters)
-    assert error == ("ValueError", "force_profile and initial_density must have the same shape."), "Expected ValueError for different shapes."
+    assert error == ("ValueError", "force_profile must have 3 rows and columns equal to the maximum of initial_density dimensions."), "Expected ValueError for different shapes."
 
-def test_forward_model_input_test_invalid_initial_density_values():
-    force_profile = np.random.rand(10, 10)
+def test_forward_model_input_test_negative_initial_density_values():
     initial_density = np.full((10, 10), -0.1)  # Negative values
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -168,11 +168,13 @@ def test_forward_model_input_test_invalid_initial_density_values():
     }
     
     error = forward_model_input_test(force_profile, initial_density, time_steps, dt, parameters)
-    assert error == ("ValueError", "initial_density values must be between 0 and 1."), "Expected ValueError for invalid initial_density values."
+    assert error == ("ValueError", "initial_density values must be between rho_min and rho_max."), "Expected ValueError for invalid initial_density values."
 
 def test_forward_model_input_test_invalid_force_profile_values():
-    force_profile = np.full((10, 10), -0.1)  # Negative values
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
+    force_profile[0, 0] = np.nan  # Set one value to NaN
+    force_profile[1, 2] = np.nan  # Set another value to NaN
     time_steps = 100
     dt = 1.0
     parameters = {
@@ -182,11 +184,28 @@ def test_forward_model_input_test_invalid_force_profile_values():
     }
     
     error = forward_model_input_test(force_profile, initial_density, time_steps, dt, parameters)
-    assert error == ("ValueError", "force_profile values must be non-negative."), "Expected ValueError for invalid force_profile values."
+    assert error == ("ValueError", "force_profile contains NaN values."), "Expected ValueError for invalid force_profile values."
+
+def test_forward_model_input_test_invalid_initial_density_values():
+    initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
+    initial_density[0, 0] = np.nan  # Set one value to NaN
+    initial_density[1, 2] = np.nan  # Set another value to NaN
+    time_steps = 100
+    dt = 1.0
+    parameters = {
+        'file_location': 'bone_inverse_rl/data/raw',
+        'rho_min': 0.01,
+        'rho_max': 1.74,
+    }
+    
+    error = forward_model_input_test(force_profile, initial_density, time_steps, dt, parameters)
+    assert error == ("ValueError", "initial_density contains NaN values."), "Expected ValueError for invalid initial_density values."
+
 
 def test_forward_model_input_test_invalid_rho_min_range():
-    force_profile = np.random.rand(10, 10)
     initial_density = np.full((10, 10), 0.8)
+    force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
     parameters = {
