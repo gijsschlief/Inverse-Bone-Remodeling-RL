@@ -21,6 +21,7 @@ def read_json_data(file_path):
     return None
 
 # Example usage:
-# file_path = "/path/to/your/json_file.json"
-# data = read_json_data(file_path)
-# print(data)
+if __name__ == "__main__":
+    file_path = "/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_test.json"
+    data = read_json_data(file_path)
+    print(data)
