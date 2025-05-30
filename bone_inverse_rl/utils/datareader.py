@@ -1,6 +1,7 @@
 import json
+from typing import List, Optional, Any
 
-def read_json_data(file_path):
+def read_json_data(file_path: str) -> Optional[List[Any]]:
     """
     Reads and parses JSON data from a file.
 
@@ -8,7 +9,7 @@ def read_json_data(file_path):
         file_path (str): Path to the JSON file.
 
     Returns:
-        list: Parsed JSON data as a Python list.
+        Optional[List[Any]]: Parsed JSON data as a Python list, or None if an error occurs.
     """
     try:
         with open(file_path, 'r') as file:

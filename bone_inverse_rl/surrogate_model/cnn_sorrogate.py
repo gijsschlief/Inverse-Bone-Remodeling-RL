@@ -3,23 +3,26 @@ from bone_inverse_rl.surrogate_model.neural_network import NeuralNetwork
 from bone_inverse_rl.utils.datareader import read_json_data
 from bone_inverse_rl.utils.convert_to_array import convert_to_array
 import numpy as np
+from bone_inverse_rl.utils.data_splitting import split_data
 
-data = read_json_data("/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_test.json")
+# Data Loading
+data = read_json_data("/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_test_large.json")
+print(f"Data loaded")
 
-
+# Preprocessing
 serial_numbers, force_profiles, final_output_densities = convert_to_array(data)
+X_train, X_val, X_test, y_train, y_val, y_test = split_data(force_profiles, final_output_densities)
 
 device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
-print(f"Using {device} device")
+num_train_samples = X_train.shape[0]  # Calculate the number of training samples
+
+X = torch.tensor(X_train.reshape(num_train_samples, 3, 10).astype(np.float32)).to(device)
+y = torch.tensor(y_train.reshape(num_train_samples, 10, 10).astype(np.float32)).to(device)
+print(f"Data converted and using {device} device and {num_train_samples} training samples")
 
 model = NeuralNetwork().to(device)
-print(model)
+print(f"Loaded the model: {model}")
 
-# Ensure the input tensor is converted to a PyTorch tensor and moved to the correct device
-X = torch.tensor(force_profiles.reshape(100, 3, 10).astype(np.float32)).to(device)
-
-# Ensure the target tensor matches the model's output shape
-y = torch.tensor(final_output_densities.reshape(100, 10, 10).astype(np.float32)).to(device)
 
 # Pass the input through the model
 logits = model(X)

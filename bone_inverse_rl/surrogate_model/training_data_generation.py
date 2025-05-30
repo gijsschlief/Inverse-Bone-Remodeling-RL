@@ -43,7 +43,7 @@ def generate_training_data(
 
     # Generate random force profiles and collect results
     data = []
-    for _ in range(num_samples):
+    for i in range(num_samples):
         force_profile = np.zeros((3, max(initial_density.shape)))
         force_max = 10  # Define the maximum force value
         num_forces = np.random.randint(1, 4)  # Random number of forces between 1 and 3
@@ -57,13 +57,27 @@ def generate_training_data(
         data_point = serialize_data(
             force_profile=force_profile, 
             result=output, 
-            serial_number=np.array([len(data) + 1])
+            serial_number=np.array([i + 1])
         )
         data.append(data_point)
 
         # Save the collected data to a JSON file
-        with open(filepath, 'w') as json_file:
-            json.dump(data, json_file, indent=4)
+        if (i + 1) % 100 == 0 or (i + 1) == num_samples:
+            with open(filepath, 'w') as json_file:
+                json.dump(data, json_file, indent=4)
+
+        # Measure and display average time for samples 2 to 12
+        if i == 1:
+            start_time = datetime.datetime.now()
+        elif i == 11:
+            end_time = datetime.datetime.now()
+            elapsed_time = (end_time - start_time).total_seconds()
+            avg_time_per_sample = elapsed_time / 10  # 10 samples (1 to 11 inclusive)
+            print(f"\nAverage time per sample (1-11): {avg_time_per_sample:.4f} seconds")
+
+        # Display progress bar
+        progress = (i / num_samples) * 100
+        print(f"\rProgress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%", end="")
 
     print(f"Training data saved to {filepath}")
     return None
@@ -81,4 +95,4 @@ def serialize_data(
 
 # Example usage
 if __name__ == "__main__":
-    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=100)
+    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=10000)
