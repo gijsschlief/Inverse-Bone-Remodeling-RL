@@ -1,0 +1,51 @@
+import torch
+
+class SurrogateModelLoader:
+    def __init__(self, model_path, model_class):
+        """
+        Initialize the loader with the path to the model and the model class.
+
+        Args:
+            model_path (str): Path to the .pth file containing the model weights.
+            model_class (torch.nn.Module): The class of the model to be loaded.
+        """
+        self.model_path = model_path
+        self.model_class = model_class
+        self.model = None
+
+    def load_model(self):
+        """
+        Load the surrogate model from the .pth file.
+        """
+        self.model = self.model_class()
+        self.model.load_state_dict(torch.load(self.model_path))
+        self.model.eval()  # Set the model to evaluation mode
+
+    def forward(self, data_points):
+        """
+        Run forward estimation on the given data points.
+
+        Args:
+            data_points (torch.Tensor): Input data points for the model.
+
+        Returns:
+            torch.Tensor: Model predictions.
+        """
+        if self.model is None:
+            raise ValueError("Model is not loaded. Call load_model() first.")
+        
+        with torch.no_grad():  # Disable gradient computation for inference
+            predictions = self.model(data_points)
+        return predictions
+    
+if __name__ == "__main__":
+    # Example usage
+    from bone_inverse_rl.surrogate_model.neural_network import NeuralNetwork # Replace with the actual class name
+
+    model_loader = SurrogateModelLoader("Thesis_code/bone_inverse_rl/surrogate_model/trained_model.pth", NeuralNetwork)
+    model_loader.load_model()
+    
+    # Assuming data_points is a torch.Tensor of appropriate shape
+    data_points = torch.randn(1, 30)  # Example input
+    predictions = model_loader.forward(data_points)
+    print(predictions)
