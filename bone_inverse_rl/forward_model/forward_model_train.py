@@ -2,6 +2,7 @@ from __future__ import print_function
 import numpy as np
 from bone_inverse_rl.forward_model.forward_model_input_test import forward_model_input_test
 from typing import Dict, Union
+from bone_inverse_rl.forward_model.density_simulation import DensitySimulation
 
 def forward_model_train(
     force_profile: np.ndarray,
@@ -22,6 +23,7 @@ def forward_model_train(
             - 'file_location': Location of the data files.
             - 'rho_min': Minimum bone density.
             - 'rho_max': Maximum bone density.
+            - 'tolerance': Tolerance for convergence criteria.
 
     Returns:
         np.ndarray: Updated bone density profile after the simulation.
@@ -39,15 +41,20 @@ def forward_model_train(
             raise Exception(f"Unhandled error type: {error_type} - {error_message}")
 
     # If inputs are valid, proceed with the forward model computation
-    #raise NotImplementedError
-    # Placeholder for the actual forward model computation
 
-    final_density = initial_density.copy()
+    simulation = DensitySimulation(
+        force_profile=force_profile,
+        initial_density=initial_density,
+        time_steps=time_steps,
+        dt=dt,
+        parameters=parameters,
+        )
+    #simulation.run()
 
-    return final_density
+    return initial_density
 
 if __name__ == "__main__":
-    force_profile = np.random.rand(10, 10)  # Example force profile
+    force_profile = np.random.rand(3, 10)  # Example force profile
     initial_density = np.full((10, 10), 0.8)  # Initial density matrix
     time_steps = 100  # Number of time steps
     dt = 1.0  # Time step size
@@ -55,6 +62,7 @@ if __name__ == "__main__":
         'file_location': 'bone_inverse_rl/data/raw',
         'rho_min': 0.01,
         'rho_max': 1.74,
+        'tolerance': 1E-14,
     }
 
     final_density = forward_model_train(force_profile, initial_density, time_steps, dt, parameters)
