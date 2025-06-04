@@ -159,7 +159,7 @@ class DensitySimulation:
             rho_func, self.updated_rho_val, self.cnt_cell_converged = self.calculate_Density_change(self.updated_rho_val, SED)
 
             if t == self.T or sum(self.cnt_cell_converged) == self.cnt_cells:
-                File(self.file_name + str(self.t) + self.file_extension) << rho_func
+                File(self.file_name + str(t) + self.file_extension) << rho_func
                 if sum(self.cnt_cell_converged) == self.cnt_cells:
                     break
 
@@ -167,9 +167,11 @@ class DensitySimulation:
             self.mu, self.lmbda = self.calculate_Lame_coefficients(self.E0)
             t += self.dt
 
-        print("Simulation completed")
-        print(f"--- {time.time() - self.start_time} seconds ---")
-        print("Final density values:", self.updated_rho_val)
-        print("Number of converged cells:", sum(self.cnt_cell_converged))
-        print("Total number of cells:", self.cnt_cells)
-        print("Final time:", t)
+    def get_final_density(self):
+        """
+        Get the final density profile after the simulation.
+        :return: Final density profile as a NumPy array.
+        """
+
+        half_size = len(self.updated_rho_val) // 2
+        return np.array(self.updated_rho_val[:half_size]).reshape((self.X, self.Y))

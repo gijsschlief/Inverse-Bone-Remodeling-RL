@@ -52,7 +52,10 @@ def forward_model(
         )
     simulation.run()
 
-    return simulation.updated_rho_val
+    # Convert the final density function to a NumPy array
+    final_density = simulation.get_final_density()
+
+    return final_density
 
 if __name__ == "__main__":
     force_profile = np.random.rand(3, 10)  # Example force profile
