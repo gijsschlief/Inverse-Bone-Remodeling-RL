@@ -17,7 +17,8 @@ class DensitySimulation:
         self.initialize_density()
         self.setup_boundary_conditions()
         self.setup_subdomains()
-        self.F = Expression("m*x[0]+c", m=-10, c=10, degree=1)
+        self.setup_force_expression()
+        #self.F = Expression("m*x[0]+c", m=-10, c=10, degree=1)
         self.E0 = self.calculate_E(self.rho_val)
         self.mu, self.lmbda = self.calculate_Lame_coefficients(self.E0)
         self.u = Function(self.V)
@@ -81,13 +82,51 @@ class DensitySimulation:
                 super().__init__()
                 self.tolerance = tolerance
             def inside(self, x, on_boundary):
-                return near(x[1], 1, self.tolerance)
+                return near(x[1], 1, self.tolerance) and on_boundary
+
+        class Right(SubDomain):
+            def __init__(self, tolerance=1E-14):
+                super().__init__()
+                self.tolerance = tolerance
+            def inside(self, x, on_boundary):
+                return near(x[0], 1, self.tolerance) and on_boundary
+            
+        class Left(SubDomain):
+            def __init__(self, tolerance=1E-14):
+                super().__init__()
+                self.tolerance = tolerance
+            def inside(self, x, on_boundary):
+                return near(x[0], 0, self.tolerance) and on_boundary
+        
 
         self.boundaries = MeshFunction('size_t', self.mesh, 1)
         self.boundaries.set_all(0)
         Top().mark(self.boundaries, 1)
+        Right().mark(self.boundaries, 2)
+        Left().mark(self.boundaries, 3)
         self.ds = Measure('ds', domain=self.mesh, subdomain_data=self.boundaries)
- 
+    
+    def setup_force_expression(self):
+        self.top_force_expr = self.build_force_expression(self.force_profile[0], axis='x')
+        self.right_force_expr = self.build_force_expression(self.force_profile[1], axis='y')
+        self.left_force_expr = self.build_force_expression(self.force_profile[2], axis='y')
+
+    @staticmethod
+    def build_force_expression(force_row, axis='x'):
+        """
+        Build the force expression based on the force profile.
+        """
+        expr_pieces = []
+        dx = 1.0 / len(force_row)
+        for i, val in enumerate(force_row):
+            if val != 0:
+                start = i * dx
+                end = (i + 1) * dx
+                cond = f"{start} <= x[0] && x[0] <= {end}" if axis == 'x' else f"{start} <= x[1] && x[1] <= {end}"
+                expr_pieces.append(f"({val})*({cond})")
+        full_expr = " + ".join(expr_pieces) if expr_pieces else "0.0"
+        return Expression(full_expr, degree=1)
+    
     def calculate_E(self, rho_vals):
         E_func = Function(self.V_ele)
         E_array = E_func.vector().get_local()
@@ -149,7 +188,8 @@ class DensitySimulation:
         while t <= self.T:
             a = 2 * self.mu * inner(self.epsilon(self.u_trial), self.epsilon(self.v)) * dx \
                 + self.lmbda * dot(div(self.u_trial), div(self.v)) * dx
-            L = dot(self.f, self.v) * dx + self.v[1] * self.F * self.ds(1)
+            L = dot(self.f, self.v) * dx + self.v[1] * self.top_force_expr * self.ds(1) + \
+                self.v[0] * self.right_force_expr * self.ds(2) + self.v[1] * self.left_force_expr * self.ds(3)
             solve(a == L, self.u, self.bcs)
 
             eps_val = self.epsilon(self.u)
@@ -172,6 +212,17 @@ class DensitySimulation:
         Get the final density profile after the simulation.
         :return: Final density profile as a NumPy array.
         """
-
         half_size = len(self.updated_rho_val) // 2
         return np.array(self.updated_rho_val[:half_size]).reshape((self.X, self.Y))
+    
+    def plot_density(self):
+        """
+        Plot the final density profile using pyvista.
+        """
+        import pyvista as pv
+        filename = self.file_name + str(self.T) + self.file_extension
+        reader = pv.get_reader(filename)
+        reader.set_active_time_point(0)
+
+        grid = reader.read()[0]
+        grid.plot(scalars='f_3251', show_edges=True, show_scalar_bar=True, clim=[self.rho_min, self.rho_max], cpos='xy', show_grid=True)

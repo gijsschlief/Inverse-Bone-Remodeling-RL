@@ -52,14 +52,19 @@ def forward_model(
         )
     simulation.run()
 
+    simulation.plot_density()
+
     # Convert the final density function to a NumPy array
     final_density = simulation.get_final_density()
 
     return final_density
 
 if __name__ == "__main__":
-    force_profile = np.random.rand(3, 10)  # Example force profile
-    initial_density = np.full((10, 10), 0.8)  # Initial density matrix
+    force_profile = np.zeros((3, 40))  # Initialize an empty force profile
+    force_profile[0, 0] = 0  # Set a force at location (0, 2) Top
+    force_profile[0, 9] = 3  # Set a force at location (1, 5) Left
+    force_profile[2, 8] = 0  # Set a force at location (2, 8) Left
+    initial_density = np.full((40, 40), 0.8)  # Initial density matrix
     time_steps = 100  # Number of time steps
     dt = 1.0  # Time step size
     parameters = {
@@ -70,4 +75,5 @@ if __name__ == "__main__":
     }
 
     final_density = forward_model(force_profile, initial_density, time_steps, dt, parameters)
+    print("Force Profile:", force_profile)
     print("Final Density:", final_density)
