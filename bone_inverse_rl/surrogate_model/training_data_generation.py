@@ -2,8 +2,9 @@ import numpy as np
 import datetime
 import os
 import json
-from bone_inverse_rl.forward_model.forward_model_train import forward_model_train
+from bone_inverse_rl.forward_model.forward_model import forward_model
 from typing import Dict, Optional, Tuple
+from fenics import set_log_level, LogLevel
 
 def generate_training_data(
     output_dir: str, 
@@ -45,7 +46,7 @@ def generate_training_data(
     data = []
     for i in range(num_samples):
         force_profile = np.zeros((3, max(initial_density.shape)))
-        force_max = 10  # Define the maximum force value
+        force_max = 3  # Define the maximum force value
         num_forces = np.random.randint(1, 4)  # Random number of forces between 1 and 3
 
         # Randomly select three unique locations on the side of the density matrix
@@ -53,7 +54,7 @@ def generate_training_data(
         for loc in locations:
             row, col = divmod(loc, force_profile.shape[1])
             force_profile[row, col] = np.random.uniform(-force_max, force_max)
-        output = forward_model_train(force_profile, initial_density, time_steps, dt, parameters)
+        output = forward_model(force_profile, initial_density, time_steps, dt, parameters)
         data_point = serialize_data(
             force_profile=force_profile, 
             result=output, 
@@ -82,7 +83,6 @@ def generate_training_data(
     print(f"Training data saved to {filepath}")
     return None
 
-
 def serialize_data(
     force_profile: np.ndarray, 
     result: np.ndarray, 
@@ -95,4 +95,5 @@ def serialize_data(
 
 # Example usage
 if __name__ == "__main__":
-    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=10000)
+    set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
+    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=100)

@@ -52,8 +52,8 @@ def forward_model(
         )
     simulation.run()
 
-    simulation.plot_density()
-
+    #simulation.plot_density()
+    
     # Convert the final density function to a NumPy array
     final_density = simulation.get_final_density()
 
@@ -72,6 +72,7 @@ if __name__ == "__main__":
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,
+        'save': True,
     }
 
     final_density = forward_model(force_profile, initial_density, time_steps, dt, parameters)
