@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-class NeuralNetwork(nn.Module):
+class NNSurrogateModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.flatten = nn.Flatten()
@@ -14,6 +14,8 @@ class NeuralNetwork(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 10 * 10) # Output layer (10x10 flattened to 100)
         )
+        self.train_losses = []
+        self.val_losses = []
 
     def forward(self, x):
         x = self.flatten(x)
@@ -44,3 +46,21 @@ class NeuralNetwork(nn.Module):
     def __len__(self):
         """Return the number of layers in the model."""
         return len(self.linear_relu_stack)
+    
+    def plot_loss(self):
+        import matplotlib.pyplot as plt
+        if not self.train_losses:
+            print("No training history found.")
+            return
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(self.train_losses, label="Train Loss")
+        if self.val_losses:
+            plt.plot(self.val_losses, label="Validation Loss")
+        plt.xlabel("Epoch")
+        plt.ylabel("Loss")
+        plt.title("Training and Validation Loss")
+        plt.legend()
+        plt.grid(True)
+        plt.tight_layout()
+        plt.show()
