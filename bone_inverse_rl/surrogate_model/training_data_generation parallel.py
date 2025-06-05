@@ -12,7 +12,7 @@ def _run_one_sample(args) -> Dict:
 
     force_profile = np.zeros((3, max(initial_density.shape)))
     force_max = 3
-    num_forces = np.random.randint(1, 4)
+    num_forces = np.random.randint(1, 7)
     locations = np.random.choice(np.prod(force_profile.shape), num_forces, replace=False)
     for loc in locations:
         row, col = divmod(loc, force_profile.shape[1])
@@ -75,4 +75,4 @@ def serialize_data(
 # Example usage
 if __name__ == "__main__":
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
-    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=1000)
+    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=25000)
