@@ -7,14 +7,16 @@ from bone_inverse_rl.utils.data_splitting import split_data
 from bone_inverse_rl.rl_model.reward_calculation import calculate_similarity
 
 # Data Loading
-data = read_json_data("/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_test_large.json")
+data = read_json_data("/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_20250605_014805.json")
 print(f"Data loaded")
 
 # Preprocessing
 serial_numbers, force_profiles, final_output_densities = convert_to_array(data)
 X_train, X_val, X_test, y_train, y_val, y_test = split_data(force_profiles, final_output_densities)
 
-device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+#device = torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else "cpu"
+
 num_train_samples = X_train.shape[0]  # Calculate the number of training samples
 
 X = torch.tensor(X_train.reshape(num_train_samples, 3, 10).astype(np.float32)).to(device)

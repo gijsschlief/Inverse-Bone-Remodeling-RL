@@ -75,4 +75,4 @@ def serialize_data(
 # Example usage
 if __name__ == "__main__":
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
-    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=100)
+    generate_training_data(output_dir="/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw", num_samples=1000)
