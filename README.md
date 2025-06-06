@@ -39,7 +39,7 @@ Modify the configuration files in the `config/` directory to customize the exper
 ## Project Structure
 ```
 Thesis_code/
-├── data/               # Datasets and preprocessing scripts
+├── bone_inverse_rl/    # Contains all important code
 ├── environments/       # Simulation environments
 ├── models/             # RL models and training scripts
 ├── results/            # Output results and logs
