@@ -1,7 +1,7 @@
 import argparse
 
 def generate_data(args):
-    from forward_model import fenics_simulator
+    from Thesis_code.bone_inverse_rl.forward_model.OLD import fenics_simulator
     fenics_simulator.generate_dataset(num_samples=args.samples)
 
 def train_surrogate(args):
@@ -43,4 +43,5 @@ def main():
     args.func(args)
 
 if __name__ == "__main__":
-    main()
+    import sys
+    sys.path.append("/home/gijs/Desktop/Thesis/Thesis_code")
