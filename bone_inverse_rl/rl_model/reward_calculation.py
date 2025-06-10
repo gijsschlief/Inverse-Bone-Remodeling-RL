@@ -71,7 +71,11 @@ def calculate_similarity(A, B, method="mse", baseline=0.1, threshold=0.5):
     elif method == "wasserstein":
         # Earth Mover's Distance (Wasserstein Distance) [0, +inf]
         from scipy.stats import wasserstein_distance
-        metric = wasserstein_distance(A.flatten(), B.flatten())
+        metric = 0
+        for i in range(A.shape[0]):
+            metric += wasserstein_distance(A[i, :], B[i, :])
+        metric /= A.shape[0]  # Average over rows
         return 2 * (1 - metric / (metric + baseline)) - 1  # Normalize to [-1, 1]
     else:
         raise ValueError(f"Unknown method: {method}")
+        

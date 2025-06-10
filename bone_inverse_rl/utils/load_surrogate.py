@@ -37,7 +37,7 @@ class SurrogateModelLoader:
         with torch.no_grad():  # Disable gradient computation for inference
             predictions = self.model(data_points)
         return predictions
-    
+
 if __name__ == "__main__":
     # Example usage
     import torch
@@ -48,9 +48,10 @@ if __name__ == "__main__":
     from bone_inverse_rl.utils.convert_to_array import convert_to_array
     from bone_inverse_rl.utils.data_splitting import split_data
     from bone_inverse_rl.rl_model.reward_calculation import calculate_similarity
+    import random
 
     # Data Loading
-    data = read_json_data("/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_20250605_023414.json")
+    data = read_json_data("/home/gijs/Desktop/Thesis/data/raw/training_data_20250605_023414.json")
     print(f"Data loaded")
 
     # Preprocessing
@@ -82,11 +83,42 @@ if __name__ == "__main__":
     similarity_scores = []
     for i in range(num_val_samples):
         predicted_matrix = val_logits[i].cpu().numpy()
-        average_similarity = np.mean(similarity_scores)()
+        average_similarity = np.mean(similarity_scores)
         actual_matrix = y_val_tensor[i].cpu().numpy()
-        similarity = calculate_similarity(predicted_matrix, actual_matrix)
+        similarity = calculate_similarity(predicted_matrix, actual_matrix, method='wasserstein', baseline=0.1, threshold=0.5)
         similarity_scores.append(similarity)
 
-    # Calculate average similarity as accuracy metric
+    # Calculate average similarity as accuracy metric\
+    #print(f"Similarity Scores: {similarity_scores}")
     average_similarity = np.mean(similarity_scores)
     print(f"Model Accuracy (Average Similarity): {average_similarity}")
+
+    # print a matrix of the first validation sample
+    print("First Validation Sample Predicted Matrix:")
+    # Select 3 random indices from the validation set
+    random_indices = random.sample(range(num_val_samples), 3)
+
+    for idx in random_indices:
+        predicted_matrix = val_logits[idx].cpu().numpy()
+        actual_matrix = y_val_tensor[idx].cpu().numpy()
+
+        import matplotlib.pyplot as plt
+
+        print(f"Sample Index: {idx}")
+        print("Original Density Matrix:")
+        print(actual_matrix)
+        plt.figure(figsize=(6, 6))
+        plt.imshow(actual_matrix, cmap='viridis', interpolation='nearest')
+        plt.colorbar(label='Value')
+        plt.title('Original Density Matrix')
+        plt.show()
+
+        print("Predicted Density Matrix:")
+        print(predicted_matrix)
+        plt.figure(figsize=(6, 6))
+        plt.imshow(predicted_matrix, cmap='viridis', interpolation='nearest')
+        plt.colorbar(label='Value')
+        plt.title('Predicted Density Matrix')
+        plt.show()
+
+        print("-" * 50)
