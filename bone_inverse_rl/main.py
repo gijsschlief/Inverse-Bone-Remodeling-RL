@@ -1,12 +1,12 @@
 import argparse
 
 def generate_data(args):
-    from Thesis_code.bone_inverse_rl.forward_model.OLD import fenics_simulator
-    fenics_simulator.generate_dataset(num_samples=args.samples)
+    from Thesis_code.bone_inverse_rl.forward_model.data_generation_parallel import main as fenics_simulator
+    fenics_simulator()
 
 def train_surrogate(args):
-    from surrogate_model import cnn_surrogate
-    cnn_surrogate.train_model(epochs=args.epochs)
+    from Thesis_code.bone_inverse_rl.surrogate_model import trainer
+    trainer.train_model(epochs=args.epochs)
 
 def train_rl(args):
     from rl_model import train_agent

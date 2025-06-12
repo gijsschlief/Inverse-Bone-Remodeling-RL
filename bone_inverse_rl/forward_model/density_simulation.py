@@ -1,6 +1,8 @@
+import time
+
 from fenics import *
 import numpy as np
-import time
+
 
 class DensitySimulation:
     def __init__(self, force_profile, initial_density, time_steps, dt, parameters):
@@ -38,7 +40,7 @@ class DensitySimulation:
         self.rho0 = self.density_profile.mean()  # Initial average density
         
         # Data extraction from parameters
-        self.file_location = parameters.get('file_location', 'data/')  # Location of the data files
+        self.file_location = parameters.get('file_location', '/home/gijs/Desktop/Thesis/data/fenics/')  # Location of the data files
         self.rho_min = parameters.get('rho_min', 0.1)  # Minimum bone density
         self.rho_max = parameters.get('rho_max', 1.5)  # Maximum bone density
         self.tolerance = parameters.get('tolerance', 1E-14)  # Tolerance for convergence
@@ -50,6 +52,7 @@ class DensitySimulation:
         self.file_name = parameters.get('file_name', 'density_simulation')  # Base name for output files
         self.file_extension = parameters.get('file_extension', '.pvd')  # File extension for output files
         self.save = parameters.get('save', False)  # Flag to save output files
+        self.convergence_eps = parameters.get('convergence_eps', 1E-6)  # Convergence threshold for density change
 
     def setup_mesh_and_spaces(self):
         self.mesh = UnitSquareMesh(self.X, self.Y, 'left')
@@ -170,14 +173,14 @@ class DensitySimulation:
                 elif new_rho >= self.rho_max:
                     new_rho = self.rho_max
                     self.cnt_cell_converged[i] = 1
-                elif abs(change) < 1E-6:
+                elif abs(change) < self.convergence_eps:
                     self.cnt_cell_converged[i] = 1
 
                 rho_array[i] = new_rho
                 change_in_density.append(change)
             else:
                 rho_array[i] = rho_vals[i]
-                stimulus[i] = SED_val / rho_vals[i]
+                stimulus[i] = SED_val / max(rho_vals[i], self.rho_min)
                 change_in_density.append(0)
 
         rho_plot.vector().set_local(rho_array)

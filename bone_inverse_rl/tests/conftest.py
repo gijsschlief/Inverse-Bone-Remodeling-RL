@@ -8,7 +8,7 @@ def dummy_force_map():
 
 @pytest.fixture
 def surrogate_model():
-    from surrogate_model.cnn_surrogate import SurrogateModel
+    from Thesis_code.bone_inverse_rl.surrogate_model.trainer import SurrogateModel
     model = SurrogateModel()
     model.eval()
     return model
