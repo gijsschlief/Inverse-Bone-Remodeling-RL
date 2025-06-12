@@ -1,4 +1,3 @@
-# Thesis_code
 # Thesis Code Repository
 
 Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research.
@@ -38,14 +37,15 @@ Modify the configuration files in the `config/` directory to customize the exper
 
 ## Project Structure
 ```
-Thesis_code/
-├── data/               # Datasets and preprocessing scripts
-├── environments/       # Simulation environments
-├── models/             # RL models and training scripts
-├── results/            # Output results and logs
+bone_inverse_rl/
+├── delft_blue/         # bash files for running simulations on the delft supercomputer cluster
+├── forward_model/      # runs the forward bone remodelling finite element solver for datageneration
+├── rl_model/           # RL models and training scripts
+├── surrogate_model/    # Supervised learning model that estimates forward_model
 ├── utils/              # Utility functions and helpers
-├── config/             # Configuration files
+├── test/               # Test functions
 ├── main.py             # Entry point for running experiments
+├── __init__.py         # Empty initilizer
 └── README.md           # Project documentation
 ```
 
