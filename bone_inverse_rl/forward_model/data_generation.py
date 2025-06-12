@@ -63,14 +63,15 @@ def generate_training_data(
         e = None  # Initialize e to ensure it is always defined
         try:
             output = forward_model(force_profile, initial_density, time_steps, dt, parameters)
-        except Exception as e:
+        except Exception as ex:
+            e = ex
             logging.error(f"Error in sample {i}: {e} | Force profile: {force_profile}")
             output = np.full(initial_density.shape, np.nan)
         
         data_point = serialize_data(
             force_profile=force_profile, 
             result=output, 
-            serial_number=np.array([i + 1]),
+            serial_number=i + 1,
             error=str(e) if isinstance(e, Exception) else None
         )
         data.append(data_point)
@@ -106,7 +107,7 @@ def serialize_data(
     If there is no error, exclude the error field from the dictionary.
     """
     serialized_data = {
-        "serial_number": [serial_number],
+        "serial_number": serial_number,
         "force_profile": force_profile.tolist(),
         "final_output_density": result.tolist(),
     }

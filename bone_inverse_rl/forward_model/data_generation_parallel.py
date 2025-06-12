@@ -29,7 +29,8 @@ def _run_one_sample(args: Tuple[int, str, np.ndarray, int, float, Dict]) -> Dict
     e = None  # Initialize e to ensure it is always defined
     try:
         output = forward_model(force_profile, initial_density, time_steps, dt, parameters)
-    except Exception as e:
+    except Exception as ex:
+        e = ex
         logging.error(f"Error in sample {i}: {e} | Force profile: {force_profile}")
         output = np.full(initial_density.shape, np.nan)
         
