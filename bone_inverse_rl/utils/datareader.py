@@ -23,6 +23,6 @@ def read_json_data(file_path: str) -> Optional[List[Any]]:
 
 # Example usage:
 if __name__ == "__main__":
-    file_path = "/home/gijs/Desktop/Thesis/Thesis_code/bone_inverse_rl/data/raw/training_data_test.json"
+    file_path = "/home/gijs/Desktop/Thesis/data/raw/training_data_test.json"
     data = read_json_data(file_path)
     print(data)

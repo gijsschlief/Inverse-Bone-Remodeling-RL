@@ -9,6 +9,8 @@ from bone_inverse_rl.forward_model.density_simulation import DensitySimulation
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
+#TODO - Turn file_locations from hard to relative paths so it works on all systems!!!
+
 class ForwardModelParameters(TypedDict):
     file_location: str = '/home/gijs/Desktop/Thesis/data/fenics/'
     rho_min: float = 0.01
