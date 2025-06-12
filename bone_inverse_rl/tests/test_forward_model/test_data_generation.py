@@ -6,7 +6,7 @@ import unittest
 
 from fenics import set_log_level, LogLevel
 
-from Thesis_code.bone_inverse_rl.forward_model.data_generation import generate_training_data, serialize_data
+from Thesis_code.bone_inverse_rl.forward_model.data_generation import generate_training_data
 
 @pytest.fixture
 def temp_output_dir(tmpdir):
@@ -48,33 +48,6 @@ def test_generate_training_data_handles_exceptions(temp_output_dir):
     for sample in data:
         assert np.isnan(np.array(sample["final_output_density"])).all(), "Output density should be NaN."
         assert "error" in sample, "Error field should be present in the sample."
-
-def test_serialize_data():
-    """Test the serialize_data function."""
-    serial_number = 1
-    force_profile = np.array([[1.0, 0.0], [0.0, -1.0]])
-    result = np.array([[0.8, 0.8], [0.8, 0.8]])
-    error = "Test error"
-
-    serialized = serialize_data(serial_number, force_profile, result, error)
-
-    assert serialized["serial_number"] == serial_number, "Serial number mismatch."
-    assert serialized["force_profile"] == force_profile.tolist(), "Force profile mismatch."
-    assert serialized["final_output_density"] == result.tolist(), "Final output density mismatch."
-    assert serialized["error"] == error, "Error mismatch."
-
-def test_serialize_data_no_error():
-    """Test the serialize_data function when no error is provided."""
-    serial_number = 1
-    force_profile = np.array([[1.0, 0.0], [0.0, -1.0]])
-    result = np.array([[0.8, 0.8], [0.8, 0.8]])
-
-    serialized = serialize_data(serial_number, force_profile, result)
-
-    assert serialized["serial_number"] == serial_number, "Serial number mismatch."
-    assert serialized["force_profile"] == force_profile.tolist(), "Force profile mismatch."
-    assert serialized["final_output_density"] == result.tolist(), "Final output density mismatch."
-    assert "error" not in serialized, "Error field should not be present."
 
 if __name__ == "__main__":
     pytest.main([__file__])

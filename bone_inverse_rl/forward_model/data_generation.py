@@ -9,6 +9,7 @@ import numpy as np
 from fenics import set_log_level, LogLevel
 
 from Thesis_code.bone_inverse_rl.forward_model.main import forward_model
+from Thesis_code.bone_inverse_rl.forward_model.data_serialization import serialize_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -96,24 +97,6 @@ def generate_training_data(
 
     logging.info(f"Training data saved to {filepath}")
     return None
-
-def serialize_data(
-    serial_number: int, 
-    force_profile: np.ndarray, 
-    result: np.ndarray, 
-    error: str = None) -> Dict:
-    """
-    Serialize the data into a dictionary format for saving or further processing.
-    If there is no error, exclude the error field from the dictionary.
-    """
-    serialized_data = {
-        "serial_number": serial_number,
-        "force_profile": force_profile.tolist(),
-        "final_output_density": result.tolist(),
-    }
-    if error is not None:
-        serialized_data["error"] = error
-    return serialized_data
 
 def main():
     parser = argparse.ArgumentParser(description="Generate training data for the forward model.")

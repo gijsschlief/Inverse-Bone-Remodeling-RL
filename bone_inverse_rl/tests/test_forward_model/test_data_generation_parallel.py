@@ -20,39 +20,12 @@ def mock_forward_model():
         mock.return_value = np.full((10, 10), 1.0)  # Mock output
         yield mock
 
-def test_serialize_data():
-    """Test the serialize_data function."""
-    serial_number = 1
-    force_profile = np.array([[0.5, -0.2], [0.1, 0.0]])
-    result = np.array([[1.0, 1.0], [1.0, 1.0]])
-    error = "Test error"
-
-    serialized = serialize_data(serial_number, force_profile, result, error)
-
-    assert serialized["serial_number"] == [serial_number]
-    assert serialized["force_profile"] == force_profile.tolist()
-    assert serialized["final_output_density"] == result.tolist()
-    assert serialized["error"] == error
-
-def test_serialize_data_no_error():
-    """Test serialize_data when no error is provided."""
-    serial_number = 1
-    force_profile = np.array([[0.5, -0.2], [0.1, 0.0]])
-    result = np.array([[1.0, 1.0], [1.0, 1.0]])
-
-    serialized = serialize_data(serial_number, force_profile, result)
-
-    assert serialized["serial_number"] == [serial_number]
-    assert serialized["force_profile"] == force_profile.tolist()
-    assert serialized["final_output_density"] == result.tolist()
-    assert "error" not in serialized
-
 def test_run_one_sample(mock_forward_model):
     """Test the _run_one_sample function."""
     args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74})
     result = _run_one_sample(args)
 
-    assert result["serial_number"] == [1]
+    assert result["serial_number"] == 1
     assert isinstance(result["force_profile"], list)
     assert isinstance(result["final_output_density"], list)
     assert "error" not in result
@@ -63,7 +36,7 @@ def test_run_one_sample_with_error():
         args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74})
         result = _run_one_sample(args)
 
-        assert result["serial_number"] == [1]
+        assert result["serial_number"] == 1
         assert isinstance(result["force_profile"], list)
         assert isinstance(result["final_output_density"], list)
         if "error" in result:
