@@ -65,7 +65,11 @@ def forward_model_input_test(
 
     return None
 
-def main():
+def main() -> None:
+    """
+    Main function to run the input test with example data.
+    This function simulates the input validation process for the forward model.
+    """
     force_profile = np.random.rand(3, 10)  # Example force profile
     initial_density = np.full((10, 10), 0.8)  # Initial density matrix
     time_steps = 100  # Number of time steps

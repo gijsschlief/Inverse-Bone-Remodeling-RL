@@ -6,7 +6,7 @@ import unittest
 
 from fenics import set_log_level, LogLevel
 
-from Thesis_code.bone_inverse_rl.forward_model.data_generation import generate_training_data
+from forward_model.data_generation import generate_training_data
 
 @pytest.fixture
 def temp_output_dir(tmpdir):
@@ -35,7 +35,7 @@ def test_generate_training_data_handles_exceptions(temp_output_dir):
     num_samples = 5
 
     # Mock the forward_model function to raise an exception
-    with unittest.mock.patch("Thesis_code.bone_inverse_rl.forward_model.data_generation.forward_model", side_effect=Exception("Mocked error")):
+    with unittest.mock.patch("forward_model.data_generation.forward_model", side_effect=Exception("Mocked error")):
         generate_training_data(output_dir=temp_output_dir, num_samples=num_samples)
 
     # Check if the file contains valid JSON data

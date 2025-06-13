@@ -1,10 +1,10 @@
 import torch
 import numpy as np
-from bone_inverse_rl.surrogate_model.advanced_neural_network import AdvancedNNSurrogateModel
-from bone_inverse_rl.utils.datareader import read_json_data
-from bone_inverse_rl.utils.convert_to_array import convert_to_array
-from bone_inverse_rl.utils.data_splitting import split_data
-from bone_inverse_rl.rl_model.reward_calculation import calculate_similarity
+from surrogate_model.advanced_neural_network import AdvancedNNSurrogateModel
+from utils.datareader import read_json_data
+from utils.convert_to_array import convert_to_array
+from utils.data_splitting import split_data
+from rl_model.reward_calculation import calculate_similarity
 import random
 
 class SurrogateModelLoader:

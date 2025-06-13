@@ -9,8 +9,8 @@ import numpy as np
 from fenics import set_log_level, LogLevel
 from multiprocessing import Pool, cpu_count
 
-from Thesis_code.bone_inverse_rl.forward_model.main import forward_model
-from Thesis_code.bone_inverse_rl.forward_model.data_serialization import serialize_data
+from forward_model.main import forward_model
+from forward_model.data_serialization import serialize_data
 
 def _run_one_sample(args: Tuple[int, str, np.ndarray, int, float, Dict]) -> Dict:
     """
@@ -83,6 +83,9 @@ def generate_training_data(
     logging.info(f"Training data saved to {filepath}")
 
 def main() -> None:
+    """
+    Main function to parse arguments and generate training data.
+    """
     parser = argparse.ArgumentParser(description="Generate training data for the forward model.")
     parser.add_argument(
         "--output_dir", 

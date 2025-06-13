@@ -5,7 +5,7 @@ import pytest
 import numpy as np
 from fenics import set_log_level, LogLevel
 
-from Thesis_code.bone_inverse_rl.forward_model.edge_case_generation import (
+from forward_model.edge_case_generation import (
     _generate_edge_case_force_profiles,
     _run_edge_case_sample,
     generate_edge_case_data

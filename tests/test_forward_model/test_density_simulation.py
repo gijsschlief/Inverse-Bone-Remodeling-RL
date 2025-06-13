@@ -3,8 +3,7 @@ import numpy as np
 from fenics import *
 from ufl.core.expr import Expr
 
-from Thesis_code.bone_inverse_rl.forward_model.density_simulation import DensitySimulation
-
+from forward_model.density_simulation import DensitySimulation
 
 @pytest.fixture
 def simulation_parameters():

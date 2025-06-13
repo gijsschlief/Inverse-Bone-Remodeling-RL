@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from Thesis_code.bone_inverse_rl.forward_model.input_tester import forward_model_input_test
+from forward_model.input_tester import forward_model_input_test
 
 def test_forward_model_input_test_valid_inputs():
     initial_density = np.full((5, 7), 0.8)  # Any shape larger than 2x2

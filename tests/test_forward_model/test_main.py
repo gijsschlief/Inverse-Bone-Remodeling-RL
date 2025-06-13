@@ -1,6 +1,6 @@
 import pytest
 import numpy as np
-from Thesis_code.bone_inverse_rl.forward_model.main import forward_model, ForwardModelParameters
+from forward_model.main import forward_model
 
 def test_forward_model_valid_inputs():
     force_profile = np.zeros((3, 40))

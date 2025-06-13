@@ -7,16 +7,12 @@ import pytest
 from multiprocessing import cpu_count
 from fenics import set_log_level, LogLevel
 
-from Thesis_code.bone_inverse_rl.forward_model.data_generation_parallel import (
-    _run_one_sample,
-    generate_training_data,
-    serialize_data,
-)
+from forward_model.data_generation_parallel import (_run_one_sample, generate_training_data)
 
 @pytest.fixture
 def mock_forward_model():
     """Mock the forward_model function."""
-    with patch("Thesis_code.bone_inverse_rl.forward_model.main.forward_model") as mock:
+    with patch("forward_model.main.forward_model") as mock:
         mock.return_value = np.full((10, 10), 1.0)  # Mock output
         yield mock
 
@@ -32,7 +28,7 @@ def test_run_one_sample(mock_forward_model):
 
 def test_run_one_sample_with_error():
     """Test _run_one_sample when forward_model raises an exception."""
-    with patch("Thesis_code.bone_inverse_rl.forward_model.main.forward_model", side_effect=Exception("Test error")):
+    with patch("forward_model.main.forward_model", side_effect=Exception("Test error")):
         args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74})
         result = _run_one_sample(args)
 

@@ -9,8 +9,8 @@ import numpy as np
 from fenics import set_log_level, LogLevel
 from multiprocessing import Pool, cpu_count
 
-from Thesis_code.bone_inverse_rl.forward_model.main import forward_model
-from Thesis_code.bone_inverse_rl.forward_model.data_serialization import serialize_data
+from forward_model.main import forward_model
+from forward_model.data_serialization import serialize_data
 
 def _generate_edge_case_force_profiles(initial_density_shape: Tuple[int, int], num_cases: int = 2500) -> np.ndarray:
     """
@@ -116,6 +116,9 @@ def generate_edge_case_data(
     logging.info(f"Edge case data saved to {filepath}")
 
 def main() -> None:
+    """
+    Main function to parse arguments and generate edge case data.
+    """
     parser = argparse.ArgumentParser(description="Generate edge case data for the forward model.")
     parser.add_argument(
         "--output_dir", 

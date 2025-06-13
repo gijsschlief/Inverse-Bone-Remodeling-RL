@@ -8,8 +8,8 @@ from typing import Dict
 import numpy as np
 from fenics import set_log_level, LogLevel
 
-from Thesis_code.bone_inverse_rl.forward_model.main import forward_model
-from Thesis_code.bone_inverse_rl.forward_model.data_serialization import serialize_data
+from forward_model.main import forward_model
+from forward_model.data_serialization import serialize_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -98,7 +98,11 @@ def generate_training_data(
     logging.info(f"Training data saved to {filepath}")
     return None
 
-def main():
+def main() -> None:
+    """
+    Main function to parse command line arguments and generate training data.
+    It sets up the argument parser, suppresses FEniCS log messages, and calls the data generation function.
+    """
     parser = argparse.ArgumentParser(description="Generate training data for the forward model.")
     parser.add_argument(
         "--output_dir", 

@@ -2,23 +2,23 @@ import argparse
 import sys
 
 def forward_simulation(args):
-    from Thesis_code.bone_inverse_rl.forward_model.main import main as fenics_simulator
+    from forward_model.main import main as fenics_simulator
     fenics_simulator()
 
 def generate_data(args):
-    from Thesis_code.bone_inverse_rl.forward_model.data_generation import main as generate_training_data
+    from forward_model.data_generation import main as generate_training_data
     generate_training_data(samples=args.samples)
 
 def generate_data_parallel(args):
-    from Thesis_code.bone_inverse_rl.forward_model.data_generation_parallel import main as generate_training_data_parallel
+    from forward_model.data_generation_parallel import main as generate_training_data_parallel
     generate_training_data_parallel(samples=args.samples)
 
 def train_surrogate(args):
-    from Thesis_code.bone_inverse_rl.surrogate_model.trainer import main as surrogate_trainer
+    from surrogate_model.trainer import main as surrogate_trainer
     surrogate_trainer(epochs=args.epochs)
 
 def load_surrogate(args):
-    from Thesis_code.bone_inverse_rl.surrogate_model.loader import main as surrogate_loader
+    from surrogate_model.loader import main as surrogate_loader
     surrogate_loader()
 
 def main():

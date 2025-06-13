@@ -1,6 +1,6 @@
 import numpy as np
 import pytest
-from bone_inverse_rl.rl_model.reward_calculation import calculate_similarity
+from rl_model.reward_calculation import calculate_similarity
 
 def test_calculate_similarity_invalid_method():
     A = np.array([[1, 2], [3, 4]])

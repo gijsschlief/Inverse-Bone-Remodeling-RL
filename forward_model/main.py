@@ -5,8 +5,8 @@ from typing import TypedDict
 import numpy as np
 from fenics import set_log_level, LogLevel
 
-from Thesis_code.bone_inverse_rl.forward_model.input_tester import forward_model_input_test
-from bone_inverse_rl.forward_model.density_simulation import DensitySimulation
+from forward_model.input_tester import forward_model_input_test
+from forward_model.density_simulation import DensitySimulation
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -88,7 +88,12 @@ def forward_model(
 
     return final_density
 
-def main():
+def main() -> None:
+    """
+    Main function to run the forward model simulation.
+    This function parses command line arguments and initializes the simulation.
+    It sets up the force profile and parameters, runs the simulation, and logs the results.
+    """
     parser = argparse.ArgumentParser(description="Run the forward model simulation.")
     parser.add_argument("--time_steps", type=int, default=100, help="Number of time steps for the simulation.")
     parser.add_argument("--dt", type=float, default=1.0, help="Time step size.")

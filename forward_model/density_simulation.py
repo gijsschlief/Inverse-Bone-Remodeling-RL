@@ -3,7 +3,6 @@ import time
 from fenics import *
 import numpy as np
 
-
 class DensitySimulation:
     def __init__(self, force_profile, initial_density, time_steps, dt, parameters):
         """

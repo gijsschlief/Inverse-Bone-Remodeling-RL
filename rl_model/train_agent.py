@@ -1,7 +1,7 @@
 import gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.envs import DummyVecEnv
-from bone_inverse_rl.rl_model.reward_calculation import calculate_similarity
+from rl_model.reward_calculation import calculate_similarity
 
 # Define your custom reward calculation function
 def reward_calculate(observation, action, next_observation):

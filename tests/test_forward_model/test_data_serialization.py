@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from Thesis_code.bone_inverse_rl.forward_model.data_generation import serialize_data
+from forward_model.data_generation import serialize_data
     
 def test_serialize_data():
     """Test the serialize_data function."""
