@@ -126,7 +126,7 @@ def main() -> None:
     parser.add_argument(
         "--num_samples", 
         type=int, 
-        default=50, 
+        default=2500, 
         help="Number of edge cases to generate."
     )
     args = parser.parse_args()

@@ -1,3 +1,4 @@
+import argparse
 import logging
 from typing import TypedDict
 
@@ -9,7 +10,7 @@ from bone_inverse_rl.forward_model.density_simulation import DensitySimulation
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-#TODO - Turn file_locations from hard to relative paths so it works on all systems!!!
+# TODO - Turn file_locations from hard to relative paths so it works on all systems!!!
 
 class ForwardModelParameters(TypedDict):
     file_location: str = '/home/gijs/Desktop/Thesis/data/fenics/'
@@ -87,27 +88,40 @@ def forward_model(
 
     return final_density
 
-if __name__ == "__main__":
+def main():
+    parser = argparse.ArgumentParser(description="Run the forward model simulation.")
+    parser.add_argument("--time_steps", type=int, default=100, help="Number of time steps for the simulation.")
+    parser.add_argument("--dt", type=float, default=1.0, help="Time step size.")
+    parser.add_argument("--rho_min", type=float, default=0.01, help="Minimum bone density.")
+    parser.add_argument("--rho_max", type=float, default=1.74, help="Maximum bone density.")
+    parser.add_argument("--tolerance", type=float, default=1E-14, help="Tolerance for convergence criteria.")
+    parser.add_argument("--save", action="store_true", help="Save the simulation results.")
+    parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
+    parser.add_argument("--file_location", type=str, default='/home/gijs/Desktop/Thesis/data/fenics/', help="Location of the data files.")
+    args = parser.parse_args()
+
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
     logging.info("Initializing force profile and parameters...")
     force_profile = np.zeros((3, 40))  # Initialize an empty force profile
-    force_profile[0, 0] = 0  # Set a force at location (0, 2) Top
-    force_profile[0, 9] = 3  # Set a force at location (1, 5) Left
+    force_profile[0, 0] = 3  # Set a force at location (0, 2) Top
+    force_profile[0, 39] = 3  # Set a force at location (1, 5) Left
     force_profile[2, 8] = 0  # Set a force at location (2, 8) Left
     initial_density = np.full((40, 40), 0.8)  # Initial density matrix
-    time_steps = 100  # Number of time steps
-    dt = 1.0  # Time step size
+
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
-        'rho_min': 0.01,
-        'rho_max': 1.74,
-        'tolerance': 1E-14,
-        'save': True,
-        'plot': True
+        'file_location': args.file_location,
+        'rho_min': args.rho_min,
+        'rho_max': args.rho_max,
+        'tolerance': args.tolerance,
+        'save': args.save,
+        'plot': args.plot
     }
 
     logging.info("Running forward model simulation...")
-    final_density = forward_model(force_profile, initial_density, time_steps, dt, parameters)
+    final_density = forward_model(force_profile, initial_density, args.time_steps, args.dt, parameters)
     logging.info("Simulation completed.")
     logging.info("Force Profile: %s", force_profile)
     logging.info("Final Density: %s", final_density)
+
+if __name__ == "__main__":
+    main()

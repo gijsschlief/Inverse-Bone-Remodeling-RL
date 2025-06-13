@@ -1,20 +1,25 @@
 import argparse
+import sys
 
-def generate_data(args):
-    from Thesis_code.bone_inverse_rl.forward_model.data_generation_parallel import main as fenics_simulator
+def forward_simulation(args):
+    from Thesis_code.bone_inverse_rl.forward_model.main import main as fenics_simulator
     fenics_simulator()
 
+def generate_data(args):
+    from Thesis_code.bone_inverse_rl.forward_model.data_generation import main as generate_training_data
+    generate_training_data(samples=args.samples)
+
+def generate_data_parallel(args):
+    from Thesis_code.bone_inverse_rl.forward_model.data_generation_parallel import main as generate_training_data_parallel
+    generate_training_data_parallel(samples=args.samples)
+
 def train_surrogate(args):
-    from Thesis_code.bone_inverse_rl.surrogate_model import trainer
-    trainer.train_model(epochs=args.epochs)
+    from Thesis_code.bone_inverse_rl.surrogate_model.trainer import main as surrogate_trainer
+    surrogate_trainer(epochs=args.epochs)
 
-def train_rl(args):
-    from rl_model import train_agent
-    train_agent.train(timesteps=args.timesteps)
-
-def evaluate(args):
-    from rl_model import train_agent
-    train_agent.evaluate_policy()
+def load_surrogate(args):
+    from Thesis_code.bone_inverse_rl.surrogate_model.loader import main as surrogate_loader
+    surrogate_loader()
 
 def main():
     parser = argparse.ArgumentParser(description="Inverse Bone Remodeling Framework")
@@ -30,19 +35,9 @@ def main():
     p_sur.add_argument("--epochs", type=int, default=50, help="Number of training epochs")
     p_sur.set_defaults(func=train_surrogate)
 
-    # RL training
-    p_rl = subparsers.add_parser("train_rl", help="Train the RL agent")
-    p_rl.add_argument("--timesteps", type=int, default=100000, help="RL training steps")
-    p_rl.set_defaults(func=train_rl)
-
-    # Evaluation
-    p_eval = subparsers.add_parser("evaluate", help="Evaluate the RL agent")
-    p_eval.set_defaults(func=evaluate)
-
     args = parser.parse_args()
     args.func(args)
 
 if __name__ == "__main__":
-    import sys
     sys.path.append("/home/gijs/Desktop/Thesis/Thesis_code")
-    
+    main()
