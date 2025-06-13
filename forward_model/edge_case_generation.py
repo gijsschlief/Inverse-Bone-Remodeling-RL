@@ -4,6 +4,7 @@ import os
 import json
 from typing import Dict, Tuple
 import logging
+from pathlib import Path
 
 import numpy as np
 from fenics import set_log_level, LogLevel
@@ -119,11 +120,12 @@ def main() -> None:
     """
     Main function to parse arguments and generate edge case data.
     """
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parser = argparse.ArgumentParser(description="Generate edge case data for the forward model.")
     parser.add_argument(
         "--output_dir", 
         type=str, 
-        default="/home/gijs/Desktop/Thesis/data/raw", 
+        default=str(default_dir), 
         help="Directory to save the generated edge case data."
     )
     parser.add_argument(

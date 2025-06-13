@@ -1,6 +1,7 @@
 import argparse
 import logging
 from typing import TypedDict
+from pathlib import Path
 
 import numpy as np
 from fenics import set_log_level, LogLevel
@@ -13,7 +14,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # TODO - Turn file_locations from hard to relative paths so it works on all systems!!!
 
 class ForwardModelParameters(TypedDict):
-    file_location: str = '/home/gijs/Desktop/Thesis/data/fenics/'
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    file_location: str = str(default_dir)
     rho_min: float = 0.01
     rho_max: float = 1.74
     tolerance: float = 1E-14
@@ -46,8 +48,9 @@ def forward_model(
         np.ndarray: Updated bone density profile after the simulation.
     """
     if parameters is None:
+        default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
         parameters = {
-            'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
+            'file_location': str(default_dir),
             'rho_min': 0.01,
             'rho_max': 1.74,
             'tolerance': 1E-14,
@@ -102,7 +105,8 @@ def main() -> None:
     parser.add_argument("--tolerance", type=float, default=1E-14, help="Tolerance for convergence criteria.")
     parser.add_argument("--save", action="store_true", help="Save the simulation results.")
     parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
-    parser.add_argument("--file_location", type=str, default='/home/gijs/Desktop/Thesis/data/fenics/', help="Location of the data files.")
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    parser.add_argument("--file_location", type=str, default=str(default_dir), help="Location of the data files.")
     args = parser.parse_args()
 
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages

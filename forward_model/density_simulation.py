@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 
 from fenics import *
 import numpy as np
@@ -39,7 +40,8 @@ class DensitySimulation:
         self.rho0 = self.density_profile.mean()  # Initial average density
         
         # Data extraction from parameters
-        self.file_location = parameters.get('file_location', '/home/gijs/Desktop/Thesis/data/fenics/')  # Location of the data files
+        default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+        self.file_location = parameters.get('file_location', str(default_dir))  # Location of the data files
         self.rho_min = parameters.get('rho_min', 0.1)  # Minimum bone density
         self.rho_max = parameters.get('rho_max', 1.5)  # Maximum bone density
         self.tolerance = parameters.get('tolerance', 1E-14)  # Tolerance for convergence

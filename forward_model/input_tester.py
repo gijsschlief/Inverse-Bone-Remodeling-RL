@@ -1,5 +1,6 @@
 import logging
 from typing import Union, Tuple, Optional, Dict
+from pathlib import Path
 
 import numpy as np
 
@@ -29,7 +30,8 @@ def forward_model_input_test(
             - None: If all inputs are valid.
             - Tuple: Contains ('error_type', 'error_message') if any input is invalid.
     """
-    file_location = parameters.get('file_location', 'bone_inverse_rl/data/raw')
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
+    file_location = parameters.get('file_location', str(default_dir))
     rho_min = parameters.get('rho_min', 0.01)
     rho_max = parameters.get('rho_max', 1.74)
 
@@ -70,12 +72,13 @@ def main() -> None:
     Main function to run the input test with example data.
     This function simulates the input validation process for the forward model.
     """
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     force_profile = np.random.rand(3, 10)  # Example force profile
     initial_density = np.full((10, 10), 0.8)  # Initial density matrix
     time_steps = 100  # Number of time steps
     dt = 1.0  # Time step size
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }

@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import pytest
 import numpy as np
+
 from forward_model.main import forward_model
 
 def test_forward_model_valid_inputs():
@@ -8,8 +11,9 @@ def test_forward_model_valid_inputs():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,
@@ -26,8 +30,9 @@ def test_forward_model_invalid_force_profile():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,
@@ -43,8 +48,9 @@ def test_forward_model_invalid_initial_density():
     initial_density = "invalid_initial_density"  # Invalid type
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,
@@ -60,8 +66,9 @@ def test_forward_model_invalid_time_steps():
     initial_density = np.full((40, 40), 0.8)
     time_steps = "invalid_time_steps"  # Invalid type
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,
@@ -77,8 +84,9 @@ def test_forward_model_invalid_dt():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = "invalid_dt"  # Invalid type
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     parameters = {
-        'file_location': '/home/gijs/Desktop/Thesis/data/fenics/',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,

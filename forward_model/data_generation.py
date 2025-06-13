@@ -3,7 +3,7 @@ import datetime
 import os
 import json
 import logging
-from typing import Dict
+from pathlib import Path
 
 import numpy as np
 from fenics import set_log_level, LogLevel
@@ -103,11 +103,12 @@ def main() -> None:
     Main function to parse command line arguments and generate training data.
     It sets up the argument parser, suppresses FEniCS log messages, and calls the data generation function.
     """
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parser = argparse.ArgumentParser(description="Generate training data for the forward model.")
     parser.add_argument(
         "--output_dir", 
         type=str, 
-        default="/home/gijs/Desktop/Thesis/data/raw", 
+        default=str(default_dir), 
         help="Directory to save the output file."
     )
     parser.add_argument(

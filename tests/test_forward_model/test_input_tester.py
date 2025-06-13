@@ -1,5 +1,8 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
+
 from forward_model.input_tester import forward_model_input_test
 
 def test_forward_model_input_test_valid_inputs():
@@ -7,8 +10,9 @@ def test_forward_model_input_test_valid_inputs():
     force_profile = np.random.rand(3, max(initial_density.shape))  # 3 rows and columns matching max(rows, cols) of initial_density
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -21,8 +25,9 @@ def test_forward_model_input_test_invalid_force_profile_type():
     initial_density = np.full((10, 10), 0.8)
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -35,8 +40,9 @@ def test_forward_model_input_test_invalid_initial_density_type():
     initial_density = "invalid_type"  # Not a numpy array
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -49,8 +55,9 @@ def test_forward_model_input_test_invalid_time_steps_type():
     force_profile = np.random.rand(3, max(initial_density.shape))  # 3 rows and columns matching max(rows, cols) of initial_density
     time_steps = "invalid_type"  # Not an integer
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -63,8 +70,9 @@ def test_forward_model_input_test_invalid_dt_type():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = "invalid_type"  # Not a number
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -91,8 +99,9 @@ def test_forward_model_input_test_invalid_rho_min_type():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': "invalid_type",  # Not a number
         'rho_max': 1.74,
     }
@@ -105,8 +114,9 @@ def test_forward_model_input_test_invalid_rho_max_type():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': "invalid_type",  # Not a number
     }
@@ -119,8 +129,9 @@ def test_forward_model_input_test_invalid_rho_min_value():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': -0.01,  # Negative value
         'rho_max': 1.74,
     }
@@ -133,8 +144,9 @@ def test_forward_model_input_test_invalid_rho_max_value():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 0.005,  # Less than rho_min
     }
@@ -147,8 +159,9 @@ def test_forward_model_input_test_invalid_force_profile_shape():
     force_profile = np.random.rand(3, max(initial_density.shape)+1)
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -161,8 +174,9 @@ def test_forward_model_input_test_negative_initial_density_values():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -177,8 +191,9 @@ def test_forward_model_input_test_invalid_force_profile_values():
     force_profile[1, 2] = np.nan  # Set another value to NaN
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -193,8 +208,9 @@ def test_forward_model_input_test_invalid_initial_density_values():
     initial_density[1, 2] = np.nan  # Set another value to NaN
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
     }
@@ -208,8 +224,9 @@ def test_forward_model_input_test_invalid_rho_min_range():
     force_profile = np.random.rand(3, max(initial_density.shape))
     time_steps = 100
     dt = 1.0
+    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parameters = {
-        'file_location': 'bone_inverse_rl/data/raw',
+        'file_location': str(default_dir),
         'rho_min': -0.01,  # Negative value
         'rho_max': 1.74,
     }
