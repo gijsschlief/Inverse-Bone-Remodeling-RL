@@ -21,6 +21,14 @@ class ForwardModelParameters(TypedDict):
     tolerance: float = 1E-14
     save: bool = False
     plot: bool = False
+    B: float = 0.1
+    k: float = 0.01
+    nu: float = 0.3
+    M: float = 1.0
+    gamma: float = 2.0
+    file_name: str = "density_simulation"
+    file_extension: str = ".pvd"
+    convergence_eps: float = 1E-6
 
 def forward_model(
     force_profile: np.ndarray,
@@ -49,14 +57,22 @@ def forward_model(
     """
     if parameters is None:
         default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
-        parameters = {
-            'file_location': str(default_dir),
-            'rho_min': 0.01,
-            'rho_max': 1.74,
-            'tolerance': 1E-14,
-            'save': False,
-            'plot': False
-        }
+        parameters = ForwardModelParameters(
+            file_location=str(default_dir),
+            rho_min=0.01,
+            rho_max=1.74,
+            tolerance=1E-14,
+            save=False,
+            plot=False,
+            B=0.1,
+            k=0.01,
+            nu=0.3,
+            M=1.0,
+            gamma=2.0,
+            file_name="density_simulation",
+            file_extension=".pvd",
+            convergence_eps=1E-6
+        )
 
     # Validate inputs
     error = forward_model_input_test(
@@ -103,8 +119,16 @@ def main() -> None:
     parser.add_argument("--rho_min", type=float, default=0.01, help="Minimum bone density.")
     parser.add_argument("--rho_max", type=float, default=1.74, help="Maximum bone density.")
     parser.add_argument("--tolerance", type=float, default=1E-14, help="Tolerance for convergence criteria.")
+    parser.add_argument("--B", type=float, default=0.1, help="Coefficient for density change.")
+    parser.add_argument("--k", type=float, default=0.01, help="Threshold for density change.")
+    parser.add_argument("--nu", type=float, default=0.3, help="Poisson's ratio.")
+    parser.add_argument("--M", type=float, default=1.0, help="Modulus of elasticity.")
+    parser.add_argument("--gamma", type=float, default=2.0, help="Exponent for density elasticity.")
+    parser.add_argument("--file_name", type=str, default="density_simulation", help="Base name for output files.")
+    parser.add_argument("--file_extension", type=str, default=".pvd", help="File extension for output files.")
     parser.add_argument("--save", action="store_true", help="Save the simulation results.")
     parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
+    parser.add_argument("--convergence_eps", type=float, default=1E-6, help="Convergence threshold for density change.")
     default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     parser.add_argument("--file_location", type=str, default=str(default_dir), help="Location of the data files.")
     args = parser.parse_args()
@@ -123,7 +147,15 @@ def main() -> None:
         'rho_max': args.rho_max,
         'tolerance': args.tolerance,
         'save': args.save,
-        'plot': args.plot
+        'plot': args.plot,
+        'B': args.B,
+        'k': args.k,
+        'nu': args.nu,
+        'M': args.M,
+        'gamma': args.gamma,
+        'file_name': args.file_name,
+        'file_extension': args.file_extension,
+        'convergence_eps': args.convergence_eps
     }
 
     logging.info("Running forward model simulation...")
