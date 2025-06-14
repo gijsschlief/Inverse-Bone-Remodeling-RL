@@ -57,13 +57,13 @@ class DensitySimulation:
         # Data extraction from parameters
         default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
         self.file_location = parameters.get('file_location', str(default_dir))  # Location of the data files
-        self.rho_min = parameters.get('rho_min', 0.1)  # Minimum bone density
-        self.rho_max = parameters.get('rho_max', 1.5)  # Maximum bone density
+        self.rho_min = parameters.get('rho_min', 0.01)  # Minimum bone density
+        self.rho_max = parameters.get('rho_max', 1.74)  # Maximum bone density
         self.tolerance = parameters.get('tolerance', 1E-14)  # Tolerance for convergence
-        self.B = parameters.get('B', 0.1)  # Coefficient for density change
-        self.k = parameters.get('k', 0.01)  # Threshold for density change
+        self.B = parameters.get('B', 1)  # Coefficient for density change
+        self.k = parameters.get('k', 0.25)  # Threshold for density change
         self.nu = parameters.get('nu', 0.3)  # Poisson's ratio
-        self.M = parameters.get('M', 1.0)  # Modulus of elasticity
+        self.M = parameters.get('M', 100)  # Modulus of elasticity
         self.gamma = parameters.get('gamma', 2.0)  # Exponent for density elasticity
         self.file_name = parameters.get('file_name', 'density_simulation')  # Base name for output files
         self.file_extension = parameters.get('file_extension', '.pvd')  # File extension for output files
