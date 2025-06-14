@@ -308,7 +308,7 @@ class DensitySimulation:
                 change_in_density.append(change)
             else:
                 rho_array[i] = rho_vals[i]
-                stimulus[i] = SED_val / max(rho_vals[i], self.rho_min)
+                stimulus[i] = SED_val / max(rho_vals[i], 1e-8)
                 change_in_density.append(0)
 
         rho_plot.vector().set_local(rho_array)
