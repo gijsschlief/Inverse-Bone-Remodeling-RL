@@ -1,14 +1,13 @@
-import time
 from pathlib import Path
-from typing import Union, List
 import logging
+from typing import Any
 
 from fenics import *
 import numpy as np
 import ufl
 
 class DensitySimulation:
-    def __init__(self, force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int = 100, dt: int = 1, parameters: dict = {}) -> None:
+    def __init__(self, force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int = 100, dt: int = 1, parameters: dict[str, Any] | None = None) -> None:
         """
         Initialize the density simulation with parameters and setup.
         Parameters:
@@ -226,7 +225,7 @@ class DensitySimulation:
         full_expr = " + ".join(expr_pieces) if expr_pieces else "0.0"
         return Expression(full_expr, degree=1)
     
-    def _calculate_E(self, rho_vals: List[float]) -> Function:
+    def _calculate_E(self, rho_vals: list[float]) -> Function:
         """
         Calculate the modulus of elasticity (E) based on the density values.
         :param rho_vals: List of density values.

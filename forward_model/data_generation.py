@@ -4,7 +4,7 @@ import logging
 import os
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Dict, Tuple, List
+from typing import Dict, Tuple, List, Any
 
 import numpy as np
 
@@ -28,7 +28,7 @@ class TrainingDataGenerator:
         self.initial_density: np.ndarray = initial_density
         self.time_steps: int = 100
         self.dt: float = 1.0
-        self.parameters: Dict = self._load_parameters()
+        self.parameters: Dict[str, Any] | None = self._load_parameters()
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
 

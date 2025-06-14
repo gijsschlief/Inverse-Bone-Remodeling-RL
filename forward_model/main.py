@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Dict, Union
+from typing import Any, Dict
 from pathlib import Path
 
 import numpy as np
@@ -13,7 +13,7 @@ def forward_model(
     initial_density: np.ndarray,
     time_steps: int = 100,
     dt: float = 1.0,
-    parameters: Dict[str, Union[str, float]] = {}
+    parameters: Dict[str, Any] | None = None
 ) -> np.ndarray:
     """
     Calculate the bone density profile based on the force locations on the model.
