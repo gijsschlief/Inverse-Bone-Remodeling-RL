@@ -1,20 +1,24 @@
 import time
 from pathlib import Path
+from typing import Union
 
 from fenics import *
 import numpy as np
+import ufl
 
 class DensitySimulation:
-    def __init__(self, force_profile, initial_density, time_steps, dt, parameters):
+    def __init__(self, force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int = 100, dt: int = 1, parameters: dict = {}) -> None:
         """
         Initialize the density simulation with parameters and setup.
-        :param force_profile: Force profile matrix.
-        :param initial_density: Initial bone density matrix.
-        :param time_steps: Number of time steps for the simulation.
-        :param dt: Time step size.
-        :param parameters: Dictionary containing simulation parameters.
+        Parameters:
+            force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left and right and n is the exact location in that row.
+            initial_density (np.ndarray): Initial bone density matrix.
+            time_steps (int): Number of time steps for the simulation.
+            dt (Union[int, float]): Time step size.
+            parameters (dict): Dictionary containing simulation parameters.
         """
         self.initialize_parameters(force_profile, initial_density, time_steps, dt, parameters)
+        self.validate_parameters()
         self.setup_mesh_and_spaces()
         self.initialize_density()
         self.setup_boundary_conditions()
@@ -55,7 +59,52 @@ class DensitySimulation:
         self.save = parameters.get('save', False)  # Flag to save output files
         self.convergence_eps = parameters.get('convergence_eps', 1E-6)  # Convergence threshold for density change
 
-    def setup_mesh_and_spaces(self):
+    def validate_parameters(self) -> None:
+        """
+        This function tests if the inputs are valid for the forward model and raises errors for invalid inputs.
+
+        Parameters:
+            force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left and right and n is the exact location in that row.
+            initial_density (np.ndarray): Initial bone density matrix.
+            time_steps (int): Number of time steps for the simulation.
+            dt (Union[int, float]): Time step size.
+            parameters (dict): Dictionary containing simulation parameters.
+
+        Returns:
+            None: If all inputs are valid.
+        """
+        if not isinstance(self.force_profile, np.ndarray):
+            raise TypeError("force_profile must be a numpy array.")
+        if not isinstance(self.density_profile, np.ndarray):
+            raise TypeError("initial_density must be a numpy array.")
+        if not isinstance(self.time_steps, int) or self.time_steps <= 0:
+            raise ValueError("time_steps must be a positive integer.")
+        if not isinstance(self.dt, (int, float)) or self.dt <= 0:
+            raise ValueError("dt must be a positive number.")
+        if not isinstance(self.file_location, str):
+            raise TypeError("file_location must be a string.")
+        if not isinstance(self.rho_min, (int, float)):
+            raise TypeError("rho_min must be a number.")
+        if not isinstance(self.rho_max, (int, float)):
+            raise TypeError("rho_max must be a number.")
+        if self.rho_min < 0 or self.rho_max <= self.rho_min:
+            raise ValueError("rho_min must be non-negative and rho_max must be greater than rho_min.")
+        if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != max(self.density_profile.shape):
+            raise ValueError("force_profile must have 3 rows and columns equal to the maximum of initial_density dimensions.")
+        if np.isnan(self.force_profile).any():
+            raise ValueError("force_profile contains NaN values.")
+        if np.isnan(self.density_profile).any():
+            raise ValueError("initial_density contains NaN values.")
+        if not (self.rho_min <= self.density_profile).all() or not (self.density_profile <= self.rho_max).all():
+            raise ValueError("initial_density values must be between rho_min and rho_max.")
+        if not (0 <= self.dt <= 1):
+            raise ValueError("dt must be between 0 and 1.")
+        if not (0 <= self.time_steps <= 1000):
+            raise ValueError("time_steps must be between 0 and 1000.")
+        # If all checks pass, return None indicating no errors
+        return None
+
+    def setup_mesh_and_spaces(self) -> None:
         self.mesh = UnitSquareMesh(self.X, self.Y, 'left')
         self.V = VectorFunctionSpace(self.mesh, "P", 1)
         self.V_ele = FunctionSpace(self.mesh, "DG", 0)
@@ -65,42 +114,42 @@ class DensitySimulation:
         self.u_trial = TrialFunction(self.V)
         self.cnt_cells = self.mesh.num_cells()
 
-    def initialize_density(self):
+    def initialize_density(self) -> None:
         self.rho_val = [self.rho0 for _ in range(self.mesh.num_cells())]
         self.updated_rho_val = self.rho_val[:]
         self.cnt_cell_converged = [0 for _ in range(self.mesh.num_cells())]
 
-    def setup_boundary_conditions(self):
-        def bottom_fixed_boundary(x, on_boundary):
+    def setup_boundary_conditions(self) -> None:
+        def bottom_fixed_boundary(x, on_boundary) -> bool:
             return near(x[0], 0, self.tolerance) and near(x[1], 0, self.tolerance)
 
-        def bottom_right_boundary(x, on_boundary):
+        def bottom_right_boundary(x, on_boundary) -> bool:
             return near(x[1], 0, self.tolerance) and x[0] > 0
 
         bc_fixed = DirichletBC(self.V, Constant((0., 0.)), bottom_fixed_boundary, method='pointwise')
         bc_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_right_boundary)
         self.bcs = [bc_fixed, bc_roller]
 
-    def setup_subdomains(self):
+    def setup_subdomains(self) -> None:
         class Top(SubDomain):
-            def __init__(self, tolerance=1E-14):
+            def __init__(self, tolerance: float = 1E-14) -> None:
                 super().__init__()
                 self.tolerance = tolerance
-            def inside(self, x, on_boundary):
+            def inside(self, x, on_boundary) -> bool:
                 return near(x[1], 1, self.tolerance) and on_boundary
 
         class Right(SubDomain):
-            def __init__(self, tolerance=1E-14):
+            def __init__(self, tolerance: float = 1E-14) -> None:
                 super().__init__()
                 self.tolerance = tolerance
-            def inside(self, x, on_boundary):
+            def inside(self, x, on_boundary) -> bool:
                 return near(x[0], 1, self.tolerance) and on_boundary
             
         class Left(SubDomain):
-            def __init__(self, tolerance=1E-14):
+            def __init__(self, tolerance: float = 1E-14) -> None:
                 super().__init__()
                 self.tolerance = tolerance
-            def inside(self, x, on_boundary):
+            def inside(self, x, on_boundary) -> bool:
                 return near(x[0], 0, self.tolerance) and on_boundary
         
 
@@ -111,15 +160,22 @@ class DensitySimulation:
         Left().mark(self.boundaries, 3)
         self.ds = Measure('ds', domain=self.mesh, subdomain_data=self.boundaries)
     
-    def setup_force_expression(self):
+    def setup_force_expression(self) -> None:
         self.top_force_expr = self.build_force_expression(self.force_profile[0], axis='x')
         self.right_force_expr = self.build_force_expression(self.force_profile[1], axis='y')
         self.left_force_expr = self.build_force_expression(self.force_profile[2], axis='y')
 
     @staticmethod
-    def build_force_expression(force_row, axis='x'):
+    def build_force_expression(force_row: np.ndarray, axis: str = 'x') -> Expression:
         """
         Build the force expression based on the force profile.
+
+        Parameters:
+            force_row (np.ndarray): Array representing the force values along the specified axis.
+            axis (str): Axis along which the force is applied ('x' or 'y').
+
+        Returns:
+            Expression: FEniCS Expression object representing the force profile.
         """
         expr_pieces = []
         dx = 1.0 / len(force_row)
@@ -132,7 +188,7 @@ class DensitySimulation:
         full_expr = " + ".join(expr_pieces) if expr_pieces else "0.0"
         return Expression(full_expr, degree=1)
     
-    def calculate_E(self, rho_vals):
+    def calculate_E(self, rho_vals: list[float]) -> Function:
         E_func = Function(self.V_ele)
         E_array = E_func.vector().get_local()
         for i, rho in enumerate(rho_vals):
@@ -140,27 +196,27 @@ class DensitySimulation:
         E_func.vector().set_local(E_array)
         return E_func
 
-    def calculate_Lame_coefficients(self, E_val):
+    def calculate_Lame_coefficients(self, E_val: Function) -> tuple[Function, Function]:
         mu = E_val / (2 * (1 + self.nu))
         lmbda = (E_val * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
         return mu, lmbda
 
-    def epsilon(self, u):
+    def epsilon(self, u: Function) -> ufl.tensors.ListTensor:
         return 0.5 * (grad(u) + grad(u).T)
 
-    def sigma(self, u, mu, lmbda):
+    def sigma(self, u: Function, mu: Function, lmbda: Function) -> ufl.tensors.ListTensor:
         return lmbda * div(u) * Identity(self.d) + 2 * mu * self.epsilon(u)
-
-    def calculate_SED(self, epsilon_val, sigma_val):
+    
+    def calculate_SED(self, epsilon_val: ufl.tensors.ListTensor, sigma_val: ufl.tensors.ListTensor) -> tuple[np.ndarray, Function]:
         SED_val = 0.5 * inner(sigma_val, epsilon_val)
         SED_plot = project(SED_val, self.V_ele)
         return SED_plot.vector().get_local(), SED_plot
 
-    def calculate_Density_change(self, rho_vals, SED):
+    def calculate_Density_change(self, rho_vals: list[float], SED: np.ndarray) -> tuple[Function, list[float], list[int]]:
         rho_plot = Function(self.V_ele)
         rho_array = rho_plot.vector().get_local()
         stimulus = np.zeros_like(rho_array)
-        change_in_density = []
+        change_in_density: list[float] = []
 
         for i, SED_val in enumerate(SED):
             if self.cnt_cell_converged[i] == 0:
@@ -187,7 +243,7 @@ class DensitySimulation:
         rho_plot.vector().set_local(rho_array)
         return rho_plot, list(rho_array), self.cnt_cell_converged
 
-    def run(self):
+    def run(self) -> None:
         self.start_time = time.time()
         t = 0
         while t <= self.T:
@@ -216,7 +272,7 @@ class DensitySimulation:
             self.mu, self.lmbda = self.calculate_Lame_coefficients(self.E0)
             t += self.dt
 
-    def get_final_density(self):
+    def get_final_density(self) -> np.ndarray:
         """
         Get the final density profile after the simulation.
         :return: Final density profile as a NumPy array.
@@ -224,7 +280,7 @@ class DensitySimulation:
         half_size = len(self.updated_rho_val) // 2
         return np.array(self.updated_rho_val[:half_size]).reshape((self.X, self.Y))
 
-    def plot_density(self):
+    def plot_density(self) -> None:
         """
         Plot the final density profile using pyvista.
         """

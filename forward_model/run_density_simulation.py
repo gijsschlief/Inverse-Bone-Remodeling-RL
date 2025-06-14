@@ -1,0 +1,83 @@
+import argparse
+import logging
+import json
+from pathlib import Path
+
+import numpy as np
+from fenics import set_log_level, LogLevel
+
+from forward_model.main import forward_model
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def main() -> None:
+    """
+    Main function to run the forward model simulation.
+    This function parses command line arguments and initializes the simulation.
+    It sets up the force profile and parameters, runs the simulation, and logs the results.
+    """
+    parser = argparse.ArgumentParser(description="Run the forward model simulation.")
+    parser.add_argument("--time_steps", type=int, help="Number of time steps for the simulation.")
+    parser.add_argument("--dt", type=float, help="Time step size.")
+    parser.add_argument("--rho_min", type=float, help="Minimum bone density.")
+    parser.add_argument("--rho_max", type=float, help="Maximum bone density.")
+    parser.add_argument("--tolerance", type=float, help="Tolerance for convergence criteria.")
+    parser.add_argument("--B", type=float, help="Coefficient for density change.")
+    parser.add_argument("--k", type=float, help="Threshold for density change.")
+    parser.add_argument("--nu", type=float, help="Poisson's ratio.")
+    parser.add_argument("--M", type=float, help="Modulus of elasticity.")
+    parser.add_argument("--gamma", type=float, help="Exponent for density elasticity.")
+    parser.add_argument("--file_name", type=str, help="Base name for output files.")
+    parser.add_argument("--file_extension", type=str, help="File extension for output files.")
+    parser.add_argument("--save", action="store_true", help="Save the simulation results.")
+    parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
+    parser.add_argument("--convergence_eps", type=float, help="Convergence threshold for density change.")
+    parser.add_argument("--file_location", type=str, help="Location of the data files.")
+    parser.add_argument("--reset", action="store_true", help="Reset parameters to default by deleting parameters.json.")
+
+    args = parser.parse_args()
+
+    parameters_file = Path(__file__).resolve().parent / "parameters.json"
+
+    if args.reset:
+        if parameters_file.exists():
+            parameters_file.unlink()  # Delete the parameters.json file
+            logging.info(f"Parameters reset to default by deleting {parameters_file}.")
+        else:
+            logging.info("No parameters.json file found to reset.")
+        return
+
+    set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
+    logging.info("Initializing force profile and parameters...")
+    force_profile = np.zeros((3, 40))  # Initialize an empty force profile
+    force_profile[0, 0] = 3  # Set a force at location (0, 2) Top
+    force_profile[0, 39] = 3  # Set a force at location (1, 5) Left
+    force_profile[2, 8] = 0  # Set a force at location (2, 8) Left
+    initial_density = np.full((40, 40), 0.8)  # Initial density matrix
+
+    # Load existing parameters from JSON file if it exists
+    if parameters_file.exists():
+        with open(parameters_file, "r") as f:
+            parameters = json.load(f)
+    else:
+        parameters = {}
+
+    # Update parameters with command-line arguments
+    for key, value in vars(args).items():
+        if value is not None:
+            parameters[key] = value
+
+    # Save updated parameters to the JSON file
+    with open(parameters_file, "w") as f:
+        json.dump(parameters, f, indent=4)
+
+    logging.info(f"Parameters saved to {parameters_file}")
+
+    logging.info("Running forward model simulation...")
+    final_density = forward_model(force_profile, initial_density, parameters.get('time_steps', 100), parameters.get('dt', 1.0), parameters)
+    logging.info("Simulation completed.")
+    logging.info("Force Profile: %s", force_profile)
+    logging.info("Final Density: %s", final_density)
+
+if __name__ == "__main__":
+    main()

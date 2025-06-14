@@ -1,4 +1,3 @@
-import argparse
 import datetime
 import json
 import logging
@@ -11,7 +10,6 @@ import numpy as np
 from fenics import set_log_level, LogLevel
 
 from forward_model.main import forward_model
-from forward_model.data_serialization import serialize_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
@@ -59,7 +57,7 @@ class TrainingDataGenerator:
             logging.error(f"Error in sample {i}: {e} | Force profile: {force_profile}")
             output = np.full(self.initial_density.shape, np.nan)
 
-        return serialize_data(
+        return self.serialize_data(
             serial_number=i + 1,
             force_profile=force_profile,
             result=output,
@@ -154,35 +152,21 @@ class TrainingDataGenerator:
             json.dump(results, f, indent=4)
         logging.info(f"Edge case data saved to {filepath}")
 
-
-def main():
-    parser = argparse.ArgumentParser(description="Generate training or edge case data for the forward model.")
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
-    parser.add_argument("--output_dir", type=str, default=str(default_dir), help="Directory to save output.")
-    parser.add_argument("--num_samples", type=int, default=10, help="Number of samples to generate.")
-    parser.add_argument("--force_max", type=int, default=2, help="Maximum force magnitude.")
-    parser.add_argument("--force_count_max", type=int, default=7, help="Max number of force applications.")
-    parser.add_argument("--batch_seed", type=int, default=np.random.randint(0, 1_000_000), help="Random seed.")
-    parser.add_argument("--mode", type=str, choices=["parallel", "sequential", "edge"], default="parallel",
-                        help="Generation mode: 'parallel', 'sequential', or 'edge'.")
-
-    args = parser.parse_args()
-    set_log_level(LogLevel.ERROR)
-
-    generator = TrainingDataGenerator(
-        output_dir=args.output_dir,
-        force_max=args.force_max,
-        force_count_max=args.force_count_max,
-        batch_seed=args.batch_seed
-    )
-
-    if args.mode == "parallel":
-        generator.generate_parallel(args.num_samples)
-    elif args.mode == "sequential":
-        generator.generate_sequential(args.num_samples)
-    elif args.mode == "edge":
-        generator.generate_edge_cases(args.num_samples)
-
-
-if __name__ == "__main__":
-    main()
+    @staticmethod
+    def serialize_data(
+        serial_number: int, 
+        force_profile: np.ndarray, 
+        result: np.ndarray, 
+        error: str = None) -> Dict:
+        """
+        Serialize the data into a dictionary format for saving or further processing.
+        If there is no error, exclude the error field from the dictionary.
+        """
+        serialized_data = {
+            "serial_number": serial_number,
+            "force_profile": force_profile.tolist(),
+            "final_output_density": result.tolist(),
+        }
+        if error is not None:
+            serialized_data["error"] = error
+        return serialized_data
