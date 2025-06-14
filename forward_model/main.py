@@ -52,6 +52,15 @@ def forward_model(
             - 'rho_max': Maximum bone density.
             - 'tolerance': Tolerance for convergence criteria.
             - 'plot': Whether to plot the density simulation.
+            - 'save': Whether to save the simulation results.
+            - 'B': Coefficient for density change.
+            - 'k': Threshold for density change.
+            - 'nu': Poisson's ratio.
+            - 'M': Modulus of elasticity.
+            - 'gamma': Exponent for density elasticity.
+            - 'file_name': Base name for output files.
+            - 'file_extension': File extension for output files.
+            - 'convergence_eps': Convergence threshold for density change.
 
     Returns:
         np.ndarray: Updated bone density profile after the simulation.
