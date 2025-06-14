@@ -1,0 +1,17 @@
+{
+    "file_location": "/home/gijs/Desktop/Thesis/data/fenics",
+    "rho_min": 0.01,
+    "rho_max": 1.74,
+    "tolerance": 1e-14,
+    "save": false,
+    "plot": false,
+    "B": 0.1,
+    "k": 0.01,
+    "nu": 0.3,
+    "M": 1.0,
+    "gamma": 2.0,
+    "file_name": "density_simulation",
+    "file_extension": ".pvd",
+    "convergence_eps": 1e-06,
+    "reset": false
+}

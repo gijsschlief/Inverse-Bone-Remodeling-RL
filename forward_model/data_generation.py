@@ -15,7 +15,10 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 
 def generate_training_data(
     output_dir: str, 
-    num_samples: int = 100
+    num_samples: int,
+    force_max: int,
+    force_count_max: int,
+    batch_seed: int
 ) -> None:
 
     """
@@ -25,6 +28,9 @@ def generate_training_data(
     Args:
         output_dir (str): Directory to save the output file.
         num_samples (int): Number of random force profiles to generate.
+        force_max (int): Maximum force applied in the force profile.
+        force_count_max (int): Maximum number of forces applied in the force profile.
+        batch_seed (int): Seed for random number generation to ensure reproducibility.
 
     Returns:
         None: The function saves the training data to a JSON file in the specified directory.
@@ -34,33 +40,43 @@ def generate_training_data(
     os.makedirs(output_dir, exist_ok=True)
     
     # Create a timestamped filename
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"training_data_{timestamp}.json"
-    filepath = os.path.join(output_dir, filename)
+    os.makedirs(output_dir, exist_ok=True)
+    timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+    filepath = os.path.join(output_dir, f"training_batch_{batch_seed}_samples_{num_samples}_{timestamp}.json")
 
     # Define parameters for the forward model
     initial_density = np.full((10, 10), 0.8) 
     time_steps = 100
     dt = 1.0 
-    parameters = {
-        'file_location': output_dir,
-        'rho_min': 0.01,
-        'rho_max': 1.74,
-    }
+    parameters = {}
+
+    # Read parameters from parameters.json
+    parameters_file = Path(__file__).resolve().parent / "parameters.json"
+    if parameters_file.exists():
+        with open(parameters_file, 'r') as f:
+            loaded_parameters = json.load(f)
+            time_steps = loaded_parameters.get('time_steps', time_steps)
+            dt = loaded_parameters.get('dt', dt)
+            parameters.update(loaded_parameters)
+    else:
+        logging.warning(f"parameters.json not found in {parameters_file}. Using default values.")
+
+    logging.info("Starting simulation...")
+    logging.info(f"Using batch seed: {batch_seed} to generate {num_samples} samples.")
 
     # Generate random force profiles and collect results
     data = []
     for i in range(num_samples):
+        np.random.seed(batch_seed + i)
         force_profile = np.zeros((3, max(initial_density.shape)))
-        force_max = 3  # Define the maximum force value
-        num_forces = np.random.randint(1, 4)  # Random number of forces between 1 and 3
+        num_forces = np.random.randint(1, force_count_max)  # Random number of forces between 1 and force_count_max
 
         # Randomly select three unique locations on the side of the density matrix
         locations = np.random.choice(np.prod(force_profile.shape), num_forces, replace=False)
         for loc in locations:
             row, col = divmod(loc, force_profile.shape[1])
             force_profile[row, col] = np.random.uniform(-force_max, force_max)
-
+            force_profile[row, col] = np.random.uniform(-force_max, force_max)  # Use force_max from function arguments
         e = None  # Initialize e to ensure it is always defined
         try:
             output = forward_model(force_profile, initial_density, time_steps, dt, parameters)
@@ -114,13 +130,31 @@ def main() -> None:
     parser.add_argument(
         "--num_samples", 
         type=int, 
-        default=100, 
-        help="Number of random force profiles to generate (default: 100)."
+        default=10, 
+        help="Number of random force profiles to generate."
+    )
+    parser.add_argument(
+        "--force_max", 
+        type=int, 
+        default=2, 
+        help="Maximum force applied in the force profile."
+    )
+    parser.add_argument(
+        "--force_count_max", 
+        type=int, 
+        default=7, 
+        help="Maximum number of forces applied in the force profile."
+    )
+    parser.add_argument(
+        "--batch_seed", 
+        type=int, 
+        default=np.random.randint(0, 1_000_000), 
+        help="Seed for random number generation to ensure reproducibility."
     )
     args = parser.parse_args()
 
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
-    generate_training_data(output_dir=args.output_dir, num_samples=args.num_samples)
+    generate_training_data(output_dir=args.output_dir, num_samples=args.num_samples, force_max=args.force_max, force_count_max=args.force_count_max, batch_seed=args.batch_seed)
     return
 
 if __name__ == "__main__":

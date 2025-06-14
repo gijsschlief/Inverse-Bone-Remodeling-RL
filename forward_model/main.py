@@ -2,6 +2,7 @@ import argparse
 import logging
 from typing import TypedDict
 from pathlib import Path
+import json
 
 import numpy as np
 from fenics import set_log_level, LogLevel
@@ -114,24 +115,35 @@ def main() -> None:
     It sets up the force profile and parameters, runs the simulation, and logs the results.
     """
     parser = argparse.ArgumentParser(description="Run the forward model simulation.")
-    parser.add_argument("--time_steps", type=int, default=100, help="Number of time steps for the simulation.")
-    parser.add_argument("--dt", type=float, default=1.0, help="Time step size.")
-    parser.add_argument("--rho_min", type=float, default=0.01, help="Minimum bone density.")
-    parser.add_argument("--rho_max", type=float, default=1.74, help="Maximum bone density.")
-    parser.add_argument("--tolerance", type=float, default=1E-14, help="Tolerance for convergence criteria.")
-    parser.add_argument("--B", type=float, default=0.1, help="Coefficient for density change.")
-    parser.add_argument("--k", type=float, default=0.01, help="Threshold for density change.")
-    parser.add_argument("--nu", type=float, default=0.3, help="Poisson's ratio.")
-    parser.add_argument("--M", type=float, default=1.0, help="Modulus of elasticity.")
-    parser.add_argument("--gamma", type=float, default=2.0, help="Exponent for density elasticity.")
-    parser.add_argument("--file_name", type=str, default="density_simulation", help="Base name for output files.")
-    parser.add_argument("--file_extension", type=str, default=".pvd", help="File extension for output files.")
+    parser.add_argument("--time_steps", type=int, help="Number of time steps for the simulation.")
+    parser.add_argument("--dt", type=float, help="Time step size.")
+    parser.add_argument("--rho_min", type=float, help="Minimum bone density.")
+    parser.add_argument("--rho_max", type=float, help="Maximum bone density.")
+    parser.add_argument("--tolerance", type=float, help="Tolerance for convergence criteria.")
+    parser.add_argument("--B", type=float, help="Coefficient for density change.")
+    parser.add_argument("--k", type=float, help="Threshold for density change.")
+    parser.add_argument("--nu", type=float, help="Poisson's ratio.")
+    parser.add_argument("--M", type=float, help="Modulus of elasticity.")
+    parser.add_argument("--gamma", type=float, help="Exponent for density elasticity.")
+    parser.add_argument("--file_name", type=str, help="Base name for output files.")
+    parser.add_argument("--file_extension", type=str, help="File extension for output files.")
     parser.add_argument("--save", action="store_true", help="Save the simulation results.")
     parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
-    parser.add_argument("--convergence_eps", type=float, default=1E-6, help="Convergence threshold for density change.")
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
-    parser.add_argument("--file_location", type=str, default=str(default_dir), help="Location of the data files.")
+    parser.add_argument("--convergence_eps", type=float, help="Convergence threshold for density change.")
+    parser.add_argument("--file_location", type=str, help="Location of the data files.")
+    parser.add_argument("--reset", action="store_true", help="Reset parameters to default by deleting parameters.json.")
+
     args = parser.parse_args()
+
+    parameters_file = Path(__file__).resolve().parent / "parameters.json"
+
+    if args.reset:
+        if parameters_file.exists():
+            parameters_file.unlink()  # Delete the parameters.json file
+            logging.info(f"Parameters reset to default by deleting {parameters_file}.")
+        else:
+            logging.info("No parameters.json file found to reset.")
+        return
 
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
     logging.info("Initializing force profile and parameters...")
@@ -141,25 +153,26 @@ def main() -> None:
     force_profile[2, 8] = 0  # Set a force at location (2, 8) Left
     initial_density = np.full((40, 40), 0.8)  # Initial density matrix
 
-    parameters = {
-        'file_location': args.file_location,
-        'rho_min': args.rho_min,
-        'rho_max': args.rho_max,
-        'tolerance': args.tolerance,
-        'save': args.save,
-        'plot': args.plot,
-        'B': args.B,
-        'k': args.k,
-        'nu': args.nu,
-        'M': args.M,
-        'gamma': args.gamma,
-        'file_name': args.file_name,
-        'file_extension': args.file_extension,
-        'convergence_eps': args.convergence_eps
-    }
+    # Load existing parameters from JSON file if it exists
+    if parameters_file.exists():
+        with open(parameters_file, "r") as f:
+            parameters = json.load(f)
+    else:
+        parameters = ForwardModelParameters()
+
+    # Update parameters with command-line arguments
+    for key, value in vars(args).items():
+        if value is not None:
+            parameters[key] = value
+
+    # Save updated parameters to the JSON file
+    with open(parameters_file, "w") as f:
+        json.dump(parameters, f, indent=4)
+
+    logging.info(f"Parameters saved to {parameters_file}")
 
     logging.info("Running forward model simulation...")
-    final_density = forward_model(force_profile, initial_density, args.time_steps, args.dt, parameters)
+    final_density = forward_model(force_profile, initial_density, parameters.get('time_steps', 100), parameters.get('dt', 1.0), parameters)
     logging.info("Simulation completed.")
     logging.info("Force Profile: %s", force_profile)
     logging.info("Final Density: %s", final_density)
