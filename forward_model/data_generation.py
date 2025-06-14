@@ -23,6 +23,7 @@ class TrainingDataGenerator:
         self.time_steps = 100
         self.dt = 1.0
         self.parameters = self._load_parameters()
+        self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
 
     def _load_parameters(self) -> Dict:
@@ -36,6 +37,22 @@ class TrainingDataGenerator:
         else:
             logging.warning(f"parameters.json not found at {parameters_file}. Using default values.")
             return {}
+
+    def _validate_input(self) -> None:
+        """
+        Validate the output directory, maximum force, maximum force count and batch seed.
+        """
+        if not isinstance(self.output_dir, Path):
+            raise ValueError("output_dir must be a Path object.")
+        if not self.output_dir.exists():
+            raise ValueError(f"Output directory {self.output_dir} does not exist.")
+        if not isinstance(self.force_max, int) or self.force_max <= 0:
+            raise ValueError("force_max must be a positive integer.")
+        if not isinstance(self.force_count_max, int) or self.force_count_max <= 0:
+            raise ValueError("force_count_max must be a positive integer.")
+        if not isinstance(self.batch_seed, int):
+            raise ValueError("batch_seed must be an integer.")
+        return None
 
     def _generate_random_force_profile(self, sample_index: int) -> np.ndarray:
         np.random.seed(self.batch_seed + sample_index)

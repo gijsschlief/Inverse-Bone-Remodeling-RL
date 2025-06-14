@@ -91,3 +91,6 @@ def test_forward_model_execution(mock_argparse, mock_forward_model):
     assert args[1].shape == (40, 40)  # Initial density
     assert args[2] == 100  # Time steps
     assert args[3] == 1.0  # Time step size
+
+if __name__ == "__main__":
+    pytest.main([__file__])

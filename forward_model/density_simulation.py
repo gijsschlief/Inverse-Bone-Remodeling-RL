@@ -97,8 +97,8 @@ class DensitySimulation:
             raise ValueError("initial_density contains NaN values.")
         if not (self.rho_min <= self.density_profile).all() or not (self.density_profile <= self.rho_max).all():
             raise ValueError("initial_density values must be between rho_min and rho_max.")
-        if not (0 <= self.dt <= 1):
-            raise ValueError("dt must be between 0 and 1.")
+        if not (0 < self.dt <= self.time_steps):
+            raise ValueError("dt must be a positive number and less than or equal to time_steps.")
         if not (0 <= self.time_steps <= 1000):
             raise ValueError("time_steps must be between 0 and 1000.")
         # If all checks pass, return None indicating no errors
@@ -261,7 +261,6 @@ class DensitySimulation:
 
             if t == self.T or sum(self.cnt_cell_converged) == self.cnt_cells:
                 if self.save == True:
-                    from pathlib import Path
                     path = Path(self.file_location)
                     path.mkdir(parents=True, exist_ok=True)
                     File(self.file_location + self.file_name + self.file_extension) << rho_func

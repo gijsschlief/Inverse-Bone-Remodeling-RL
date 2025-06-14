@@ -16,6 +16,7 @@ def main() -> None:
     This function parses command line arguments and initializes the simulation.
     It sets up the force profile and parameters, runs the simulation, and logs the results.
     """
+    # Data
     parser = argparse.ArgumentParser(description="Run the forward model simulation.")
     parser.add_argument("--time_steps", type=int, help="Number of time steps for the simulation.")
     parser.add_argument("--dt", type=float, help="Time step size.")
@@ -29,13 +30,18 @@ def main() -> None:
     parser.add_argument("--gamma", type=float, help="Exponent for density elasticity.")
     parser.add_argument("--file_name", type=str, help="Base name for output files.")
     parser.add_argument("--file_extension", type=str, help="File extension for output files.")
-    parser.add_argument("--save", action="store_true", help="Save the simulation results.")
-    parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
     parser.add_argument("--convergence_eps", type=float, help="Convergence threshold for density change.")
     parser.add_argument("--file_location", type=str, help="Location of the data files.")
-    parser.add_argument("--reset", action="store_true", help="Reset parameters to default by deleting parameters.json.")
 
+    # Actions
+    parser.add_argument("--reset", action="store_true", help="Reset parameters to default by deleting parameters.json.")
+    parser.add_argument("--save", action="store_true", help="Save the simulation results.")
+    parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
+
+    # Ensure that if plot is activated, save is automatically activated
     args = parser.parse_args()
+    if args.plot:
+        args.save = True
 
     parameters_file = Path(__file__).resolve().parent / "parameters.json"
 
@@ -62,9 +68,9 @@ def main() -> None:
     else:
         parameters = {}
 
-    # Update parameters with command-line arguments
+    # Update parameters with command-line arguments, excluding reset, save, and plot
     for key, value in vars(args).items():
-        if value is not None:
+        if key not in {"reset", "save", "plot"} and value is not None:
             parameters[key] = value
 
     # Save updated parameters to the JSON file

@@ -52,7 +52,7 @@ def forward_model(
     simulation.run()
 
     # Plot density if the plot parameter is enabled
-    if parameters.get('plot', False):
+    if parameters.get('plot', True):
         simulation.plot_density()
     
     # Convert the final density function to a NumPy array

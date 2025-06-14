@@ -1,8 +1,10 @@
-import pytest
 from unittest.mock import patch, MagicMock
 import argparse
-import numpy as np
 from pathlib import Path
+
+import pytest
+import numpy as np
+
 from forward_model.run_data_generation import main
 
 @pytest.fixture
@@ -47,3 +49,6 @@ def test_default_arguments(mock_argparse):
     assert mock_argparse.force_count_max == 7
     assert mock_argparse.batch_seed == 12345
     assert mock_argparse.mode == "parallel"
+
+if __name__ == "__main__":
+    pytest.main([__file__])
