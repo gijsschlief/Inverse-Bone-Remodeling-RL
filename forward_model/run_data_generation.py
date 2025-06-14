@@ -11,6 +11,12 @@ def main() -> None:
     default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parser.add_argument("--output_dir", type=str, default=str(default_dir), help="Directory to save output.")
     parser.add_argument("--num_samples", type=int, default=10, help="Number of samples to generate.")
+    parser.add_argument("--initial_density_value", type=float, default=0.8,
+                        help="Initial density value to fill the array.")
+    parser.add_argument("--x_shape", type=int, default=10,
+                        help="Number of rows in the initial density array.")
+    parser.add_argument("--y_shape", type=int, default=10,
+                        help="Number of columns in the initial density array.")
     parser.add_argument("--force_max", type=int, default=2, help="Maximum force magnitude.")
     parser.add_argument("--force_count_max", type=int, default=7, help="Max number of force applications.")
     parser.add_argument("--batch_seed", type=int, default=np.random.randint(0, 1_000_000), help="Random seed.")
@@ -25,8 +31,11 @@ def main() -> None:
     else:
         set_log_level(LogLevel.ERROR)
 
+    initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
+
     generator = TrainingDataGenerator(
         output_dir=args.output_dir,
+        initial_density=initial_density,
         force_max=args.force_max,
         force_count_max=args.force_count_max,
         batch_seed=args.batch_seed

@@ -14,15 +14,22 @@ from forward_model.main import forward_model
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 class TrainingDataGenerator:
-    def __init__(self, output_dir: str, force_max: int = 2, force_count_max: int = 7, batch_seed: int = 0):
-        self.output_dir = Path(output_dir)
-        self.force_max = force_max
-        self.force_count_max = force_count_max
-        self.batch_seed = batch_seed
-        self.initial_density = np.full((10, 10), 0.8)
-        self.time_steps = 100
-        self.dt = 1.0
-        self.parameters = self._load_parameters()
+    def __init__(
+        self, 
+        output_dir: str, 
+        initial_density: np.ndarray = np.full((10, 10), 0.8), 
+        force_max: int = 2, 
+        force_count_max: int = 7, 
+        batch_seed: int = 0
+    ):
+        self.output_dir: Path = Path(output_dir)
+        self.force_max: int = force_max
+        self.force_count_max: int = force_count_max
+        self.batch_seed: int = batch_seed
+        self.initial_density: np.ndarray = initial_density
+        self.time_steps: int = 0
+        self.dt: float = 0.0
+        self.parameters: Dict = self._load_parameters()
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
 
@@ -48,6 +55,8 @@ class TrainingDataGenerator:
             raise ValueError(f"Output directory {self.output_dir} does not exist.")
         if not isinstance(self.force_max, int) or self.force_max <= 0:
             raise ValueError("force_max must be a positive integer.")
+        if not isinstance(self.initial_density, np.ndarray):
+            raise ValueError("initial_density must be a numpy ndarray.")
         if not isinstance(self.force_count_max, int) or self.force_count_max <= 0:
             raise ValueError("force_count_max must be a positive integer.")
         if not isinstance(self.batch_seed, int):

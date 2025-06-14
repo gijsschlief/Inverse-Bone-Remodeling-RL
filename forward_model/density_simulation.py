@@ -264,7 +264,7 @@ class DensitySimulation:
                 if self.save == True:
                     path = Path(self.file_location)
                     path.mkdir(parents=True, exist_ok=True)
-                    File(self.file_location + self.file_name + self.file_extension) << rho_func
+                    File(self.file_location + '/' + self.file_name + self.file_extension) << rho_func
                 if sum(self.cnt_cell_converged) == self.cnt_cells:
                     break
 
@@ -288,7 +288,7 @@ class DensitySimulation:
             print("Plotting is disabled. Set 'save' parameter to True to enable plotting.")
             return
         import pyvista as pv
-        filename = self.file_location + self.file_name + self.file_extension
+        filename = self.file_location + '/' + self.file_name + self.file_extension
         reader = pv.get_reader(filename)
         reader.set_active_time_point(0)
 
