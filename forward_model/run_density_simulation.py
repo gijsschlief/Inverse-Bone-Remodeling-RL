@@ -71,10 +71,12 @@ def main() -> None:
             logging.info("No parameters.json file found to reset.")
         return
 
-    set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
+    # Initialize logging based on verbosity
     if args.verbose:
         logging.info("Initializing force profile and parameters...")
         set_log_level(LogLevel.INFO)  # Set FEniCS log level to INFO for verbose output
+    else:
+        set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
 
     initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
 
@@ -100,8 +102,7 @@ def main() -> None:
                 logging.warning(f"Invalid force argument format: {force}. Expected format: side,location,magnitude")
     else:
         logging.warning("No forces specified. Using default force profile.")
-        force_profile[2, 2] = 3
-
+        force_profile[0, 0] = 15
 
     # Load existing parameters from JSON file if it exists
     if parameters_file.exists():

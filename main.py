@@ -63,6 +63,8 @@ def main():
     args.func(args)
 
 if __name__ == "__main__":
-    default_dir = Path(__file__).resolve().parent
-    sys.path.insert(0, str(default_dir))
-    main()
+    #default_dir = Path(__file__).resolve().parent
+    #sys.path.insert(0, str(default_dir))
+    #main()
+    import numpy as np
+    print(np.version.full_version)

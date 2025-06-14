@@ -391,3 +391,64 @@ class DensitySimulation:
         except Exception as e:
             logging.error(f"Failed to plot the result: {e}")
             return
+        self.visualize_force_with_pyvista()
+        
+    def visualize_force_with_pyvista(self):
+        """
+        Visualize boundary forces using self.force_profile as magnitudes.
+        Assumes self.force_profile has shape (3, N), for top, right, and left.
+        """
+        import pyvista as pv
+
+        mesh = self.mesh
+        coords = mesh.coordinates()
+        top_nodes = []
+        right_nodes = []
+        left_nodes = []
+
+        # Classify boundary nodes
+        for coord in coords:
+            if near(coord[1], 1.0, self.tolerance):  # Top boundary
+                top_nodes.append(coord)
+            elif near(coord[0], 1.0, self.tolerance):  # Right boundary
+                right_nodes.append(coord)
+            elif near(coord[0], 0.0, self.tolerance):  # Left boundary
+                left_nodes.append(coord)
+
+        # Sort nodes consistently (by x or y) to match force_profile indexing
+        top_nodes = sorted(top_nodes, key=lambda x: x[0])    # left to right
+        right_nodes = sorted(right_nodes, key=lambda x: -x[1])  # top to bottom
+        left_nodes = sorted(left_nodes, key=lambda x: -x[1])   # top to bottom
+
+        # Convert to NumPy arrays
+        top_nodes = np.array(top_nodes)
+        right_nodes = np.array(right_nodes)
+        left_nodes = np.array(left_nodes)
+
+        # Check matching shape
+        if (self.force_profile.shape[1] != len(top_nodes) or
+            self.force_profile.shape[1] != len(right_nodes) or
+            self.force_profile.shape[1] != len(left_nodes)):
+            raise ValueError("Mismatch between force_profile columns and boundary node counts.")
+
+        # Construct force vectors
+        top_forces = np.column_stack([self.force_profile[0], np.zeros_like(self.force_profile[0])])
+        right_forces = np.column_stack([np.zeros_like(self.force_profile[1]), -self.force_profile[1]])
+        left_forces = np.column_stack([np.zeros_like(self.force_profile[2]), self.force_profile[2]])
+
+        # Combine all
+        all_coords = np.vstack([top_nodes, right_nodes, left_nodes])
+        all_forces = np.vstack([top_forces, right_forces, left_forces])
+
+        # Create PyVista objects
+        points = pv.PolyData(all_coords)
+        points["force"] = all_forces
+        arrows = points.glyph(orient="force", scale=False, factor=0.05)
+
+
+        plotter = pv.Plotter()
+        grid = pv.UnstructuredGrid(self.mesh.cells(), self.mesh.cell_types(), self.mesh.coordinates())
+        plotter.add_mesh(grid, show_edges=True, opacity=0.3)
+        plotter.add_mesh(arrows, color="red", label="Forces")
+        plotter.add_legend()
+        plotter.show()
