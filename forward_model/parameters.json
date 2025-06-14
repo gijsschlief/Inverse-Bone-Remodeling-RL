@@ -4,7 +4,7 @@
     "rho_max": 1.5,
     "tolerance": 1e-14,
     "save": false,
-    "plot": true,
+    "plot": false,
     "B": 0.1,
     "k": 0.01,
     "nu": 0.3,

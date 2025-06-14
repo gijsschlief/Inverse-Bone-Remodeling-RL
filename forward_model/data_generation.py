@@ -1,9 +1,11 @@
 import argparse
 import datetime
-import os
 import json
 import logging
+import os
+from multiprocessing import Pool, cpu_count
 from pathlib import Path
+from typing import Dict, Tuple, List
 
 import numpy as np
 from fenics import set_log_level, LogLevel
@@ -13,149 +15,174 @@ from forward_model.data_serialization import serialize_data
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-def generate_training_data(
-    output_dir: str, 
-    num_samples: int,
-    force_max: int = 2,
-    force_count_max: int = 7,
-    batch_seed: int = 0
-) -> None:
+class TrainingDataGenerator:
+    def __init__(self, output_dir: str, force_max: int = 2, force_count_max: int = 7, batch_seed: int = 0):
+        self.output_dir = Path(output_dir)
+        self.force_max = force_max
+        self.force_count_max = force_count_max
+        self.batch_seed = batch_seed
+        self.initial_density = np.full((10, 10), 0.8)
+        self.time_steps = 100
+        self.dt = 1.0
+        self.parameters = self._load_parameters()
+        os.makedirs(self.output_dir, exist_ok=True)
 
-    """
-    Generates training data by creating random force profiles, running a forward model,
-    and saving the results to a timestamped file.
+    def _load_parameters(self) -> Dict:
+        parameters_file = Path(__file__).resolve().parent / "parameters.json"
+        if parameters_file.exists():
+            with open(parameters_file, 'r') as f:
+                loaded_parameters = json.load(f)
+                self.time_steps = loaded_parameters.get("time_steps", self.time_steps)
+                self.dt = loaded_parameters.get("dt", self.dt)
+                return loaded_parameters
+        else:
+            logging.warning(f"parameters.json not found at {parameters_file}. Using default values.")
+            return {}
 
-    Args:
-        output_dir (str): Directory to save the output file.
-        num_samples (int): Number of random force profiles to generate.
-        force_max (int): Maximum force applied in the force profile.
-        force_count_max (int): Maximum number of forces applied in the force profile.
-        batch_seed (int): Seed for random number generation to ensure reproducibility.
-
-    Returns:
-        None: The function saves the training data to a JSON file in the specified directory.
-    """
-
-    # Ensure the output directory exists
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Create a timestamped filename
-    os.makedirs(output_dir, exist_ok=True)
-    timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
-    filepath = os.path.join(output_dir, f"training_batch_{batch_seed}_samples_{num_samples}_{timestamp}.json")
-
-    # Define parameters for the forward model
-    initial_density = np.full((10, 10), 0.8) 
-    time_steps = 100
-    dt = 1.0 
-    parameters = {}
-
-    # Read parameters from parameters.json
-    parameters_file = Path(__file__).resolve().parent / "parameters.json"
-    if parameters_file.exists():
-        with open(parameters_file, 'r') as f:
-            loaded_parameters = json.load(f)
-            time_steps = loaded_parameters.get('time_steps', time_steps)
-            dt = loaded_parameters.get('dt', dt)
-            parameters.update(loaded_parameters)
-    else:
-        logging.warning(f"parameters.json not found in {parameters_file}. Using default values.")
-
-    logging.info("Starting simulation...")
-    logging.info(f"Using batch seed: {batch_seed} to generate {num_samples} samples.")
-
-    # Generate random force profiles and collect results
-    data = []
-    for i in range(num_samples):
-        np.random.seed(batch_seed + i)
-        force_profile = np.zeros((3, max(initial_density.shape)))
-        num_forces = np.random.randint(1, force_count_max)  # Random number of forces between 1 and force_count_max
-
-        # Randomly select three unique locations on the side of the density matrix
+    def _generate_random_force_profile(self, sample_index: int) -> np.ndarray:
+        np.random.seed(self.batch_seed + sample_index)
+        force_profile = np.zeros((3, max(self.initial_density.shape)))
+        num_forces = np.random.randint(1, self.force_count_max)
         locations = np.random.choice(np.prod(force_profile.shape), num_forces, replace=False)
         for loc in locations:
             row, col = divmod(loc, force_profile.shape[1])
-            force_profile[row, col] = np.random.uniform(-force_max, force_max)
-            force_profile[row, col] = np.random.uniform(-force_max, force_max)  # Use force_max from function arguments
-        e = None  # Initialize e to ensure it is always defined
+            force_profile[row, col] = np.random.uniform(-self.force_max, self.force_max)
+        return force_profile
+
+    def _run_sample(self, args: Tuple[int, np.ndarray]) -> Dict:
+        i, force_profile = args
+        e = None
         try:
-            output = forward_model(force_profile, initial_density, time_steps, dt, parameters)
+            output = forward_model(force_profile, self.initial_density, self.time_steps, self.dt, self.parameters)
         except Exception as ex:
             e = ex
             logging.error(f"Error in sample {i}: {e} | Force profile: {force_profile}")
-            output = np.full(initial_density.shape, np.nan)
-        
-        data_point = serialize_data(
-            force_profile=force_profile, 
-            result=output, 
+            output = np.full(self.initial_density.shape, np.nan)
+
+        return serialize_data(
             serial_number=i + 1,
-            error=str(e) if isinstance(e, Exception) else None
+            force_profile=force_profile,
+            result=output,
+            error=str(e) if e else None
         )
-        data.append(data_point)
 
-        # Save the collected data to a JSON file
-        if (i + 1) % 100 == 0 or (i + 1) == num_samples:
-            with open(filepath, 'w') as json_file:
-                json.dump(data, json_file, indent=4)
+    def generate_parallel(self, num_samples: int) -> None:
+        timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+        filepath = self.output_dir / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
 
-        # Measure and display average time for samples 2 to 12
-        if i == 1:
-            start_time = datetime.datetime.now()
-        elif i == 11:
-            end_time = datetime.datetime.now()
-            elapsed_time = (end_time - start_time).total_seconds()
-            avg_time_per_sample = elapsed_time / 10  # 10 samples (1 to 11 inclusive)
-            logging.info(f"Average time per sample (1-11): {avg_time_per_sample:.4f} seconds")
+        args = [(i, self._generate_random_force_profile(i)) for i in range(num_samples)]
 
-        # Display progress bar
-        progress = (i / num_samples) * 100
-        logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
+        with Pool(processes=cpu_count()) as pool:
+            results = []
+            for idx, result in enumerate(pool.imap_unordered(self._run_sample, args), 1):
+                results.append(result)
+                progress = (idx / num_samples) * 100
+                logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
 
-    logging.info(f"Training data saved to {filepath}")
-    return None
+        with open(filepath, 'w') as f:
+            json.dump(results, f, indent=4)
+        logging.info(f"Training data saved to {filepath}")
 
-def main() -> None:
-    """
-    Main function to parse command line arguments and generate training data.
-    It sets up the argument parser, suppresses FEniCS log messages, and calls the data generation function.
-    """
+    def generate_sequential(self, num_samples: int) -> None:
+        timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+        filepath = self.output_dir / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+
+        data = []
+        for i in range(num_samples):
+            force_profile = self._generate_random_force_profile(i)
+            start = datetime.datetime.now() if i == 1 else None
+            data_point = self._run_sample((i, force_profile))
+            end = datetime.datetime.now() if i == 11 else None
+
+            if start and end:
+                elapsed = (end - start).total_seconds() / 10
+                logging.info(f"Average time per sample (samples 2–11): {elapsed:.4f} seconds")
+
+            data.append(data_point)
+
+            # Progress log
+            progress = (i + 1) / num_samples * 100
+            logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
+
+            if (i + 1) % 100 == 0 or (i + 1) == num_samples:
+                with open(filepath, 'w') as f:
+                    json.dump(data, f, indent=4)
+
+        logging.info(f"Training data saved to {filepath}")
+
+    def _generate_edge_case_profiles(self, num_cases: int) -> List[np.ndarray]:
+        edge_cases = []
+        rng = np.random.default_rng(self.batch_seed)
+        shape = (3, max(self.initial_density.shape))
+
+        for i in range(num_cases):
+            if i % 5 == 0:
+                edge_cases.append(np.zeros(shape))
+            elif i % 5 == 1:
+                profile = np.zeros(shape)
+                r, c = rng.integers(0, 3), rng.integers(0, shape[1])
+                profile[r, c] = self.force_max
+                edge_cases.append(profile)
+            elif i % 5 == 2:
+                edge_cases.append(rng.uniform(-self.force_max, self.force_max, shape))
+            elif i % 5 == 3:
+                profile = np.array([[(-1)**(r + c) * self.force_max for c in range(shape[1])] for r in range(3)])
+                edge_cases.append(profile)
+            elif i % 5 == 4:
+                profile = np.zeros(shape)
+                for _ in range(rng.integers(1, 5)):
+                    r, c = rng.integers(0, 3), rng.integers(0, shape[1])
+                    profile[r, c] = self.force_max
+                edge_cases.append(profile)
+        return edge_cases
+
+    def generate_edge_cases(self, num_samples: int) -> None:
+        timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
+        filepath = self.output_dir / f"edge_case_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+
+        force_profiles = self._generate_edge_case_profiles(num_samples)
+        args = [(i, force_profiles[i]) for i in range(num_samples)]
+
+        with Pool(processes=cpu_count()) as pool:
+            results = []
+            for idx, result in enumerate(pool.imap_unordered(self._run_sample, args), 1):
+                results.append(result)
+                progress = (idx / num_samples) * 100
+                logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
+
+        with open(filepath, 'w') as f:
+            json.dump(results, f, indent=4)
+        logging.info(f"Edge case data saved to {filepath}")
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Generate training or edge case data for the forward model.")
     default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
-    parser = argparse.ArgumentParser(description="Generate training data for the forward model.")
-    parser.add_argument(
-        "--output_dir", 
-        type=str, 
-        default=str(default_dir), 
-        help="Directory to save the output file."
-    )
-    parser.add_argument(
-        "--num_samples", 
-        type=int, 
-        default=10, 
-        help="Number of random force profiles to generate."
-    )
-    parser.add_argument(
-        "--force_max", 
-        type=int, 
-        default=2, 
-        help="Maximum force applied in the force profile."
-    )
-    parser.add_argument(
-        "--force_count_max", 
-        type=int, 
-        default=7, 
-        help="Maximum number of forces applied in the force profile."
-    )
-    parser.add_argument(
-        "--batch_seed", 
-        type=int, 
-        default=np.random.randint(0, 1_000_000), 
-        help="Seed for random number generation to ensure reproducibility."
-    )
-    args = parser.parse_args()
+    parser.add_argument("--output_dir", type=str, default=str(default_dir), help="Directory to save output.")
+    parser.add_argument("--num_samples", type=int, default=10, help="Number of samples to generate.")
+    parser.add_argument("--force_max", type=int, default=2, help="Maximum force magnitude.")
+    parser.add_argument("--force_count_max", type=int, default=7, help="Max number of force applications.")
+    parser.add_argument("--batch_seed", type=int, default=np.random.randint(0, 1_000_000), help="Random seed.")
+    parser.add_argument("--mode", type=str, choices=["parallel", "sequential", "edge"], default="parallel",
+                        help="Generation mode: 'parallel', 'sequential', or 'edge'.")
 
-    set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
-    generate_training_data(output_dir=args.output_dir, num_samples=args.num_samples, force_max=args.force_max, force_count_max=args.force_count_max, batch_seed=args.batch_seed)
-    return
+    args = parser.parse_args()
+    set_log_level(LogLevel.ERROR)
+
+    generator = TrainingDataGenerator(
+        output_dir=args.output_dir,
+        force_max=args.force_max,
+        force_count_max=args.force_count_max,
+        batch_seed=args.batch_seed
+    )
+
+    if args.mode == "parallel":
+        generator.generate_parallel(args.num_samples)
+    elif args.mode == "sequential":
+        generator.generate_sequential(args.num_samples)
+    elif args.mode == "edge":
+        generator.generate_edge_cases(args.num_samples)
+
 
 if __name__ == "__main__":
     main()

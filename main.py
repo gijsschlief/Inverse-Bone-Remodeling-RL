@@ -7,12 +7,8 @@ def forward_simulation(args):
     fenics_simulator()
 
 def generate_data(args):
-    from forward_model.data_generation import main as generate_training_data
-    generate_training_data(samples=args.samples)
-
-def generate_data_parallel(args):
-    from forward_model.data_generation_parallel import main as generate_training_data_parallel
-    generate_training_data_parallel(samples=args.samples)
+    from Thesis_code.forward_model.data_generation import main as generate_data
+    generate_data()
 
 def train_surrogate(args):
     from surrogate_model.trainer import main as surrogate_trainer
@@ -41,12 +37,13 @@ def main():
     # Data generation
     p_data = subparsers.add_parser("generate", help="Generate dataset with FEniCS")
     p_data.add_argument("--samples", type=int, default=100, help="Number of samples")
+    p_data.add_argument("--output_dir", type=str, default=str(Path(__file__).resolve().parent.parent / "data" / "raw"), help="Directory to save output.")
+    p_data.add_argument("--num_samples", type=int, default=10, help="Number of samples to generate.")
+    p_data.add_argument("--force_max", type=int, default=2, help="Maximum force magnitude.")
+    p_data.add_argument("--force_count_max", type=int, default=7, help="Max number of force applications.")
+    p_data.add_argument("--batch_seed", type=int, default=np.random.randint(0, 1_000_000), help="Random seed.")
+    p_data.add_argument("--mode", type=str, choices=["parallel", "sequential", "edge"], default="parallel", help="Generation mode: 'parallel', 'sequential', or 'edge'.")
     p_data.set_defaults(func=generate_data)
-
-    # Parallel data generation
-    p_data_parallel = subparsers.add_parser("generate_parallel", help="Generate dataset with FEniCS in parallel")
-    p_data_parallel.add_argument("--samples", type=int, default=100, help="Number of samples")
-    p_data_parallel.set_defaults(func=generate_data_parallel)
 
     # Surrogate training
     p_sur = subparsers.add_parser("train_surrogate", help="Train the surrogate model")
