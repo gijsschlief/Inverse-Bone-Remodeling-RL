@@ -40,6 +40,13 @@ def main() -> None:
     parser.add_argument("--convergence_eps", type=float, help="Convergence threshold for density change.")
     parser.add_argument("--file_location", type=str, help="Location of the data files.")
 
+    # Density profile
+    parser.add_argument("--initial_density_value", type=float, default=0.8, help="Initial density value to fill the array.")
+    parser.add_argument("--x_shape", type=int, default=10, help="Number of rows in the initial density array.")
+    parser.add_argument("--y_shape", type=int, default=10, help="Number of columns in the initial density array.")
+
+    # Force profile
+    parser.add_argument("-f","--force", action="append", help="Specify a force in the format side ('top' / 'left' / 'right'), location [int], magnitude [float]. Use multiple -f or --force arguments for multiple forces.")
     # Actions
     parser.add_argument("--reset", action="store_true", help="Reset parameters to default by deleting parameters.json.")
     parser.add_argument("--save", action="store_true", help="Save the simulation results.")
@@ -69,11 +76,32 @@ def main() -> None:
         logging.info("Initializing force profile and parameters...")
         set_log_level(LogLevel.INFO)  # Set FEniCS log level to INFO for verbose output
 
-    force_profile = np.zeros((3, 40))  # Initialize an empty force profile
-    force_profile[0, 0] = 3  # Set a force at location (0, 2) Top
-    force_profile[0, 39] = 3  # Set a force at location (1, 5) Left
-    force_profile[2, 8] = 0  # Set a force at location (2, 8) Left
-    initial_density = np.full((40, 40), 0.8)  # Initial density matrix
+    initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
+
+    # Initialize force profile based on command-line arguments
+    force_profile = np.zeros((3, max(args.x_shape, args.y_shape)))  # Initialize an empty force profile
+    if args.force:
+        for force in args.force:
+            try:
+                side, location, magnitude = force.split(",")
+                side = side.strip().lower()
+                location = int(location.strip())
+                magnitude = float(magnitude.strip())
+
+                if side == "top":
+                    force_profile[0, location] = magnitude
+                elif side == "left":
+                    force_profile[1, location] = magnitude
+                elif side == "right":
+                    force_profile[2, location] = magnitude
+                else:
+                    logging.warning(f"Invalid side '{side}' specified in force argument: {force}")
+            except ValueError:
+                logging.warning(f"Invalid force argument format: {force}. Expected format: side,location,magnitude")
+    else:
+        logging.warning("No forces specified. Using default force profile.")
+        force_profile[2, 2] = 5
+
 
     # Load existing parameters from JSON file if it exists
     if parameters_file.exists():
@@ -82,9 +110,9 @@ def main() -> None:
     else:
         parameters = {}
 
-    # Update parameters with command-line arguments, excluding reset, save, and plot
+    # Update parameters with command-line arguments, excluding reset, save, plot, verbose, force, and density profile
     for key, value in vars(args).items():
-        if key not in {"reset", "save", "plot", "verbose"} and value is not None:
+        if key not in {"reset", "save", "plot", "verbose", "force", "initial_density_value", "x_shape", "y_shape"} and value is not None:
             parameters[key] = value
 
     # Save updated parameters to the JSON file
