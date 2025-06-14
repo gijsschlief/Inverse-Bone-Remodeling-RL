@@ -16,9 +16,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 def generate_training_data(
     output_dir: str, 
     num_samples: int,
-    force_max: int,
-    force_count_max: int,
-    batch_seed: int
+    force_max: int = 2,
+    force_count_max: int = 7,
+    batch_seed: int = 0
 ) -> None:
 
     """

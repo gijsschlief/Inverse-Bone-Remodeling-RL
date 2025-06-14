@@ -20,7 +20,7 @@ def test_generate_training_data_creates_file(temp_output_dir):
     generate_training_data(output_dir=temp_output_dir, num_samples=num_samples)
 
     # Check if a file is created in the output directory
-    files = [f for f in os.listdir(temp_output_dir) if f.startswith("training_data_") and f.endswith(".json")]
+    files = [f for f in os.listdir(temp_output_dir) if f.startswith("training_batch_") and f.endswith(".json")]
     assert len(files) == 1, f"Expected 1 file, but found {len(files)} files in the output directory."
     
     # Check if the file contains valid JSON data

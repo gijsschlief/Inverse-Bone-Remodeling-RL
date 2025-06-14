@@ -32,7 +32,7 @@ def mock_parameters():
 def test_generate_edge_case_force_profiles(mock_initial_density_shape):
     set_log_level(LogLevel.ERROR)
     num_cases = 10
-    force_profiles = _generate_edge_case_force_profiles(mock_initial_density_shape, num_cases)
+    force_profiles = _generate_edge_case_force_profiles(mock_initial_density_shape, num_cases, force_max=2, batch_seed=0)
     
     assert len(force_profiles) == num_cases
     assert isinstance(force_profiles, list)
@@ -60,7 +60,7 @@ def test_generate_edge_case_data(mock_output_dir):
     
     files = os.listdir(mock_output_dir)
     assert len(files) == 1
-    assert files[0].startswith("edge_case_data_")
+    assert files[0].startswith("edge_case_batch_")
     assert files[0].endswith(".json")
     
     filepath = os.path.join(mock_output_dir, files[0])

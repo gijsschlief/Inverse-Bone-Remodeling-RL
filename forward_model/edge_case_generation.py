@@ -77,8 +77,8 @@ def _run_edge_case_sample(args: Tuple[int, str, np.ndarray, int, float, Dict, np
 def generate_edge_case_data(
     output_dir: str, 
     num_samples: int,
-    max_force: int,
-    batch_seed: int
+    max_force: int = 2,
+    batch_seed: int = 0
     ) -> None:
     """
     Generates edge case data by creating specific force profiles, running a forward model,

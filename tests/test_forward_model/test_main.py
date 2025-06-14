@@ -14,7 +14,7 @@ def test_forward_model_valid_inputs():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = 1.0
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
@@ -33,7 +33,7 @@ def test_forward_model_invalid_force_profile():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = 1.0
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
@@ -51,7 +51,7 @@ def test_forward_model_invalid_initial_density():
     initial_density = "invalid_initial_density"  # Invalid type
     time_steps = 100
     dt = 1.0
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
@@ -69,7 +69,7 @@ def test_forward_model_invalid_time_steps():
     initial_density = np.full((40, 40), 0.8)
     time_steps = "invalid_time_steps"  # Invalid type
     dt = 1.0
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
@@ -87,7 +87,7 @@ def test_forward_model_invalid_dt():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = "invalid_dt"  # Invalid type
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
@@ -118,7 +118,7 @@ def test_main_valid_arguments():
         text=True
     )
     assert result.returncode == 0
-    assert "Simulation completed." in result.stdout
+    assert "Plotting is disabled. Set 'save' parameter to True to enable plotting." in result.stdout
 
 def test_main_invalid_time_steps():
     script_path = Path(__file__).resolve().parent.parent.parent / "forward_model" / "main.py"
@@ -148,7 +148,7 @@ def test_main_missing_file_location():
         text=True
     )
     assert result.returncode != 0
-    assert "No such file or directory" in result.stderr
+    assert "Error: Invalid file location" in result.stderr
 
 def test_main_plot_flag():
     script_path = Path(__file__).resolve().parent.parent.parent / "forward_model" / "main.py"
@@ -165,7 +165,7 @@ def test_forward_model_plot_enabled():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = 1.0
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
@@ -184,13 +184,13 @@ def test_forward_model_save_enabled():
     initial_density = np.full((40, 40), 0.8)
     time_steps = 100
     dt = 1.0
-    default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
+    default_dir = Path(__file__).resolve().parent.parent.parent.parent / "data" / "fenics" / ""
     parameters = {
         'file_location': str(default_dir),
         'rho_min': 0.01,
         'rho_max': 1.74,
         'tolerance': 1E-14,
-        'save': True,  # Enable saving
+        'save': True,
         'plot': False
     }
 

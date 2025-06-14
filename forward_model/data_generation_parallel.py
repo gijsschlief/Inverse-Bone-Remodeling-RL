@@ -45,9 +45,9 @@ def _run_one_sample(args: Tuple[int, str, np.ndarray, int, float, Dict]) -> Dict
 def generate_training_data(
     output_dir: str, 
     num_samples: int,
-    force_max: int,
-    force_count_max: int,
-    batch_seed: int
+    force_max: int = 2,
+    force_count_max: int = 7,
+    batch_seed: int = 0
     ) -> None:
     """
     Generates training data by creating random force profiles, running a forward model,

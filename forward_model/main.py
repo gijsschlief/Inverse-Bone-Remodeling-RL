@@ -12,8 +12,6 @@ from forward_model.density_simulation import DensitySimulation
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# TODO - Turn file_locations from hard to relative paths so it works on all systems!!!
-
 class ForwardModelParameters(TypedDict):
     default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
     file_location: str = str(default_dir)

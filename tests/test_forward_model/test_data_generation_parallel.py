@@ -18,7 +18,7 @@ def mock_forward_model():
 
 def test_run_one_sample(mock_forward_model):
     """Test the _run_one_sample function."""
-    args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74})
+    args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74}, 2, 7, 0)
     result = _run_one_sample(args)
 
     assert result["serial_number"] == 1
@@ -29,7 +29,7 @@ def test_run_one_sample(mock_forward_model):
 def test_run_one_sample_with_error():
     """Test _run_one_sample when forward_model raises an exception."""
     with patch("forward_model.main.forward_model", side_effect=Exception("Test error")):
-        args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74})
+        args = (0, "/tmp", np.full((10, 10), 0.8), 100, 1.0, {"rho_min": 0.01, "rho_max": 1.74}, 2, 7, 0)
         result = _run_one_sample(args)
 
         assert result["serial_number"] == 1
@@ -65,10 +65,10 @@ def test_generate_training_data_parallel(tmpdir):
     output_dir = tmpdir.mkdir("output")
 
     # Call the parallel version of generate_training_data
-    generate_training_data(output_dir=str(output_dir), num_samples=num_samples)
+    generate_training_data(output_dir=str(output_dir), num_samples=num_samples, force_max=2, force_count_max=7, batch_seed=0)
 
     # Check if a file is created in the output directory
-    files = [f for f in output_dir.listdir() if f.basename.startswith("training_data_") and f.basename.endswith(".json")]
+    files = [f for f in output_dir.listdir() if f.basename.startswith("training_batch_") and f.basename.endswith(".json")]
     assert len(files) == 1, f"Expected 1 file, but found {len(files)} files in the output directory."
 
     # Check if the file contains valid JSON data
