@@ -8,7 +8,14 @@ from fenics import set_log_level, LogLevel
 
 from forward_model.main import forward_model
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+def setup_logging(verbose: bool) -> None:
+    """
+    Set up logging based on verbosity.
+    """
+    if verbose:
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    else:
+        logging.basicConfig(level=logging.WARNING, format='%(message)s')
 
 def main() -> None:
     """
@@ -36,12 +43,16 @@ def main() -> None:
     # Actions
     parser.add_argument("--reset", action="store_true", help="Reset parameters to default by deleting parameters.json.")
     parser.add_argument("--save", action="store_true", help="Save the simulation results.")
-    parser.add_argument("--plot", action="store_true", help="Plot the density simulation.")
+    parser.add_argument("-p","--plot", action="store_true", help="Plot the density simulation.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
 
-    # Ensure that if plot is activated, save is automatically activated
     args = parser.parse_args()
+
+    # Set saving to true if plotting is enabled
     if args.plot:
         args.save = True
+
+    setup_logging(args.verbose)
 
     parameters_file = Path(__file__).resolve().parent / "parameters.json"
 
@@ -54,7 +65,10 @@ def main() -> None:
         return
 
     set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
-    logging.info("Initializing force profile and parameters...")
+    if args.verbose:
+        logging.info("Initializing force profile and parameters...")
+        set_log_level(LogLevel.INFO)  # Set FEniCS log level to INFO for verbose output
+
     force_profile = np.zeros((3, 40))  # Initialize an empty force profile
     force_profile[0, 0] = 3  # Set a force at location (0, 2) Top
     force_profile[0, 39] = 3  # Set a force at location (1, 5) Left
@@ -70,19 +84,29 @@ def main() -> None:
 
     # Update parameters with command-line arguments, excluding reset, save, and plot
     for key, value in vars(args).items():
-        if key not in {"reset", "save", "plot"} and value is not None:
+        if key not in {"reset", "save", "plot", "verbose"} and value is not None:
             parameters[key] = value
 
     # Save updated parameters to the JSON file
     with open(parameters_file, "w") as f:
         json.dump(parameters, f, indent=4)
 
-    logging.info(f"Parameters saved to {parameters_file}")
+    # Add save and plot to parameters
+    parameters['save'] = args.save
+    parameters['plot'] = args.plot
+
+    if args.verbose:
+        logging.info("Parameters loaded: %s", parameters)
+        logging.info(f"Parameters saved to {parameters_file}")
 
     logging.info("Running forward model simulation...")
     final_density = forward_model(force_profile, initial_density, parameters.get('time_steps', 100), parameters.get('dt', 1.0), parameters)
     logging.info("Simulation completed.")
-    logging.info("Force Profile: %s", force_profile)
+
+    # Log less information if verbose is not enabled
+    if args.verbose:
+        logging.info("Force Profile: %s", force_profile)
+    
     logging.info("Final Density: %s", final_density)
 
 if __name__ == "__main__":

@@ -14,11 +14,16 @@ def main() -> None:
     parser.add_argument("--force_max", type=int, default=2, help="Maximum force magnitude.")
     parser.add_argument("--force_count_max", type=int, default=7, help="Max number of force applications.")
     parser.add_argument("--batch_seed", type=int, default=np.random.randint(0, 1_000_000), help="Random seed.")
-    parser.add_argument("--mode", type=str, choices=["parallel", "sequential", "edge"], default="parallel",
+    parser.add_argument("-m","--mode", type=str, choices=["parallel", "sequential", "edge"], default="parallel",
                         help="Generation mode: 'parallel', 'sequential', or 'edge'.")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output.")
 
     args = parser.parse_args()
-    set_log_level(LogLevel.ERROR)
+    
+    if args.verbose:
+        set_log_level(LogLevel.INFO)
+    else:
+        set_log_level(LogLevel.ERROR)
 
     generator = TrainingDataGenerator(
         output_dir=args.output_dir,

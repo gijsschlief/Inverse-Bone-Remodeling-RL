@@ -57,6 +57,7 @@ class DensitySimulation:
         self.file_name = parameters.get('file_name', 'density_simulation')  # Base name for output files
         self.file_extension = parameters.get('file_extension', '.pvd')  # File extension for output files
         self.save = parameters.get('save', False)  # Flag to save output files
+        self.plot = parameters.get('plot', False)  # Flag to plot the results
         self.convergence_eps = parameters.get('convergence_eps', 1E-6)  # Convergence threshold for density change
 
     def validate_parameters(self) -> None:
