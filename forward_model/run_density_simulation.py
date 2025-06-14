@@ -90,9 +90,9 @@ def main() -> None:
 
                 if side == "top":
                     force_profile[0, location] = magnitude
-                elif side == "left":
-                    force_profile[1, location] = magnitude
                 elif side == "right":
+                    force_profile[1, location] = magnitude
+                elif side == "left":
                     force_profile[2, location] = magnitude
                 else:
                     logging.warning(f"Invalid side '{side}' specified in force argument: {force}")
@@ -100,7 +100,7 @@ def main() -> None:
                 logging.warning(f"Invalid force argument format: {force}. Expected format: side,location,magnitude")
     else:
         logging.warning("No forces specified. Using default force profile.")
-        force_profile[2, 2] = 5
+        force_profile[2, 2] = 3
 
 
     # Load existing parameters from JSON file if it exists

@@ -7,7 +7,6 @@ from pathlib import Path
 from typing import Dict, Tuple, List
 
 import numpy as np
-from fenics import set_log_level, LogLevel
 
 from forward_model.main import forward_model
 
@@ -27,8 +26,8 @@ class TrainingDataGenerator:
         self.force_count_max: int = force_count_max
         self.batch_seed: int = batch_seed
         self.initial_density: np.ndarray = initial_density
-        self.time_steps: int = 0
-        self.dt: float = 0.0
+        self.time_steps: int = 100
+        self.dt: float = 1.0
         self.parameters: Dict = self._load_parameters()
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)

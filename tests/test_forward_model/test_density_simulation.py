@@ -84,10 +84,10 @@ def test_calculate_E(density_simulation):
     assert isinstance(E_func, Function)
     assert len(E_func.vector().get_local()) == density_simulation.mesh.num_cells()
 
-def test_calculate_Lame_coefficients(density_simulation):
+def test_calculate_lame_coefficients(density_simulation):
     E_val = Function(density_simulation.V_ele)
     E_val.vector().set_local(np.array([1.0, 0.5, 0.2]))
-    mu, lmbda = density_simulation.calculate_Lame_coefficients(E_val)
+    mu, lmbda = density_simulation._calculate_lame_coefficients(E_val)
     assert isinstance(mu, Expr)
     assert isinstance(lmbda, Expr)
 

@@ -1,6 +1,7 @@
 import time
 from pathlib import Path
-from typing import Union
+from typing import Union, List
+import logging
 
 from fenics import *
 import numpy as np
@@ -17,25 +18,35 @@ class DensitySimulation:
             dt (Union[int, float]): Time step size.
             parameters (dict): Dictionary containing simulation parameters.
         """
-        self.initialize_parameters(force_profile, initial_density, time_steps, dt, parameters)
-        self.validate_parameters()
-        self.setup_mesh_and_spaces()
-        self.initialize_density()
-        self.setup_boundary_conditions()
-        self.setup_subdomains()
-        self.setup_force_expression()
+        self._initialize_parameters(force_profile, initial_density, time_steps, dt, parameters)
+        self._validate_parameters()
+        self._setup_mesh_and_spaces()
+        self._initialize_density()
+        self._setup_boundary_conditions()
+        self._setup_subdomains()
+        self._setup_force_expression()
         #self.F = Expression("m*x[0]+c", m=-10, c=10, degree=1)
-        self.E0 = self.calculate_E(self.rho_val)
-        self.mu, self.lmbda = self.calculate_Lame_coefficients(self.E0)
+        self.E0 = self._calculate_E(self.rho_val)
+        self.mu, self.lmbda = self._calculate_lame_coefficients(self.E0)
         self.u = Function(self.V)
 
-    def initialize_parameters(self, force_profile, initial_density, time_steps, dt, parameters):
+    def _initialize_parameters(self, force_profile, initial_density, time_steps, dt, parameters) -> None:
+        """
+        Initialize the simulation parameters and validate them.
+        Parameters:
+            force_profile (np.ndarray): Force profile matrix with shape (3, n).
+            initial_density (np.ndarray): Initial bone density matrix.
+            time_steps (int): Number of time steps for the simulation.
+            dt (Union[int, float]): Time step size.
+            parameters (dict): Dictionary containing simulation parameters.
+        """
         self.time_steps = time_steps  # Store time_steps as an instance variable
         # Initialize density and force profiles
         self.density_profile = initial_density
         self.force_profile = force_profile
         self.dt = dt
-        self.T = time_steps * dt
+        self.time_steps = time_steps
+        self.T = self.time_steps * self.dt
         self.parameters = parameters
 
         # Data extraction from the density profile
@@ -60,7 +71,7 @@ class DensitySimulation:
         self.plot = parameters.get('plot', False)  # Flag to plot the results
         self.convergence_eps = parameters.get('convergence_eps', 1E-6)  # Convergence threshold for density change
 
-    def validate_parameters(self) -> None:
+    def _validate_parameters(self) -> None:
         """
         This function tests if the inputs are valid for the forward model and raises errors for invalid inputs.
 
@@ -105,7 +116,12 @@ class DensitySimulation:
         # If all checks pass, return None indicating no errors
         return None
 
-    def setup_mesh_and_spaces(self) -> None:
+    def _setup_mesh_and_spaces(self) -> None:
+        """
+        Setup the mesh and function spaces for the simulation.
+        This function initializes the mesh based on the dimensions of the initial density profile,
+        and creates the necessary function spaces for the simulation.
+        """
         self.mesh = UnitSquareMesh(self.X, self.Y, 'left')
         self.V = VectorFunctionSpace(self.mesh, "P", 1)
         self.V_ele = FunctionSpace(self.mesh, "DG", 0)
@@ -113,14 +129,25 @@ class DensitySimulation:
         self.f = Constant((0, 0))
         self.v = TestFunction(self.V)
         self.u_trial = TrialFunction(self.V)
-        self.cnt_cells = self.mesh.num_cells()
+        self.cell_count = self.mesh.num_cells()
 
-    def initialize_density(self) -> None:
+    def _initialize_density(self) -> None:
+        """
+        Initialize the density values for the simulation.
+        This function sets the initial density values for each cell in the mesh,
+        based on the initial density profile provided.
+        """
         self.rho_val = [self.rho0 for _ in range(self.mesh.num_cells())]
         self.updated_rho_val = self.rho_val[:]
-        self.cnt_cell_converged = [0 for _ in range(self.mesh.num_cells())]
+        self.converged_cell_count = [0 for _ in range(self.mesh.num_cells())]
 
-    def setup_boundary_conditions(self) -> None:
+    def _setup_boundary_conditions(self) -> None:
+        """
+        Setup boundary conditions for the simulation.
+        This function defines the fixed and roller boundary conditions for the mesh.
+        The fixed boundary condition is applied to the bottom left corner,
+        while the roller boundary condition is applied to the bottom right corner.
+        """
         def bottom_fixed_boundary(x, on_boundary) -> bool:
             return near(x[0], 0, self.tolerance) and near(x[1], 0, self.tolerance)
 
@@ -131,7 +158,12 @@ class DensitySimulation:
         bc_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_right_boundary)
         self.bcs = [bc_fixed, bc_roller]
 
-    def setup_subdomains(self) -> None:
+    def _setup_subdomains(self) -> None:
+        """
+        Setup subdomains for the boundaries of the mesh.
+        This function defines the top, right, and left boundaries of the mesh as subdomains
+        and marks them with unique identifiers.
+        """
         class Top(SubDomain):
             def __init__(self, tolerance: float = 1E-14) -> None:
                 super().__init__()
@@ -161,13 +193,18 @@ class DensitySimulation:
         Left().mark(self.boundaries, 3)
         self.ds = Measure('ds', domain=self.mesh, subdomain_data=self.boundaries)
     
-    def setup_force_expression(self) -> None:
-        self.top_force_expr = self.build_force_expression(self.force_profile[0], axis='x')
-        self.right_force_expr = self.build_force_expression(self.force_profile[1], axis='y')
-        self.left_force_expr = self.build_force_expression(self.force_profile[2], axis='y')
+    def _setup_force_expression(self) -> None:
+        """
+        Setup the force expressions based on the force profile.
+        This function builds the force expressions for the top, right, and left boundaries
+        based on the provided force profile.
+        """
+        self.top_force_expr = self._build_force_expression(self.force_profile[0], axis='x')
+        self.right_force_expr = self._build_force_expression(self.force_profile[1], axis='y')
+        self.left_force_expr = self._build_force_expression(self.force_profile[2], axis='y')
 
     @staticmethod
-    def build_force_expression(force_row: np.ndarray, axis: str = 'x') -> Expression:
+    def _build_force_expression(force_row: np.ndarray, axis: str = 'x') -> Expression:
         """
         Build the force expression based on the force profile.
 
@@ -189,50 +226,83 @@ class DensitySimulation:
         full_expr = " + ".join(expr_pieces) if expr_pieces else "0.0"
         return Expression(full_expr, degree=1)
     
-    def calculate_E(self, rho_vals: list[float]) -> Function:
+    def _calculate_E(self, rho_vals: List[float]) -> Function:
+        """
+        Calculate the modulus of elasticity (E) based on the density values.
+        :param rho_vals: List of density values.
+        :return: Modulus of elasticity as a Function.
+        """
         E_func = Function(self.V_ele)
-        E_array = E_func.vector().get_local()
-        for i, rho in enumerate(rho_vals):
-            E_array[i] = self.M * pow(rho, self.gamma)
+        E_func.vector().zero()  # Initialize the function vector to zero
+        E_array = self.M * np.power(rho_vals, self.gamma)
         E_func.vector().set_local(E_array)
         return E_func
 
-    def calculate_Lame_coefficients(self, E_val: Function) -> tuple[Function, Function]:
+    def _calculate_lame_coefficients(self, E_val: Function) -> tuple[Function, Function]:
+        """
+        Calculate the Lame coefficients (mu and lambda) from the modulus of elasticity.
+        :param E_val: Modulus of elasticity as a Function.
+        :return: Shear modulus (mu) and first Lame coefficient (lambda).
+        """
         mu = E_val / (2 * (1 + self.nu))
         lmbda = (E_val * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
         return mu, lmbda
 
-    def epsilon(self, u: Function) -> ufl.tensors.ListTensor:
+    def _epsilon(self, u: Function) -> ufl.tensors.ListTensor:
+        """
+        Calculate the strain tensor from the displacement field.
+        :param u: Displacement field.
+        :return: Strain tensor.
+        """
         return 0.5 * (grad(u) + grad(u).T)
 
-    def sigma(self, u: Function, mu: Function, lmbda: Function) -> ufl.tensors.ListTensor:
-        return lmbda * div(u) * Identity(self.d) + 2 * mu * self.epsilon(u)
+    def _sigma(self, u: Function, mu: Function, lmbda: Function) -> ufl.tensors.ListTensor:
+        """
+        Calculate the stress tensor using the strain tensor and Lame coefficients.
+        :param u: Displacement field.
+        :param mu: Shear modulus.
+        :param lmbda: First Lame coefficient.
+        :return: Stress tensor.
+        """
+        return lmbda * div(u) * Identity(self.d) + 2 * mu * self._epsilon(u)
     
-    def calculate_SED(self, epsilon_val: ufl.tensors.ListTensor, sigma_val: ufl.tensors.ListTensor) -> tuple[np.ndarray, Function]:
+    def _calculate_sed(self, epsilon_val: ufl.tensors.ListTensor, sigma_val: ufl.tensors.ListTensor) -> tuple[np.ndarray, Function]:
+        """
+        Calculate the strain energy density (SED) from the strain and stress tensors.
+        :param epsilon_val: Strain tensor.
+        :param sigma_val: Stress tensor.
+        :return: SED as a NumPy array and a Function for visualization.
+        """
         SED_val = 0.5 * inner(sigma_val, epsilon_val)
         SED_plot = project(SED_val, self.V_ele)
         return SED_plot.vector().get_local(), SED_plot
 
-    def calculate_Density_change(self, rho_vals: list[float], SED: np.ndarray) -> tuple[Function, list[float], list[int]]:
+    def _calculate_density_change(self, rho_vals: list[float], SED: np.ndarray) -> tuple[Function, list[float], list[int]]:
+        """
+        Calculate the change in density based on the strain energy density (SED) and update the density values.
+        :param rho_vals: Current density values.
+        :param SED: Strain energy density values.
+        :return: Updated density function, updated density values, and convergence status for each cell.
+        """
         rho_plot = Function(self.V_ele)
         rho_array = rho_plot.vector().get_local()
         stimulus = np.zeros_like(rho_array)
         change_in_density: list[float] = []
 
         for i, SED_val in enumerate(SED):
-            if self.cnt_cell_converged[i] == 0:
+            if self.converged_cell_count[i] == 0:
                 stimulus[i] = SED_val / rho_vals[i]
                 change = self.B * (stimulus[i] - self.k)
                 new_rho = rho_vals[i] + self.dt * change
 
                 if new_rho <= self.rho_min:
                     new_rho = self.rho_min
-                    self.cnt_cell_converged[i] = 1
+                    self.converged_cell_count[i] = 1
                 elif new_rho >= self.rho_max:
                     new_rho = self.rho_max
-                    self.cnt_cell_converged[i] = 1
+                    self.converged_cell_count[i] = 1
                 elif abs(change) < self.convergence_eps:
-                    self.cnt_cell_converged[i] = 1
+                    self.converged_cell_count[i] = 1
 
                 rho_array[i] = new_rho
                 change_in_density.append(change)
@@ -242,34 +312,54 @@ class DensitySimulation:
                 change_in_density.append(0)
 
         rho_plot.vector().set_local(rho_array)
-        return rho_plot, list(rho_array), self.cnt_cell_converged
+        return rho_plot, list(rho_array), self.converged_cell_count
+
+    def _solve_elasticity_problem(self) -> None:
+        """Solve the elasticity problem for current displacement."""
+        a = 2 * self.mu * inner(self._epsilon(self.u_trial), self._epsilon(self.v)) * dx + \
+            self.lmbda * dot(div(self.u_trial), div(self.v)) * dx
+        L = dot(self.f, self.v) * dx + \
+            self.v[1] * self.top_force_expr * self.ds(1) + \
+            self.v[0] * self.right_force_expr * self.ds(2) + \
+            self.v[1] * self.left_force_expr * self.ds(3)
+
+        solve(a == L, self.u, self.bcs)
+
+    def _update_density(self) -> None:
+        """Compute SED and update density based on it."""
+        eps_val = self._epsilon(self.u)
+        sig_val = self._sigma(self.u, self.mu, self.lmbda)
+        SED, _ = self._calculate_sed(eps_val, sig_val)
+        rho_function, self.updated_rho_val, self.converged_cell_count = self._calculate_density_change(self.updated_rho_val, SED)
+        self.current_rho_function = rho_function  # store for saving/plotting
+
+    def _check_convergence_and_save(self, t: float) -> None:
+        """Save intermediate results and check for convergence."""
+        if self.save:
+            path = Path(self.file_location)
+            path.mkdir(parents=True, exist_ok=True)
+            File(self.file_location + '/' + self.file_name + self.file_extension) << self.current_rho_function
+
+    def _check_termination(self, t: float) -> bool:
+        """Return True if simulation should terminate."""
+        return t == self.T or sum(self.converged_cell_count) == self.cell_count
+
+    def _update_material_properties(self) -> None:
+        """Update material properties for the next time step."""
+        self.E0.assign(self._calculate_E(self.updated_rho_val))
+        self.mu, self.lmbda = self._calculate_lame_coefficients(self.E0)
 
     def run(self) -> None:
-        self.start_time = time.time()
+        """Run the full simulation loop."""
         t = 0
         while t <= self.T:
-            a = 2 * self.mu * inner(self.epsilon(self.u_trial), self.epsilon(self.v)) * dx \
-                + self.lmbda * dot(div(self.u_trial), div(self.v)) * dx
-            L = dot(self.f, self.v) * dx + self.v[1] * self.top_force_expr * self.ds(1) + \
-                self.v[0] * self.right_force_expr * self.ds(2) + self.v[1] * self.left_force_expr * self.ds(3)
-            solve(a == L, self.u, self.bcs)
-
-            eps_val = self.epsilon(self.u)
-            sig_val = self.sigma(self.u, self.mu, self.lmbda)
-
-            SED, _ = self.calculate_SED(eps_val, sig_val)
-            rho_func, self.updated_rho_val, self.cnt_cell_converged = self.calculate_Density_change(self.updated_rho_val, SED)
-
-            if t == self.T or sum(self.cnt_cell_converged) == self.cnt_cells:
-                if self.save == True:
-                    path = Path(self.file_location)
-                    path.mkdir(parents=True, exist_ok=True)
-                    File(self.file_location + '/' + self.file_name + self.file_extension) << rho_func
-                if sum(self.cnt_cell_converged) == self.cnt_cells:
-                    break
-
-            self.E0.assign(self.calculate_E(self.updated_rho_val))
-            self.mu, self.lmbda = self.calculate_Lame_coefficients(self.E0)
+            self._solve_elasticity_problem()
+            self._update_density()
+            self._check_convergence_and_save(t)
+            if self._check_termination(t):
+                break
+    
+            self._update_material_properties()
             t += self.dt
 
     def get_final_density(self) -> np.ndarray:
@@ -285,12 +375,20 @@ class DensitySimulation:
         Plot the final density profile using pyvista.
         """
         if self.save == False:
-            print("Plotting is disabled. Set 'save' parameter to True to enable plotting.")
+            logging.warning("Plotting is disabled. Set 'save' parameter to True to enable plotting.")
             return
         import pyvista as pv
         filename = self.file_location + '/' + self.file_name + self.file_extension
-        reader = pv.get_reader(filename)
-        reader.set_active_time_point(0)
-
-        grid = reader.read()[0]
-        grid.plot(scalars='f_3251', show_edges=True, show_scalar_bar=True, clim=[self.rho_min, self.rho_max], cpos='xy', show_grid=True)
+        try:
+            reader = pv.get_reader(filename)
+            reader.set_active_time_point(0)
+        except Exception as e:
+            logging.error(f"Failed to retrieve the file for plotting: {e}")
+            return
+        try:
+            grid = reader.read()[0]
+            scalar_field_name = grid.array_names[0]  # Automatically get the first scalar field name
+            grid.plot(scalars=scalar_field_name, show_edges=True, show_scalar_bar=True, clim=[self.rho_min, self.rho_max], cpos='xy', show_grid=True)
+        except Exception as e:
+            logging.error(f"Failed to plot the result: {e}")
+            return
