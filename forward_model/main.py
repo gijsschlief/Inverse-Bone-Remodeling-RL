@@ -25,8 +25,8 @@ def forward_model(
         dt (float): Time step size.
         parameters (Dict[str, Union[str, float]]): Parameters for the forward model, including:
             - 'file_location': Location of the data files.
-            - 'rho_min': Minimum bone density.
-            - 'rho_max': Maximum bone density.
+            - 'min_density': Minimum bone density.
+            - 'max_density': Maximum bone density.
             - 'tolerance': Tolerance for convergence criteria.
             - 'plot': Whether to plot the density simulation.
             - 'save': Whether to save the simulation results.

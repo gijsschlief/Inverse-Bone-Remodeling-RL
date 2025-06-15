@@ -45,19 +45,19 @@ class DensitySimulation:
         self.force_profile = force_profile
         self.dt = dt
         self.time_steps = time_steps
-        self.T = self.time_steps * self.dt
+        self.total_time = self.time_steps * self.dt
         self.parameters = parameters
 
         # Data extraction from the density profile
-        self.X = self.density_profile.shape[0]  # Number of rows in initial density
-        self.Y = self.density_profile.shape[1]  # Number of columns in initial density
+        self.n_rows = self.density_profile.shape[0]  # Number of rows in initial density
+        self.n_columns = self.density_profile.shape[1]  # Number of columns in initial density
         self.rho0 = self.density_profile.mean()  # Initial average density
         
         # Data extraction from parameters
         default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
         self.file_location = parameters.get('file_location', str(default_dir))  # Location of the data files
-        self.rho_min = parameters.get('rho_min', 0.01)  # Minimum bone density
-        self.rho_max = parameters.get('rho_max', 1.74)  # Maximum bone density
+        self.min_density = parameters.get('min_density', 0.01)  # Minimum bone density
+        self.max_density = parameters.get('max_density', 1.74)  # Maximum bone density
         self.tolerance = parameters.get('tolerance', 1E-14)  # Tolerance for convergence
         self.B = parameters.get('B', 1)  # Coefficient for density change
         self.k = parameters.get('k', 0.25)  # Threshold for density change
@@ -94,20 +94,20 @@ class DensitySimulation:
             raise ValueError("dt must be a positive number.")
         if not isinstance(self.file_location, str):
             raise TypeError("file_location must be a string.")
-        if not isinstance(self.rho_min, (int, float)):
-            raise TypeError("rho_min must be a number.")
-        if not isinstance(self.rho_max, (int, float)):
-            raise TypeError("rho_max must be a number.")
-        if self.rho_min < 0 or self.rho_max <= self.rho_min:
-            raise ValueError("rho_min must be non-negative and rho_max must be greater than rho_min.")
+        if not isinstance(self.min_density, (int, float)):
+            raise TypeError("min_density must be a number.")
+        if not isinstance(self.max_density, (int, float)):
+            raise TypeError("max_density must be a number.")
+        if self.min_density_min < 0 or self.max_density <= self.min_density:
+            raise ValueError("r_min must be non-negative and max_density must be greater than min_density.")
         if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != max(self.density_profile.shape):
             raise ValueError("force_profile must have 3 rows and columns equal to the maximum of initial_density dimensions.")
         if np.isnan(self.force_profile).any():
             raise ValueError("force_profile contains NaN values.")
         if np.isnan(self.density_profile).any():
             raise ValueError("initial_density contains NaN values.")
-        if not (self.rho_min <= self.density_profile).all() or not (self.density_profile <= self.rho_max).all():
-            raise ValueError("initial_density values must be between rho_min and rho_max.")
+        if not (self.min_density <= self.density_profile).all() or not (self.density_profile <= self.max_density).all():
+            raise ValueError("initial_density values must be between min_density and max_density.")
         if not (0 < self.dt <= self.time_steps):
             raise ValueError("dt must be a positive number and less than or equal to time_steps.")
         if not (0 <= self.time_steps <= 1000):
@@ -121,7 +121,7 @@ class DensitySimulation:
         This function initializes the mesh based on the dimensions of the initial density profile,
         and creates the necessary function spaces for the simulation.
         """
-        self.mesh = UnitSquareMesh(self.X, self.Y, 'left')
+        self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, 'left')
         self.V = VectorFunctionSpace(self.mesh, "P", 1)
         self.V_ele = FunctionSpace(self.mesh, "DG", 0)
         self.d = self.V.ufl_element().value_shape()[0]
@@ -294,11 +294,11 @@ class DensitySimulation:
                 change = self.B * (stimulus[i] - self.k)
                 new_rho = rho_vals[i] + self.dt * change
 
-                if new_rho <= self.rho_min:
-                    new_rho = self.rho_min
+                if new_rho <= self.min_density:
+                    new_rho = self.min_density
                     self.converged_cell_count[i] = 1
-                elif new_rho >= self.rho_max:
-                    new_rho = self.rho_max
+                elif new_rho >= self.max_density:
+                    new_rho = self.max_density
                     self.converged_cell_count[i] = 1
                 elif abs(change) < self.convergence_eps:
                     self.converged_cell_count[i] = 1
@@ -341,7 +341,7 @@ class DensitySimulation:
 
     def _check_termination(self, t: float) -> bool:
         """Return True if simulation should terminate."""
-        return t == self.T or sum(self.converged_cell_count) == self.cell_count
+        return t == self.total_time or sum(self.converged_cell_count) == self.cell_count
 
     def _update_material_properties(self) -> None:
         """Update material properties for the next time step."""
@@ -367,7 +367,7 @@ class DensitySimulation:
         :return: Final density profile as a NumPy array.
         """
         half_size = len(self.updated_rho_val) // 2
-        return np.array(self.updated_rho_val[:half_size]).reshape((self.X, self.Y))
+        return np.array(self.updated_rho_val[:half_size]).reshape((self.n_rows, self.n_columns))
 
     def plot_density(self) -> None:
         """
@@ -387,7 +387,7 @@ class DensitySimulation:
         try:
             grid = reader.read()[0]
             scalar_field_name = grid.array_names[0]  # Automatically get the first scalar field name
-            grid.plot(scalars=scalar_field_name, show_edges=True, show_scalar_bar=True, clim=[self.rho_min, self.rho_max], cpos='xy', show_grid=True)
+            grid.plot(scalars=scalar_field_name, show_edges=True, show_scalar_bar=True, clim=[self.min_density, self.max_density], cpos='xy', show_grid=True)
         except Exception as e:
             logging.error(f"Failed to plot the result: {e}")
             return
