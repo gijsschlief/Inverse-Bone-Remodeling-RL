@@ -98,7 +98,7 @@ class DensitySimulation:
             raise TypeError("min_density must be a number.")
         if not isinstance(self.max_density, (int, float)):
             raise TypeError("max_density must be a number.")
-        if self.min_density_min < 0 or self.max_density <= self.min_density:
+        if self.min_density < 0 or self.max_density <= self.min_density:
             raise ValueError("r_min must be non-negative and max_density must be greater than min_density.")
         if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != max(self.density_profile.shape):
             raise ValueError("force_profile must have 3 rows and columns equal to the maximum of initial_density dimensions.")
@@ -351,7 +351,7 @@ class DensitySimulation:
     def run(self) -> None:
         """Run the full simulation loop."""
         t = 0
-        while t <= self.T:
+        while t <= self.total_time:
             self._solve_elasticity_problem()
             self._update_density()
             self._check_convergence_and_save(t)
