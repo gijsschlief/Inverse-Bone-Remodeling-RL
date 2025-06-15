@@ -59,8 +59,8 @@ class DensitySimulation:
         self.min_density = parameters.get('min_density', 0.01)  # Minimum bone density
         self.max_density = parameters.get('max_density', 1.74)  # Maximum bone density
         self.boundary_tolerance = parameters.get('boundary_tolerance', 1E-14)  # Tolerance for convergence
-        self.B = parameters.get('B', 1)  # Coefficient for density change
-        self.k = parameters.get('k', 0.25)  # Threshold for density change
+        self.remodeling_rate_coefficient = parameters.get('remodeling_rate_coefficient', 1)  # Coefficient for density change
+        self.stimulus_threshold = parameters.get('stimulus_threshold', 0.25)  # Threshold for density change
         self.nu = parameters.get('nu', 0.3)  # Poisson's ratio
         self.M = parameters.get('M', 100)  # Modulus of elasticity
         self.gamma = parameters.get('gamma', 2.0)  # Exponent for density elasticity
@@ -291,7 +291,7 @@ class DensitySimulation:
         for i, SED_val in enumerate(SED):
             if self.converged_cell_count[i] == 0:
                 stimulus[i] = SED_val / rho_vals[i]
-                change = self.B * (stimulus[i] - self.k)
+                change = self.remodeling_rate_coefficient * (stimulus[i] - self.stimulus_threshold)
                 new_rho = rho_vals[i] + self.dt * change
 
                 if new_rho <= self.min_density:

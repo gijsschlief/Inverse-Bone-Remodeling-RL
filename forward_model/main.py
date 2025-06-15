@@ -30,8 +30,8 @@ def forward_model(
             - 'boundary_tolerance': Boundary threshold.
             - 'plot': Whether to plot the density simulation.
             - 'save': Whether to save the simulation results.
-            - 'B': Coefficient for density change.
-            - 'k': Threshold for density change.
+            - 'remodeling_rate_coefficient': Coefficient for density change.
+            - 'stimulus_threshold': Threshold for density change.
             - 'nu': Poisson's ratio.
             - 'M': Modulus of elasticity.
             - 'gamma': Exponent for density elasticity.
