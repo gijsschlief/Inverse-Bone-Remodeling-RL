@@ -55,10 +55,10 @@ class DensitySimulation:
         
         # Data extraction from parameters
         default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
-        self.file_location = parameters.get('file_location', str(default_dir))  # Location of the data files
+        self.output_dir = parameters.get('ouput_dir', str(default_dir))  # Location of the data files
         self.min_density = parameters.get('min_density', 0.01)  # Minimum bone density
         self.max_density = parameters.get('max_density', 1.74)  # Maximum bone density
-        self.tolerance = parameters.get('tolerance', 1E-14)  # Tolerance for convergence
+        self.boundary_tolerance = parameters.get('boundary_tolerance', 1E-14)  # Tolerance for convergence
         self.B = parameters.get('B', 1)  # Coefficient for density change
         self.k = parameters.get('k', 0.25)  # Threshold for density change
         self.nu = parameters.get('nu', 0.3)  # Poisson's ratio
@@ -68,7 +68,7 @@ class DensitySimulation:
         self.file_extension = parameters.get('file_extension', '.pvd')  # File extension for output files
         self.save = parameters.get('save', False)  # Flag to save output files
         self.plot = parameters.get('plot', False)  # Flag to plot the results
-        self.convergence_eps = parameters.get('convergence_eps', 1E-6)  # Convergence threshold for density change
+        self.density_tolerance = parameters.get('density_tolerance', 1E-6)  # Convergence threshold for density change
 
     def _validate_parameters(self) -> None:
         """
@@ -92,8 +92,8 @@ class DensitySimulation:
             raise ValueError("time_steps must be a positive integer.")
         if not isinstance(self.dt, (int, float)) or self.dt <= 0:
             raise ValueError("dt must be a positive number.")
-        if not isinstance(self.file_location, str):
-            raise TypeError("file_location must be a string.")
+        if not isinstance(self.output_dir, str):
+            raise TypeError("Output directory must be a string.")
         if not isinstance(self.min_density, (int, float)):
             raise TypeError("min_density must be a number.")
         if not isinstance(self.max_density, (int, float)):
@@ -148,10 +148,10 @@ class DensitySimulation:
         while the roller boundary condition is applied to the bottom right corner.
         """
         def bottom_fixed_boundary(x, on_boundary) -> bool:
-            return near(x[0], 0, self.tolerance) and near(x[1], 0, self.tolerance)
+            return near(x[0], 0, self.boundary_tolerance) and near(x[1], 0, self.boundary_tolerance)
 
         def bottom_right_boundary(x, on_boundary) -> bool:
-            return near(x[1], 0, self.tolerance) and x[0] > 0
+            return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
 
         bc_fixed = DirichletBC(self.V, Constant((0., 0.)), bottom_fixed_boundary, method='pointwise')
         bc_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_right_boundary)
@@ -164,25 +164,25 @@ class DensitySimulation:
         and marks them with unique identifiers.
         """
         class Top(SubDomain):
-            def __init__(self, tolerance: float = 1E-14) -> None:
+            def __init__(self, boundary_tolerance: float = 1E-14) -> None:
                 super().__init__()
-                self.tolerance = tolerance
+                self.boundary_tolerance = boundary_tolerance
             def inside(self, x, on_boundary) -> bool:
-                return near(x[1], 1, self.tolerance) and on_boundary
+                return near(x[1], 1, self.boundary_tolerance) and on_boundary
 
         class Right(SubDomain):
-            def __init__(self, tolerance: float = 1E-14) -> None:
+            def __init__(self, boundary_tolerance: float = 1E-14) -> None:
                 super().__init__()
-                self.tolerance = tolerance
+                self.boundary_tolerance = boundary_tolerance
             def inside(self, x, on_boundary) -> bool:
-                return near(x[0], 1, self.tolerance) and on_boundary
+                return near(x[0], 1, self.boundary_tolerance) and on_boundary
             
         class Left(SubDomain):
-            def __init__(self, tolerance: float = 1E-14) -> None:
+            def __init__(self, boundary_tolerance: float = 1E-14) -> None:
                 super().__init__()
-                self.tolerance = tolerance
+                self.boundary_tolerance = boundary_tolerance
             def inside(self, x, on_boundary) -> bool:
-                return near(x[0], 0, self.tolerance) and on_boundary
+                return near(x[0], 0, self.boundary_tolerance) and on_boundary
         
 
         self.boundaries = MeshFunction('size_t', self.mesh, 1)
@@ -300,7 +300,7 @@ class DensitySimulation:
                 elif new_rho >= self.max_density:
                     new_rho = self.max_density
                     self.converged_cell_count[i] = 1
-                elif abs(change) < self.convergence_eps:
+                elif abs(change) < self.density_tolerance:
                     self.converged_cell_count[i] = 1
 
                 rho_array[i] = new_rho
@@ -335,9 +335,9 @@ class DensitySimulation:
     def _check_convergence_and_save(self, t: float) -> None:
         """Save intermediate results and check for convergence."""
         if self.save:
-            path = Path(self.file_location)
+            path = Path(self.output_dir)
             path.mkdir(parents=True, exist_ok=True)
-            File(self.file_location + '/' + self.file_name + self.file_extension) << self.current_rho_function
+            File(self.output_dir + '/' + self.file_name + self.file_extension) << self.current_rho_function
 
     def _check_termination(self, t: float) -> bool:
         """Return True if simulation should terminate."""
@@ -377,7 +377,7 @@ class DensitySimulation:
             logging.warning("Plotting is disabled. Set 'save' parameter to True to enable plotting.")
             return
         import pyvista as pv
-        filename = self.file_location + '/' + self.file_name + self.file_extension
+        filename = self.output_dir + '/' + self.file_name + self.file_extension
         try:
             reader = pv.get_reader(filename)
             reader.set_active_time_point(0)
@@ -408,11 +408,11 @@ class DensitySimulation:
 
         # Classify boundary nodes
         for coord in coords:
-            if near(coord[1], 1.0, self.tolerance):  # Top boundary
+            if near(coord[1], 1.0, self.boundary_tolerance):  # Top boundary
                 top_nodes.append(coord)
-            elif near(coord[0], 1.0, self.tolerance):  # Right boundary
+            elif near(coord[0], 1.0, self.boundary_tolerance):  # Right boundary
                 right_nodes.append(coord)
-            elif near(coord[0], 0.0, self.tolerance):  # Left boundary
+            elif near(coord[0], 0.0, self.boundary_tolerance):  # Left boundary
                 left_nodes.append(coord)
 
         # Sort nodes consistently (by x or y) to match force_profile indexing

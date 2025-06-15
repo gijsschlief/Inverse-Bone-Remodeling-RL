@@ -24,10 +24,10 @@ def forward_model(
         time_steps (int): Number of time steps for the simulation.
         dt (float): Time step size.
         parameters (Dict[str, Union[str, float]]): Parameters for the forward model, including:
-            - 'file_location': Location of the data files.
+            - 'output_dir': Location of the data files.
             - 'min_density': Minimum bone density.
             - 'max_density': Maximum bone density.
-            - 'tolerance': Tolerance for convergence criteria.
+            - 'boundary_tolerance': Boundary threshold.
             - 'plot': Whether to plot the density simulation.
             - 'save': Whether to save the simulation results.
             - 'B': Coefficient for density change.
@@ -37,7 +37,7 @@ def forward_model(
             - 'gamma': Exponent for density elasticity.
             - 'file_name': Base name for output files.
             - 'file_extension': File extension for output files.
-            - 'convergence_eps': Convergence threshold for density change.
+            - 'density_tolerance': Convergence threshold for density change.
 
     Returns:
         np.ndarray: Updated bone density profile after the simulation.

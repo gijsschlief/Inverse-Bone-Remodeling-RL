@@ -30,7 +30,7 @@ def main() -> None:
     parser.add_argument("--dt", type=float, help="Time step size.")
     parser.add_argument("--min_density", type=float, help="Minimum bone density.")
     parser.add_argument("--max_density", type=float, help="Maximum bone density.")
-    parser.add_argument("--tolerance", type=float, help="Tolerance for convergence criteria.")
+    parser.add_argument("--boundary_tolerance", type=float, help="Tolerance for convergence criteria.")
     parser.add_argument("--B", type=float, help="Coefficient for density change.")
     parser.add_argument("--k", type=float, help="Threshold for density change.")
     parser.add_argument("--nu", type=float, help="Poisson's ratio.")
@@ -38,8 +38,8 @@ def main() -> None:
     parser.add_argument("--gamma", type=float, help="Exponent for density elasticity.")
     parser.add_argument("--file_name", type=str, help="Base name for output files.")
     parser.add_argument("--file_extension", type=str, help="File extension for output files.")
-    parser.add_argument("--convergence_eps", type=float, help="Convergence threshold for density change.")
-    parser.add_argument("--file_location", type=str, help="Location of the data files.")
+    parser.add_argument("--density_tolerance", type=float, help="Convergence threshold for density change.")
+    parser.add_argument("--output_dir", type=str, help="Location of the data files.")
 
     # Density profile
     parser.add_argument("--initial_density_value", type=float, default=0.8, help="Initial density value to fill the array.")
