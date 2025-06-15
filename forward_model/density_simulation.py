@@ -7,7 +7,7 @@ import numpy as np
 import ufl
 
 class DensitySimulation:
-    def __init__(self, force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int = 100, dt: int = 1, parameters: dict[str, Any] | None = None) -> None:
+    def __init__(self, force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int = 100, dt: int | float = 1, parameters: dict[str, Any] | None = None) -> None:
         """
         Initialize the density simulation with parameters and setup.
         Parameters:
@@ -24,7 +24,6 @@ class DensitySimulation:
         self._setup_boundary_conditions()
         self._setup_subdomains()
         self._setup_force_expression()
-        #self.F = Expression("m*x[0]+c", m=-10, c=10, degree=1)
         self.E0 = self._calculate_E(self.rho_val)
         self.mu, self.lmbda = self._calculate_lame_coefficients(self.E0)
         self.u = Function(self.V)
@@ -39,14 +38,13 @@ class DensitySimulation:
             dt (Union[int, float]): Time step size.
             parameters (dict): Dictionary containing simulation parameters.
         """
-        self.time_steps = time_steps  # Store time_steps as an instance variable
         # Initialize density and force profiles
         self.density_profile = initial_density
         self.force_profile = force_profile
         self.dt = dt
         self.time_steps = time_steps
         self.total_time = self.time_steps * self.dt
-        self.parameters = parameters
+        self.parameters = parameters or {}
 
         # Data extraction from the density profile
         self.n_rows = self.density_profile.shape[0]  # Number of rows in initial density
@@ -55,7 +53,7 @@ class DensitySimulation:
         
         # Data extraction from parameters
         default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
-        self.output_dir = parameters.get('ouput_dir', str(default_dir))  # Location of the data files
+        self.output_dir = parameters.get('output_dir', str(default_dir))  # Location of the data files
         self.min_density = parameters.get('min_density', 0.01)  # Minimum bone density
         self.max_density = parameters.get('max_density', 1.74)  # Maximum bone density
         self.boundary_tolerance = parameters.get('boundary_tolerance', 1E-14)  # Tolerance for convergence
@@ -148,13 +146,21 @@ class DensitySimulation:
         while the roller boundary condition is applied to the bottom right corner.
         """
         def bottom_fixed_boundary(x, on_boundary) -> bool:
+            """
+            This function checks if the point is on the bottom boundary and
+            in the left corner (x=0, y=0).
+            """
             return near(x[0], 0, self.boundary_tolerance) and near(x[1], 0, self.boundary_tolerance)
 
-        def bottom_right_boundary(x, on_boundary) -> bool:
+        def bottom_roller_boundary(x, on_boundary) -> bool:
+            """
+            This function checks if the point is on the bottom boundary and
+            in the right corner (x=1, y=0).
+            """
             return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
 
         boundary_condition_fixed = DirichletBC(self.V, Constant((0., 0.)), bottom_fixed_boundary, method='pointwise')
-        boundary_condition_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_right_boundary)
+        boundary_condition_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_roller_boundary)
         self.boundary_conditions = [boundary_condition_fixed, boundary_condition_roller]
 
     def _setup_subdomains(self) -> None:
@@ -326,22 +332,22 @@ class DensitySimulation:
 
     def _update_density(self) -> None:
         """Compute SED and update density based on it."""
-        eps_val = self._epsilon(self.u)
-        sig_val = self._sigma(self.u, self.mu, self.lmbda)
-        SED, _ = self._calculate_sed(eps_val, sig_val)
+        epsilon_values = self._epsilon(self.u)
+        sigma_values = self._sigma(self.u, self.mu, self.lmbda)
+        SED, _ = self._calculate_sed(epsilon_values, sigma_values)
         rho_function, self.updated_rho_val, self.converged_cell_count = self._calculate_density_change(self.updated_rho_val, SED)
         self.current_rho_function = rho_function  # store for saving/plotting
 
-    def _check_convergence_and_save(self, t: float) -> None:
-        """Save intermediate results and check for convergence."""
+    def _save(self) -> None:
+        """Save the current density result to the output."""
         if self.save:
             path = Path(self.output_dir)
             path.mkdir(parents=True, exist_ok=True)
             File(self.output_dir + '/' + self.output_basename + self.file_extension) << self.current_rho_function
 
-    def _check_termination(self, t: float) -> bool:
+    def _check_convergence(self) -> bool:
         """Return True if simulation should terminate."""
-        return t == self.total_time or sum(self.converged_cell_count) == self.cell_count
+        return sum(self.converged_cell_count) >= self.cell_count
 
     def _update_material_properties(self) -> None:
         """Update material properties for the next time step."""
@@ -354,8 +360,8 @@ class DensitySimulation:
         while t <= self.total_time:
             self._solve_elasticity_problem()
             self._update_density()
-            self._check_convergence_and_save(t)
-            if self._check_termination(t):
+            self._save()
+            if self._check_convergence():
                 break
     
             self._update_material_properties()
@@ -391,64 +397,4 @@ class DensitySimulation:
         except Exception as e:
             logging.error(f"Failed to plot the result: {e}")
             return
-        self.visualize_force_with_pyvista()
         
-    def visualize_force_with_pyvista(self):
-        """
-        Visualize boundary forces using self.force_profile as magnitudes.
-        Assumes self.force_profile has shape (3, N), for top, right, and left.
-        """
-        import pyvista as pv
-
-        mesh = self.mesh
-        coords = mesh.coordinates()
-        top_nodes = []
-        right_nodes = []
-        left_nodes = []
-
-        # Classify boundary nodes
-        for coord in coords:
-            if near(coord[1], 1.0, self.boundary_tolerance):  # Top boundary
-                top_nodes.append(coord)
-            elif near(coord[0], 1.0, self.boundary_tolerance):  # Right boundary
-                right_nodes.append(coord)
-            elif near(coord[0], 0.0, self.boundary_tolerance):  # Left boundary
-                left_nodes.append(coord)
-
-        # Sort nodes consistently (by x or y) to match force_profile indexing
-        top_nodes = sorted(top_nodes, key=lambda x: x[0])    # left to right
-        right_nodes = sorted(right_nodes, key=lambda x: -x[1])  # top to bottom
-        left_nodes = sorted(left_nodes, key=lambda x: -x[1])   # top to bottom
-
-        # Convert to NumPy arrays
-        top_nodes = np.array(top_nodes)
-        right_nodes = np.array(right_nodes)
-        left_nodes = np.array(left_nodes)
-
-        # Check matching shape
-        if (self.force_profile.shape[1] != len(top_nodes) or
-            self.force_profile.shape[1] != len(right_nodes) or
-            self.force_profile.shape[1] != len(left_nodes)):
-            raise ValueError("Mismatch between force_profile columns and boundary node counts.")
-
-        # Construct force vectors
-        top_forces = np.column_stack([self.force_profile[0], np.zeros_like(self.force_profile[0])])
-        right_forces = np.column_stack([np.zeros_like(self.force_profile[1]), -self.force_profile[1]])
-        left_forces = np.column_stack([np.zeros_like(self.force_profile[2]), self.force_profile[2]])
-
-        # Combine all
-        all_coords = np.vstack([top_nodes, right_nodes, left_nodes])
-        all_forces = np.vstack([top_forces, right_forces, left_forces])
-
-        # Create PyVista objects
-        points = pv.PolyData(all_coords)
-        points["force"] = all_forces
-        arrows = points.glyph(orient="force", scale=False, factor=0.05)
-
-
-        plotter = pv.Plotter()
-        grid = pv.UnstructuredGrid(self.mesh.cells(), self.mesh.cell_types(), self.mesh.coordinates())
-        plotter.add_mesh(grid, show_edges=True, opacity=0.3)
-        plotter.add_mesh(arrows, color="red", label="Forces")
-        plotter.add_legend()
-        plotter.show()
