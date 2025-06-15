@@ -44,7 +44,7 @@ def forward_model(
     """
     simulation = DensitySimulation(
         force_profile=force_profile,
-        initial_density=initial_density,
+        initial_density_field=initial_density,
         time_steps=time_steps,
         dt=dt,
         parameters=parameters,

@@ -10,7 +10,7 @@ class DensitySimulation:
     def __init__(
         self, 
         force_profile: np.ndarray, 
-        initial_density: np.ndarray, 
+        initial_density_field: np.ndarray, 
         time_steps: int = 100, 
         dt: int | float = 1, 
         parameters: dict[str, Any] | None = None
@@ -19,12 +19,12 @@ class DensitySimulation:
         Initialize the density simulation with parameters and setup.
         Parameters:
             force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left and right and n is the exact location in that row.
-            initial_density (np.ndarray): Initial bone density matrix.
+            initial_density_field (np.ndarray): Initial bone density matrix.
             time_steps (int): Number of time steps for the simulation.
             dt (Union[int, float]): Time step size.
             parameters (dict): Dictionary containing simulation parameters.
         """
-        self._initialize_core_parameters(force_profile, initial_density, time_steps, dt, parameters)
+        self._initialize_core_parameters(force_profile, initial_density_field, time_steps, dt, parameters)
         self._initialize_density_parameters()
         self._extract_data_from_parameters(self.parameters)
 
@@ -43,7 +43,7 @@ class DensitySimulation:
     def _initialize_core_parameters(
         self, 
         force_profile: np.ndarray, 
-        initial_density: np.ndarray, 
+        initial_density_field: np.ndarray, 
         time_steps: int, 
         dt: int | float, 
         parameters: dict[str, Any] | None
@@ -51,7 +51,7 @@ class DensitySimulation:
         """
         Initialize the core simulation parameters by adding them to the class instance.
         """
-        self.density_profile = initial_density
+        self.density_profile = initial_density_field
         self.force_profile = force_profile
         self.dt = dt
         self.time_steps = time_steps
@@ -64,7 +64,7 @@ class DensitySimulation:
         """
         self.n_rows = self.density_profile.shape[0]
         self.n_columns = self.density_profile.shape[1]
-        self.initial_density = self.density_profile.mean()
+        self.mean_initial_density = self.density_profile.mean()
 
     def _extract_data_from_parameters(self, parameters: dict[str, Any]) -> None:
         """
@@ -154,7 +154,7 @@ class DensitySimulation:
         This function sets the initial density values for each cell in the mesh,
         based on the initial density profile provided.
         """
-        self.density = np.full(self.num_cells, self.initial_density, dtype=float)
+        self.density = np.full(self.num_cells, self.mean_initial_density, dtype=float)
         self.updated_density = self.density.copy()
         self.converged_num_cells = np.zeros(self.num_cells, dtype=int)
 
@@ -302,33 +302,33 @@ class DensitySimulation:
     def _calculate_density_change(self, density_values: np.ndarray, SED: np.ndarray) -> tuple[Function, np.ndarray, np.ndarray]:
         """
         Calculate the change in density based on the strain energy density (SED) and update the density values.
+        Cells which have converged will no longer update in the simulation.
+        Convergence happens when the lower or upper density is hit or the cell has not made a noticeable change in density.
         """
-        # Initialize flags, stimulus and new density arrays
-        converged = self.converged_num_cells.astype(bool)
-        evolving = ~converged
+        converged_cells = self.converged_num_cells.astype(bool)
+        active_cells = ~converged_cells
         stimulus = np.zeros_like(density_values)
         new_density = density_values.copy()
 
-        # Compute the stimulus and density change for evolving cells
-        stimulus[evolving] = SED[evolving] / density_values[evolving]
+        # Compute the stimulus and density change for active cells
+        stimulus[active_cells] = SED[active_cells] / density_values[active_cells]
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
-        new_density[evolving] = density_values[evolving] + self.dt * delta[evolving]
+        new_density[active_cells] = density_values[active_cells] + self.dt * delta[active_cells]
 
         # Clip the new density values to the min and max bounds
-        below_min = new_density <= self.min_density
-        above_max = new_density >= self.max_density
+        cells_converged_below_min = new_density <= self.min_density
+        cells_converged_above_max = new_density >= self.max_density
         new_density = np.clip(new_density, self.min_density, self.max_density)
 
-        # Update convergence flags
-        small_change = np.abs(delta) < self.density_tolerance
-        converged = converged | below_min | above_max | small_change
+        cells_converged_small_change = np.abs(delta) < self.density_tolerance
+        converged_cells = converged_cells | cells_converged_below_min | cells_converged_above_max | cells_converged_small_change
 
         # build Fenics Function for density
         density_function = Function(self.cell_density_space)
         density_array = density_function.vector().get_local()
         density_array[:] = new_density
         density_function.vector().set_local(density_array)
-        self.converged_num_cells = converged.astype(int)
+        self.converged_num_cells = converged_cells.astype(int)
 
         return density_function, new_density, self.converged_num_cells
 
