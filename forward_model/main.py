@@ -32,10 +32,10 @@ def forward_model(
             - 'save': Whether to save the simulation results.
             - 'remodeling_rate_coefficient': Coefficient for density change.
             - 'stimulus_threshold': Threshold for density change.
-            - 'nu': Poisson's ratio.
-            - 'M': Modulus of elasticity.
-            - 'gamma': Exponent for density elasticity.
-            - 'file_name': Base name for output files.
+            - 'poisson_ratio': Poisson's ratio.
+            - 'elastic_modulus_scale': Modulus of elasticity.
+            - 'modulus_exponent': Exponent for density elasticity.
+            - 'ouptut_basename': Base name for output files.
             - 'file_extension': File extension for output files.
             - 'density_tolerance': Convergence threshold for density change.
 

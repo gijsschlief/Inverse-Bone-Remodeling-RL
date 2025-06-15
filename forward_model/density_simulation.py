@@ -51,7 +51,7 @@ class DensitySimulation:
         # Data extraction from the density profile
         self.n_rows = self.density_profile.shape[0]  # Number of rows in initial density
         self.n_columns = self.density_profile.shape[1]  # Number of columns in initial density
-        self.rho0 = self.density_profile.mean()  # Initial average density
+        self.initial_density = self.density_profile.mean()  # Initial average density
         
         # Data extraction from parameters
         default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "fenics"
@@ -61,10 +61,10 @@ class DensitySimulation:
         self.boundary_tolerance = parameters.get('boundary_tolerance', 1E-14)  # Tolerance for convergence
         self.remodeling_rate_coefficient = parameters.get('remodeling_rate_coefficient', 1)  # Coefficient for density change
         self.stimulus_threshold = parameters.get('stimulus_threshold', 0.25)  # Threshold for density change
-        self.nu = parameters.get('nu', 0.3)  # Poisson's ratio
-        self.M = parameters.get('M', 100)  # Modulus of elasticity
-        self.gamma = parameters.get('gamma', 2.0)  # Exponent for density elasticity
-        self.file_name = parameters.get('file_name', 'density_simulation')  # Base name for output files
+        self.poisson_ratio = parameters.get('poisson_ratio', 0.3)  # Poisson's ratio
+        self.elastic_modulus_scale = parameters.get('elastic_modulus_scale', 100)  # Modulus of elasticity
+        self.modulus_exponent = parameters.get('modulus_exponent', 2.0)  # Exponent for density elasticity
+        self.output_basename = parameters.get('output_basename', 'density_simulation')  # Base name for output files
         self.file_extension = parameters.get('file_extension', '.pvd')  # File extension for output files
         self.save = parameters.get('save', False)  # Flag to save output files
         self.plot = parameters.get('plot', False)  # Flag to plot the results
@@ -136,7 +136,7 @@ class DensitySimulation:
         This function sets the initial density values for each cell in the mesh,
         based on the initial density profile provided.
         """
-        self.rho_val = [self.rho0 for _ in range(self.mesh.num_cells())]
+        self.rho_val = [self.initial_density for _ in range(self.mesh.num_cells())]
         self.updated_rho_val = self.rho_val[:]
         self.converged_cell_count = [0 for _ in range(self.mesh.num_cells())]
 
@@ -153,9 +153,9 @@ class DensitySimulation:
         def bottom_right_boundary(x, on_boundary) -> bool:
             return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
 
-        bc_fixed = DirichletBC(self.V, Constant((0., 0.)), bottom_fixed_boundary, method='pointwise')
-        bc_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_right_boundary)
-        self.bcs = [bc_fixed, bc_roller]
+        boundary_condition_fixed = DirichletBC(self.V, Constant((0., 0.)), bottom_fixed_boundary, method='pointwise')
+        boundary_condition_roller = DirichletBC(self.V.sub(1), Constant(0), bottom_right_boundary)
+        self.boundary_conditions = [boundary_condition_fixed, boundary_condition_roller]
 
     def _setup_subdomains(self) -> None:
         """
@@ -233,7 +233,7 @@ class DensitySimulation:
         """
         E_func = Function(self.V_ele)
         E_func.vector().zero()  # Initialize the function vector to zero
-        E_array = self.M * np.power(rho_vals, self.gamma)
+        E_array = self.elastic_modulus_scale * np.power(rho_vals, self.modulus_exponent)
         E_func.vector().set_local(E_array)
         return E_func
 
@@ -243,8 +243,8 @@ class DensitySimulation:
         :param E_val: Modulus of elasticity as a Function.
         :return: Shear modulus (mu) and first Lame coefficient (lambda).
         """
-        mu = E_val / (2 * (1 + self.nu))
-        lmbda = (E_val * self.nu) / ((1 + self.nu) * (1 - 2 * self.nu))
+        mu = E_val / (2 * (1 + self.poisson_ratio))
+        lmbda = (E_val * self.poisson_ratio) / ((1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio))
         return mu, lmbda
 
     def _epsilon(self, u: Function) -> ufl.tensors.ListTensor:
@@ -322,7 +322,7 @@ class DensitySimulation:
             self.v[0] * self.right_force_expr * self.ds(2) + \
             self.v[1] * self.left_force_expr * self.ds(3)
 
-        solve(a == L, self.u, self.bcs)
+        solve(a == L, self.u, self.boundary_conditions)
 
     def _update_density(self) -> None:
         """Compute SED and update density based on it."""
@@ -337,7 +337,7 @@ class DensitySimulation:
         if self.save:
             path = Path(self.output_dir)
             path.mkdir(parents=True, exist_ok=True)
-            File(self.output_dir + '/' + self.file_name + self.file_extension) << self.current_rho_function
+            File(self.output_dir + '/' + self.output_basename + self.file_extension) << self.current_rho_function
 
     def _check_termination(self, t: float) -> bool:
         """Return True if simulation should terminate."""
@@ -377,7 +377,7 @@ class DensitySimulation:
             logging.warning("Plotting is disabled. Set 'save' parameter to True to enable plotting.")
             return
         import pyvista as pv
-        filename = self.output_dir + '/' + self.file_name + self.file_extension
+        filename = self.output_dir + '/' + self.output_basename + self.file_extension
         try:
             reader = pv.get_reader(filename)
             reader.set_active_time_point(0)
