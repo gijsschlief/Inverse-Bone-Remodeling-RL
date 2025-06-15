@@ -39,7 +39,7 @@ def main() -> None:
     parser.add_argument("-gamma","--modulus_exponent", type=float, help="Exponent for density elasticity.")
     parser.add_argument("--output_basename", type=str, help="Base name for output files.")
     parser.add_argument("--file_extension", type=str, help="File extension for output files.")
-    parser.add_argument("--density_tolerance", type=float, help="Convergence threshold for density change.")
+    parser.add_argument("--convergence_tolerance", type=float, help="Convergence threshold for density change.")
     parser.add_argument("--output_dir", type=str, help="Location of the data files.")
 
     # Density profile

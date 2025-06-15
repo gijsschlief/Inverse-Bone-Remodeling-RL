@@ -37,7 +37,7 @@ def forward_model(
             - 'modulus_exponent': Exponent for density elasticity.
             - 'ouptut_basename': Base name for output files.
             - 'file_extension': File extension for output files.
-            - 'density_tolerance': Convergence threshold for density change.
+            - 'convergence_tolerance': Convergence threshold for density change.
 
     Returns:
         np.ndarray: Updated bone density profile after the simulation.
