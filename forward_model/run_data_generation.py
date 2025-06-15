@@ -1,8 +1,13 @@
 import argparse
 from pathlib import Path
+import time
+import logging
 
 import numpy as np
 from fenics import set_log_level, LogLevel
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 from data_generation import TrainingDataGenerator
 
@@ -41,13 +46,16 @@ def main() -> None:
         batch_seed=args.batch_seed
     )
 
+    start_time = time.time()
     if args.mode == "parallel":
         generator.generate_parallel(args.num_samples)
     elif args.mode == "sequential":
         generator.generate_sequential(args.num_samples)
     elif args.mode == "edge":
         generator.generate_edge_cases(args.num_samples)
-
+    stop_time = time.time()
+    elapsed_time = stop_time - start_time
+    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 if __name__ == "__main__":
     main()

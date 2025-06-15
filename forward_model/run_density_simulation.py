@@ -3,6 +3,7 @@ import logging
 import json
 from pathlib import Path
 import sys
+import time
 
 import numpy as np
 from fenics import set_log_level, LogLevel
@@ -75,9 +76,7 @@ def main() -> None:
     # Initialize logging based on verbosity
     if args.verbose:
         logging.info("Initializing force profile and parameters...")
-        set_log_level(LogLevel.INFO)  # Set FEniCS log level to INFO for verbose output
-    else:
-        set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
+    set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
 
     initial_density = np.full((args.n_rows, args.n_columns), args.initial_density_value)
 
@@ -129,9 +128,13 @@ def main() -> None:
         logging.info("Parameters loaded: %s", parameters)
         logging.info(f"Parameters saved to {parameters_file}")
 
+
     logging.info("Running forward model simulation...")
+    start_time = time.time()
     final_density = forward_model(force_profile, initial_density, parameters.get('time_steps', 100), parameters.get('dt', 1.0), parameters)
-    logging.info("Simulation completed.")
+    stop_time = time.time()
+    elapsed_time = stop_time - start_time
+    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
     # Log less information if verbose is not enabled
     if args.verbose:
