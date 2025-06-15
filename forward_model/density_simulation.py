@@ -213,9 +213,9 @@ class DensitySimulation:
 
         self.boundaries = MeshFunction('size_t', self.mesh, 1)
         self.boundaries.set_all(0)
-        Top().mark(self.boundaries, 1)
-        Right().mark(self.boundaries, 2)
-        Left().mark(self.boundaries, 3)
+        Top(self.boundary_tolerance).mark(self.boundaries, 1)
+        Right(self.boundary_tolerance).mark(self.boundaries, 2)
+        Left(self.boundary_tolerance).mark(self.boundaries, 3)
         self.ds = Measure('ds', domain=self.mesh, subdomain_data=self.boundaries)
     
     def _setup_force_expression(self) -> None:
@@ -349,7 +349,7 @@ class DensitySimulation:
         # Solve the elasticity problem
         solve(stiffness_form == load_form, self.displacement, self.boundary_conditions)
 
-    def _update_density(self) -> None:
+    def _update_density(self) -> Function:
         """
         Compute SED and update density based on it.
         """
@@ -357,8 +357,7 @@ class DensitySimulation:
         stress_tensor = self._calculate_stress_tensor(self.displacement, self.shear_modules, self.first_lame_parameter, strain_tensor)
         SED, _ = self._calculate_sed(strain_tensor, stress_tensor)
         density_function, self.updated_density, self.converged_num_cells = self._calculate_density_change(self.updated_density, SED)
-        if self.save:
-            self._save(density_function)
+        return density_function
 
     def _save(self, to_save_data: Any) -> None:
         """
@@ -393,12 +392,15 @@ class DensitySimulation:
         time = 0
         while time <= self.total_time:
             self._solve_elasticity_problem()
-            self._update_density()
+            density_function = self._update_density()
             if self._check_convergence():
                 break
     
             self._update_material_properties()
             time += self.dt
+        
+        if self.save:
+            self._save(density_function)
 
     def get_final_density(self) -> np.ndarray:
         """
