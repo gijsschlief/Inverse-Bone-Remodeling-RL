@@ -1,14 +1,20 @@
+import random
+import logging
+from typing import List, Optional, Any
+
 import torch
 import numpy as np
+
 from surrogate_model.advanced_neural_network import AdvancedNNSurrogateModel
 from utils.datareader import read_json_data
 from utils.convert_to_array import convert_to_array
 from utils.data_splitting import split_data
 from rl_model.reward_calculation import calculate_similarity
-import random
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class SurrogateModelLoader:
-    def __init__(self, model_path, model_class):
+    def __init__(self, model_path: str, model_class: torch.nn.Module) -> None:
         """
         Initialize the loader with the path to the model and the model class.
 
@@ -20,7 +26,7 @@ class SurrogateModelLoader:
         self.model_class = model_class
         self.model = None
 
-    def load_model(self):
+    def load_model(self) -> None:
         """
         Load the surrogate model from the .pth file.
         """
@@ -28,7 +34,7 @@ class SurrogateModelLoader:
         self.model.load_state_dict(torch.load(self.model_path))
         self.model.eval()  # Set the model to evaluation mode
 
-    def forward(self, data_points):
+    def forward(self, data_points: torch.Tensor) -> torch.Tensor:
         """
         Run forward estimation on the given data points.
 
@@ -45,14 +51,21 @@ class SurrogateModelLoader:
             predictions = self.model(data_points)
         return predictions
     
-def main():
+def main() -> None:
+    """
+    Main function to load data, preprocess it, load the surrogate model, and evaluate its performance.
+    """
     # Data Loading
-    data = read_json_data("/home/gijs/Desktop/Thesis/data/raw/training_data_20250605_023414.json")
-    print(f"Data loaded")
+    data = read_json_data("/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json")
+    if data is None:
+        logging.error("Failed to load data. Exiting.")
+        return
+    else:
+        logging.info(f"Data loaded successfully. Number of samples: {len(data)}")
 
     # Preprocessing
-    serial_numbers, force_profiles, final_output_densities = convert_to_array(data)
-    X_train, X_val, X_test, y_train, y_val, y_test = split_data(force_profiles, final_output_densities)
+    _, force_profiles, final_output_densities = convert_to_array(data)
+    _, X_val, _, _, y_val, _ = split_data(force_profiles, final_output_densities)
 
     # Load the surrogate model
     model_loader = SurrogateModelLoader("/home/gijs/Desktop/Thesis/data/models/trained_model.pth", AdvancedNNSurrogateModel)
@@ -73,7 +86,7 @@ def main():
         loss_fn = torch.nn.MSELoss()  # Define the loss function
         val_loss = loss_fn(val_logits, y_val_tensor)
 
-        print(f"Validation Loss: {val_loss.item()}")
+        logging.info(f"Validation Loss: {val_loss.item()}")
 
     # Calculate similarity between predicted and actual validation data
     similarity_scores = []
@@ -81,16 +94,17 @@ def main():
         predicted_matrix = val_logits[i].cpu().numpy()
         average_similarity = np.mean(similarity_scores)
         actual_matrix = y_val_tensor[i].cpu().numpy()
-        similarity = calculate_similarity(predicted_matrix, actual_matrix, method='wasserstein', baseline=0.1, threshold=0.5)
+        similarity = calculate_similarity(predicted_matrix, actual_matrix, method='ssim', baseline=0.1, threshold=0.5)
         similarity_scores.append(similarity)
 
     # Calculate average similarity as accuracy metric\
     #print(f"Similarity Scores: {similarity_scores}")
     average_similarity = np.mean(similarity_scores)
-    print(f"Model Accuracy (Average Similarity): {average_similarity}")
+    logging.info(f"Model Accuracy (Average Similarity): {average_similarity}")
 
     # print a matrix of the first validation sample
-    print("First Validation Sample Predicted Matrix:")
+    logging.info(f"First Validation Sample Predicted Matrix:\n{val_logits[0].cpu().numpy()}")
+
     # Select 3 random indices from the validation set
     random_indices = random.sample(range(num_val_samples), 3)
 
@@ -103,10 +117,7 @@ def main():
         actual_matrix = y_val_tensor[idx].cpu().numpy()
 
         import matplotlib.pyplot as plt
-
-        print(f"Sample Index: {idx}")
-        print("Original Density Matrix:")
-        print(actual_matrix)
+        logging.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
         plt.figure(figsize=(6, 6))
         plt.imshow(actual_matrix, cmap='viridis', interpolation='nearest', vmin=min_true_value, vmax=max_true_value)
         plt.colorbar(label='Value')
@@ -116,8 +127,7 @@ def main():
                 plt.text(j, i, f"{actual_matrix[i, j]:.2f}", ha='center', va='center', color='white', fontsize=8)
         plt.show()
 
-        print("Predicted Density Matrix:")
-        print(predicted_matrix)
+        logging.info(f"Predicted Density Matrix:\n{predicted_matrix}")
         plt.figure(figsize=(6, 6))
         plt.imshow(predicted_matrix, cmap='viridis', interpolation='nearest', vmin=min_true_value, vmax=max_true_value)
         plt.colorbar(label='Value')
@@ -127,7 +137,8 @@ def main():
                 plt.text(j, i, f"{predicted_matrix[i, j]:.2f}", ha='center', va='center', color='white', fontsize=8)
         plt.show()
 
-        print("-" * 50)
+        logging.info("-" * 50)
+
     return
 
 if __name__ == "__main__":
