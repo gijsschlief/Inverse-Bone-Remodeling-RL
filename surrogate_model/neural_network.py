@@ -1,3 +1,5 @@
+import logging
+
 import torch
 from torch import nn
 
@@ -50,7 +52,7 @@ class NNSurrogateModel(nn.Module):
     def plot_loss(self):
         import matplotlib.pyplot as plt
         if not self.train_losses:
-            print("No training history found.")
+            logging.error("No training losses recorded.")
             return
 
         plt.figure(figsize=(10, 5))
