@@ -7,9 +7,9 @@ import torch
 import numpy as np
 
 from surrogate_model.neural_networks.advanced_neural_network import AdvancedNNSurrogateModel
-from data.datareader import read_json_data
+from Thesis_code.data.json_reader import read_json_data
 from data.convert_to_array import convert_to_array
-from data.data_splitting import split_data
+from Thesis_code.data.splitting import splitting
 from rl_model.reward_calculation import calculate_similarity
 
 # Set up logging
@@ -22,7 +22,7 @@ LEARNING_RATE = 1e-3
 PATIENCE = 20
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
-DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/training_batch_01_samples_25000_0611_2026.json"
+DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
 
 
 def load_data(path_pattern: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -62,7 +62,7 @@ def load_data(path_pattern: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np
 
     data = read_json_data(path_pattern)
     serial_numbers, force_profiles, final_output_densities = convert_to_array(data)
-    return split_data(force_profiles, final_output_densities)
+    return splitting(force_profiles, final_output_densities)
 
 
 def prepare_tensors(X_data: np.ndarray, y_data: np.ndarray, device: torch.device) -> Tuple[torch.Tensor, torch.Tensor]:

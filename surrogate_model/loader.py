@@ -6,9 +6,9 @@ import torch
 import numpy as np
 
 from surrogate_model.neural_networks.advanced_neural_network import AdvancedNNSurrogateModel
-from data.datareader import read_json_data
+from Thesis_code.data.json_reader import read_json_data
 from data.convert_to_array import convert_to_array
-from data.data_splitting import split_data
+from Thesis_code.data.splitting import splitting
 from rl_model.reward_calculation import calculate_similarity
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -65,7 +65,7 @@ def main() -> None:
 
     # Preprocessing
     _, force_profiles, final_output_densities = convert_to_array(data)
-    _, X_val, _, _, y_val, _ = split_data(force_profiles, final_output_densities)
+    _, X_val, _, _, y_val, _ = splitting(force_profiles, final_output_densities)
 
     # Load the surrogate model
     model_loader = SurrogateModelLoader("/home/gijs/Desktop/Thesis/data/models/trained_model.pth", AdvancedNNSurrogateModel)
