@@ -104,7 +104,7 @@ class DensitySimulation:
             raise TypeError("max_density must be a number.")
         if self.min_density < 0 or self.max_density <= self.min_density:
             raise ValueError("r_min must be non-negative and max_density must be greater than min_density.")
-        if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != max(self.initial_density_field.shape):
+        if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != np.max(self.initial_density_field.shape):
             raise ValueError("force_profile must have 3 rows and columns equal to the maximum of initial_density field dimensions.")
         if np.isnan(self.force_profile).any():
             raise ValueError("force_profile contains NaN values.")

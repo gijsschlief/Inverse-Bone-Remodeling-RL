@@ -64,7 +64,7 @@ class TrainingDataGenerator:
 
     def _generate_random_force_profile(self, sample_index: int) -> np.ndarray:
         np.random.seed(self.batch_seed + sample_index)
-        force_profile = np.zeros((3, max(self.initial_density.shape)))
+        force_profile = np.zeros((3, np.max(self.initial_density.shape)))
         num_forces = np.random.randint(1, self.force_count_max)
         locations = np.random.choice(np.prod(force_profile.shape), num_forces, replace=False)
         for loc in locations:
@@ -136,7 +136,7 @@ class TrainingDataGenerator:
     def _generate_edge_case_profiles(self, num_cases: int) -> List[np.ndarray]:
         edge_cases = []
         rng = np.random.default_rng(self.batch_seed)
-        shape = (3, max(self.initial_density.shape))
+        shape = (3, np.max(self.initial_density.shape))
 
         for i in range(num_cases):
             if i % 5 == 0:
