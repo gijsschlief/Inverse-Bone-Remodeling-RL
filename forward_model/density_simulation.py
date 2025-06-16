@@ -6,10 +6,6 @@ from fenics import *
 import numpy as np
 import ufl
 
-class BoundaryID:
-    TOP = 1
-    RIGHT = 2
-    LEFT = 3
 class DensitySimulation:
     def __init__(
         self, 
@@ -213,6 +209,11 @@ class DensitySimulation:
                 self.boundary_tolerance = boundary_tolerance
             def inside(self, x, on_boundary) -> bool:
                 return near(x[0], 0, self.boundary_tolerance) and on_boundary
+
+        class BoundaryID:
+            TOP = 1
+            RIGHT = 2
+            LEFT = 3
         
         self.boundaries = MeshFunction('size_t', self.mesh, 1)
         self.boundaries.set_all(0)
