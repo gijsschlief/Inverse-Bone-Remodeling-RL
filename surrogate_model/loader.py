@@ -5,10 +5,10 @@ from typing import List, Optional, Any
 import torch
 import numpy as np
 
-from surrogate_model.advanced_neural_network import AdvancedNNSurrogateModel
-from utils.datareader import read_json_data
-from utils.convert_to_array import convert_to_array
-from utils.data_splitting import split_data
+from surrogate_model.neural_networks.advanced_neural_network import AdvancedNNSurrogateModel
+from data.datareader import read_json_data
+from data.convert_to_array import convert_to_array
+from data.data_splitting import split_data
 from rl_model.reward_calculation import calculate_similarity
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
