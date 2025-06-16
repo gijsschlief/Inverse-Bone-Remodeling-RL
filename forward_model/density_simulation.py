@@ -6,6 +6,10 @@ from fenics import *
 import numpy as np
 import ufl
 
+class BoundaryID:
+    TOP = 1
+    RIGHT = 2
+    LEFT = 3
 class DensitySimulation:
     def __init__(
         self, 
@@ -209,11 +213,6 @@ class DensitySimulation:
                 self.boundary_tolerance = boundary_tolerance
             def inside(self, x, on_boundary) -> bool:
                 return near(x[0], 0, self.boundary_tolerance) and on_boundary
-            
-        class BoundaryID:
-            TOP = 1
-            RIGHT = 2
-            LEFT = 3
         
         self.boundaries = MeshFunction('size_t', self.mesh, 1)
         self.boundaries.set_all(0)
@@ -345,8 +344,17 @@ class DensitySimulation:
             self.displacement_test_function[0] * self.right_force_expr * self.ds(2) + \
             self.displacement_test_function[1] * self.left_force_expr * self.ds(3)
 
-        # Solve the elasticity problem
-        solve(stiffness_form == load_form, self.displacement, self.boundary_conditions)
+        solver_parameters={
+            'linear_solver': 'default',
+            'preconditioner': 'hypre_amg',
+            'krylov_solver': {
+                'absolute_tolerance': 1E-10,
+                'relative_tolerance': 1E-10,
+                'maximum_iterations': 1000
+            }
+        }
+
+        solve(stiffness_form == load_form, self.displacement, self.boundary_conditions, solver_parameters=solver_parameters)
 
     def _update_density(self) -> Function:
         """
