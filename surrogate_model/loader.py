@@ -6,9 +6,8 @@ import torch
 import numpy as np
 
 from surrogate_model.neural_networks.advanced_neural_network import AdvancedNNSurrogateModel
-from Thesis_code.data.json_reader import read_json_data
-from data.convert_to_array import convert_to_array
-from Thesis_code.data.splitting import splitting
+from Thesis_code.forward_model.data_reader import forward_data_reader
+from Thesis_code.surrogate_model.splitting import splitting
 from rl_model.reward_calculation import calculate_similarity
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -56,15 +55,11 @@ def main() -> None:
     Main function to load data, preprocess it, load the surrogate model, and evaluate its performance.
     """
     # Data Loading
-    data = read_json_data("/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json")
-    if data is None:
+    _, force_profiles, final_output_densities = forward_data_reader("/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json")
+    if force_profiles is None or final_output_densities is None:
         logging.error("Failed to load data. Exiting.")
         return
-    else:
-        logging.info(f"Data loaded successfully. Number of samples: {len(data)}")
-
-    # Preprocessing
-    _, force_profiles, final_output_densities = convert_to_array(data)
+    
     _, X_val, _, _, y_val, _ = splitting(force_profiles, final_output_densities)
 
     # Load the surrogate model
