@@ -25,7 +25,6 @@ class DensitySimulation:
             parameters (dict): Dictionary containing simulation parameters.
         """
         self._initialize_core_parameters(force_profile, initial_density_field, time_steps, dt)
-        self._initialize_density_parameters()
         self._extract_data_from_parameters(parameters or {})
 
         self._validate_parameters()
@@ -55,14 +54,8 @@ class DensitySimulation:
         self.dt = dt
         self.time_steps = time_steps
         self.total_time = self.time_steps * self.dt
-
-    def _initialize_density_parameters(self) -> None:
-        """
-        Initialize and extract the density profile from the initial density matrix.
-        """
         self.n_rows = self.initial_density_field.shape[0]
         self.n_columns = self.initial_density_field.shape[1]
-        self.mean_initial_density = self.initial_density_field.mean()
 
     def _extract_data_from_parameters(self, parameters: dict[str, Any]) -> None:
         """
@@ -150,12 +143,24 @@ class DensitySimulation:
 
     def _setup_density_field(self) -> None:
         """
-        Setup the density values for the simulation.
-        This function sets the initial density values for each cell in the mesh,
-        based on the initial density profile provided.
+        Setup the density values for the simulation based on the initial density field.
+        This function calculates the centroids of the cells in the mesh and assigns the initial density values
+        based on the position of these centroids in relation to the initial density field.
+        The centroids are mapped to the corresponding indices in the initial density field,
+        ensuring that the density values are correctly assigned to each cell.
+        The mapping is done by calculating the indices based on the position of the centroids in the mesh,
+        ensuring that they fall within the bounds of the initial density field.
+        The current density is initialized to the initial density field values at the corresponding indices,
+        and convergence flags are set to false for all cells.
         """
-        # should later be calculated using self.initial_density_field currently estimated based on the mean of the input field.
-        self.current_density = np.full(self.num_cells, self.mean_initial_density, dtype=float)
+        centroids = np.array([cell.midpoint().array() for cell in cells(self.mesh)])
+        xs = centroids[:, 0]
+        ys = centroids[:, 1]
+
+        i = np.minimum((ys * self.n_rows).astype(int), self.n_rows - 1)
+        j = np.minimum((xs * self.n_columns).astype(int), self.n_columns - 1)
+
+        self.current_density = self.initial_density_field[i, j]
         self.convergence_flags = np.zeros(self.num_cells, dtype=bool)
 
     def _setup_boundary_conditions(self) -> None:
@@ -233,7 +238,7 @@ class DensitySimulation:
         self.left_force_expr = self._build_force_expression(self.force_profile[2], axis='y')
 
     @staticmethod
-    def _build_force_expression(force_row: np.ndarray, axis: str = 'x') -> Expression:
+    def _build_force_expression(force_row: np.ndarray, axis: str) -> Expression:
         """
         Build the force expression based on the force profile.
 
