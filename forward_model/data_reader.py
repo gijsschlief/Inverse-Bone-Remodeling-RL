@@ -79,6 +79,7 @@ def _forward_data_load_multiple(file_paths: Sequence[Path]) -> Optional[Tuple[np
         logging.error("No valid data found in the provided files.")
         return None
     
+    logging.info(f"In total loaded {len(all_entries)} entries from {len(file_paths)} files.")
     return _convert_forward_data_to_numpy(all_entries)
 
 def _forward_data_load_single(data_path: Path) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:

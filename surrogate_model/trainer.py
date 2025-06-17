@@ -21,15 +21,15 @@ LEARNING_RATE = 1e-3
 PATIENCE = 20
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
-DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json"
+DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
 
 
 def load_data(path_pattern: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """
-    Load and preprocess data from JSON files matching the given pattern.
+    Load and preprocess data using forward_data_reader, which handles directories and checks.
     
     Args:
-        path_pattern (str): Path pattern to the JSON files. Can be a directory or a specific file.
+        path_pattern (str): Path to the JSON file or directory.
         
     Returns:
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
@@ -40,24 +40,9 @@ def load_data(path_pattern: str) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np
             - y_val: Validation labels
             - y_test: Test labels
     """
-    if os.path.isdir(path_pattern):
-        pattern = os.path.join(path_pattern, "*.json")
-    else:
-        pattern = path_pattern
-    file_list = sorted(glob.glob(pattern))
-    if not file_list:
-        raise FileNotFoundError(f"No JSON files found for pattern: {pattern}")
-    
-    all_forces = []
-    all_densities = []
-    for fp in file_list:
-        _, force_profiles, final_output_densities = forward_data_reader(fp)
-        all_forces.append(force_profiles)
-        all_densities.append(final_output_densities)
-
-    X = np.vstack(all_forces)
-    y = np.vstack(all_densities)
-
+    _, force_profiles, final_output_densities = forward_data_reader(path_pattern)
+    X = force_profiles
+    y = final_output_densities
     return splitting(X, y)
 
 
