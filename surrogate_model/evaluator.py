@@ -3,14 +3,26 @@ import logging
 import numpy as np
 import torch
 
-def evaluate_model(model: torch.nn.Module, X_val: np.ndarray, y_val):
+from rl_model.reward_calculation import calculate_similarity
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+def evaluate_surrogate_model(model: torch.nn.Module, X_val: np.ndarray, y_val):
     """
     Evaluate the surrogate model on validation data and calculate similarity scores.
     Args:
         model: The trained surrogate model.
         X_val: Validation input data.
         y_val: Validation target data.
+    
     """
+    if not isinstance (X_val, torch.Tensor) or not isinstance(y_val, torch.Tensor):
+        raise ValueError("Both X_val and y_val must be torch.Tensor objects.")
+    if X_val.shape != y_val.shape:
+        raise ValueError("Shape of X_val and y_val differs.")
+    if not isinstance (model, torch.nn.Module)
+        raise ValueError("Model must be of type torch.nn.Module")
+
     # Ensure the model is in evaluation mode and on the correct device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -42,4 +54,4 @@ def evaluate_model(model: torch.nn.Module, X_val: np.ndarray, y_val):
     logging.info(f"Model Accuracy (Average Similarity): {average_similarity}")
 
 if __name__ == "__main__":
-    main()
+    evaluate_surrogate_model()
