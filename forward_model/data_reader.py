@@ -138,7 +138,11 @@ def _convert_forward_data_to_numpy(data: List[Dict[str, Any]]) -> Tuple[np.ndarr
     error_counts = {}
     for entry in data:
         try:
-            serial_numbers.append(entry['serial_number'][0])
+            serial_number = entry['serial_number']
+            if isinstance(serial_number, list):
+                serial_numbers.append(serial_number[0])
+            else:
+                serial_numbers.append(serial_number)
             force_profiles.append(entry['force_profile'])
             final_output_densities.append(entry['final_output_density'])
         except (KeyError, IndexError, TypeError) as e:
