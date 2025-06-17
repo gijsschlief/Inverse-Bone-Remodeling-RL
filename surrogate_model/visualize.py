@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-def compare_surrogate_model(val_logits: torch.Tensor, y_val_tensor: torch.Tensor, sample_count: int = 3, show_plot: bool = True) -> List[plt.Figure]:
+def plot_surrogate_model(val_logits: torch.Tensor, y_val_tensor: torch.Tensor, sample_count: int = 3, show_plot: bool = True) -> List[plt.Figure]:
     """
     Compare the surrogate model's predictions with the actual validation data.
     Args:
@@ -66,4 +66,4 @@ if __name__ == "__main__":
     # Example val_logits and y_val_tensor for demonstration purposes
     val_logits = torch.randn(5, 10, 10)
     y_val_tensor = torch.randn(5, 10, 10)
-    compare_surrogate_model(val_logits=val_logits, y_val_tensor=y_val_tensor, sample_count=1)
+    plot_surrogate_model(val_logits=val_logits, y_val_tensor=y_val_tensor, sample_count=1)

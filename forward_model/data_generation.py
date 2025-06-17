@@ -8,7 +8,7 @@ from typing import Dict, Tuple, List, Any
 
 import numpy as np
 
-from forward_model.main import forward_model
+from Thesis_code.forward_model.forward_model import forward_model
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 

@@ -3,7 +3,7 @@ import sys
 from pathlib import Path
 
 def forward_simulation(args):
-    from forward_model.main import main as fenics_simulator
+    from Thesis_code.forward_model.forward_model import main as fenics_simulator
     fenics_simulator()
 
 def generate_data(args):

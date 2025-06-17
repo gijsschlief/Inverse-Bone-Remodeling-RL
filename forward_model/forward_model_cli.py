@@ -8,7 +8,7 @@ import time
 import numpy as np
 from fenics import set_log_level, LogLevel
 
-from forward_model.main import forward_model
+from Thesis_code.forward_model.forward_model import forward_model
 
 def setup_logging(verbose: bool) -> None:
     """
