@@ -21,7 +21,7 @@ def evaluate_surrogate_model(model: torch.nn.Module, X_val: np.ndarray, y_val: n
     
     """
     if not isinstance (X_val, np.ndarray) or not isinstance(y_val, np.ndarray):
-        raise ValueError("Both X_val and y_val must be torch.Tensor objects.")
+        raise ValueError("Both X_val and y_val must be numpy.ndarray objects.")
 
     if X_val.shape[0] != y_val.shape[0]:
         logging.warning("X_val and y_val have different number of samples. Using the minimum of both.")
@@ -52,12 +52,11 @@ def evaluate_surrogate_model(model: torch.nn.Module, X_val: np.ndarray, y_val: n
     similarity_scores = []
     for i in range(num_samples):
         predicted_matrix = val_logits[i].cpu().numpy()
-        average_similarity = np.mean(similarity_scores)
         actual_matrix = y_val_tensor[i].cpu().numpy()
         similarity = calculate_similarity(predicted_matrix, actual_matrix, method='ssim', baseline=0.1, threshold=0.5)
         similarity_scores.append(similarity)
 
-    # Calculate average similarity as accuracy metric\
+    # Calculate average similarity as accuracy metric
     #print(f"Similarity Scores: {similarity_scores}")
     average_similarity = np.mean(similarity_scores)
     logging.info(f"Model Accuracy (Average Similarity): {average_similarity}")

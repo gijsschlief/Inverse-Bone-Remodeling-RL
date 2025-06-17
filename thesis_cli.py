@@ -4,7 +4,7 @@ import sys
 from pathlib import Path
 
 CLI_MODULES = {
-    "forward-model": "forward_model_cli.py",
+    "forward-model": "forward_model/forward_modeling_cli.py",
     "data-generator": "data_generator_cli.py",
 }
 

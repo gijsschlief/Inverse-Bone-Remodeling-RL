@@ -35,7 +35,7 @@ def forward_model(
             - 'poisson_ratio': Poisson's ratio.
             - 'elastic_modulus_scale': Modulus of elasticity.
             - 'modulus_exponent': Exponent for density elasticity.
-            - 'ouptut_basename': Base name for output files.
+            - 'output_basename': Base name for output files.
             - 'file_extension': File extension for output files.
             - 'convergence_tolerance': Convergence threshold for density change.
 
