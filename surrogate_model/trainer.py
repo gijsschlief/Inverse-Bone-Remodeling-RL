@@ -8,7 +8,7 @@ import numpy as np
 
 from surrogate_model.neural_networks.advanced_neural_network import AdvancedNNSurrogateModel
 from Thesis_code.forward_model.data_reader import forward_data_reader
-from Thesis_code.surrogate_model.splitting import splitting
+from Thesis_code.surrogate_model.splitter import splitting
 from rl_model.reward_calculation import calculate_similarity
 
 # Set up logging

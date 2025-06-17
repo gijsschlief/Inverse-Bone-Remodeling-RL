@@ -1,4 +1,3 @@
-# Thesis_code
 # Thesis Code Repository
 
 Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research.
@@ -21,7 +20,7 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
 ## Installation
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/thesis-code.git
+    git clone https://github.com/gijsschlief/thesis-code.git
     cd thesis-code
     ```
 2. Install the required dependencies:
@@ -32,20 +31,18 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
 ## Usage
 Run the main script to start the experiments:
 ```bash
-python main.py
+python thesis_cli
 ```
-Modify the configuration files in the `config/` directory to customize the experiments.
 
 ## Project Structure
 ```
 Thesis_code/
-├── bone_inverse_rl/    # Contains all important code
-├── environments/       # Simulation environments
-├── models/             # RL models and training scripts
-├── results/            # Output results and logs
-├── utils/              # Utility functions and helpers
-├── config/             # Configuration files
-├── main.py             # Entry point for running experiments
+├── delft_blue/         # Contains .sh files for running the modules on a super computer cluster
+├── forward_model/      # Simulation environment for the forward model and data generation
+├── rl_model/           # RL models and training scripts
+├── surrogate_model/    # Unsupervised learning neural network model to estimate the forward model
+├── tests/              # Test module containing test functions for all code
+├── thesis_cli.py       # Entry point for running experiments
 └── README.md           # Project documentation
 ```
 

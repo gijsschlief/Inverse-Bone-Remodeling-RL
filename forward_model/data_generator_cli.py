@@ -9,7 +9,7 @@ from fenics import set_log_level, LogLevel
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
-from data_generation import TrainingDataGenerator
+from Thesis_code.forward_model.data_generator import TrainingDataGenerator
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate training or edge case data for the forward model.")
