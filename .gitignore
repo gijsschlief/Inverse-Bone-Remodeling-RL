@@ -173,6 +173,8 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 
-# Data files
-data/
-*.json
+# VS Code settings
+.vscode/
+
+# Conda environments
+.conda

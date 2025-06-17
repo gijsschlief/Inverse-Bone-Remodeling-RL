@@ -1,7 +1,0 @@
-{
-    "python.testing.pytestArgs": [
-        "bone_inverse_rl"
-    ],
-    "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
-}

@@ -20,7 +20,7 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
 ## Installation
 1. Clone the repository:
     ```bash
-    git clone https://github.com/your-username/thesis-code.git
+    git clone https://github.com/gijsschlief/thesis-code.git
     cd thesis-code
     ```
 2. Install the required dependencies:
@@ -31,21 +31,18 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
 ## Usage
 Run the main script to start the experiments:
 ```bash
-python main.py
+python thesis_cli
 ```
-Modify the configuration files in the `config/` directory to customize the experiments.
 
 ## Project Structure
 ```
-bone_inverse_rl/
-├── delft_blue/         # bash files for running simulations on the delft supercomputer cluster
-├── forward_model/      # runs the forward bone remodelling finite element solver for datageneration
+Thesis_code/
+├── delft_blue/         # Contains .sh files for running the modules on a super computer cluster
+├── forward_model/      # Simulation environment for the forward model and data generation
 ├── rl_model/           # RL models and training scripts
-├── surrogate_model/    # Supervised learning model that estimates forward_model
-├── utils/              # Utility functions and helpers
-├── test/               # Test functions
-├── main.py             # Entry point for running experiments
-├── __init__.py         # Empty initilizer
+├── surrogate_model/    # Unsupervised learning neural network model to estimate the forward model
+├── tests/              # Test module containing test functions for all code
+├── thesis_cli.py       # Entry point for running experiments
 └── README.md           # Project documentation
 ```
 
