@@ -13,7 +13,7 @@ def main():
     """
     # Load the surrogate model and data
     model = load_surrogate_model("/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth", AdvancedNNSurrogateModel)
-    _, force_profiles, final_output_densities = forward_data_reader("/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json")
+    _, force_profiles, final_output_densities = forward_data_reader("/home/gijs/Desktop/Thesis/data/raw/")
     _, X_val, _, _, y_val, _ = splitting(force_profiles, final_output_densities)
 
     val_logits, y_val_tensor, average_similarity = evaluate_surrogate_model(model, X_val, y_val)
