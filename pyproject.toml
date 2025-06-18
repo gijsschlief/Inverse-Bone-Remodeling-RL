@@ -8,8 +8,6 @@ readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
-fenics = "^2019.1.0"
-pyvista = "^0.45.2"
 torch = "^2.7.0"
 torchvision = "^0.22.0"
 stable-baselines3 = {extras = ["extra"], version = "^2.6.0"}
