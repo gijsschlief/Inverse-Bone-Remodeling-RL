@@ -6,14 +6,17 @@ import numpy as np
 
 from forward_model.density_simulation import DensitySimulation
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def forward_model(
     force_profile: np.ndarray,
     initial_density: np.ndarray,
     time_steps: int = 100,
     dt: float = 1.0,
-    parameters: Dict[str, Any] | None = None
+    parameters: Dict[str, Any] | None = None,
 ) -> np.ndarray:
     """
     Calculate the bone density profile based on the force locations on the model.
@@ -48,13 +51,13 @@ def forward_model(
         time_steps=time_steps,
         dt=dt,
         parameters=parameters,
-        )
+    )
     simulation.run()
 
     # Plot density if the plot parameter is enabled
-    if parameters.get('plot', False):
+    if parameters.get("plot", False):
         simulation.plot_density()
-    
+
     # Convert the final density function to a NumPy array
     final_density = simulation.get_final_density()
     return final_density

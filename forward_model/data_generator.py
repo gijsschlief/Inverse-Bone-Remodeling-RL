@@ -10,16 +10,19 @@ import numpy as np
 
 from Thesis_code.forward_model.forward_modeling import forward_model
 
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 class TrainingDataGenerator:
     def __init__(
-        self, 
-        output_dir: str, 
-        initial_density: np.ndarray = np.full((10, 10), 0.8), 
-        force_max: int = 2, 
-        force_count_max: int = 7, 
-        batch_seed: int = 0
+        self,
+        output_dir: str,
+        initial_density: np.ndarray = np.full((10, 10), 0.8),
+        force_max: int = 2,
+        force_count_max: int = 7,
+        batch_seed: int = 0,
     ):
         self.output_dir: Path = Path(output_dir)
         self.force_max: int = force_max
@@ -35,13 +38,15 @@ class TrainingDataGenerator:
     def _load_parameters(self) -> Dict:
         parameters_file = Path(__file__).resolve().parent / "parameters.json"
         if parameters_file.exists():
-            with open(parameters_file, 'r') as f:
+            with open(parameters_file, "r") as f:
                 loaded_parameters = json.load(f)
                 self.time_steps = loaded_parameters.get("time_steps", self.time_steps)
                 self.dt = loaded_parameters.get("dt", self.dt)
                 return loaded_parameters
         else:
-            logging.warning(f"parameters.json not found at {parameters_file}. Using default values.")
+            logging.warning(
+                f"parameters.json not found at {parameters_file}. Using default values."
+            )
             return {}
 
     def _validate_input(self) -> None:
@@ -66,7 +71,9 @@ class TrainingDataGenerator:
         np.random.seed(self.batch_seed + sample_index)
         force_profile = np.zeros((3, np.max(self.initial_density.shape)))
         num_forces = np.random.randint(1, self.force_count_max)
-        locations = np.random.choice(np.prod(force_profile.shape), num_forces, replace=False)
+        locations = np.random.choice(
+            np.prod(force_profile.shape), num_forces, replace=False
+        )
         for loc in locations:
             row, col = divmod(loc, force_profile.shape[1])
             force_profile[row, col] = np.random.uniform(-self.force_max, self.force_max)
@@ -76,7 +83,13 @@ class TrainingDataGenerator:
         i, force_profile = args
         e = None
         try:
-            output = forward_model(force_profile, self.initial_density, self.time_steps, self.dt, self.parameters)
+            output = forward_model(
+                force_profile,
+                self.initial_density,
+                self.time_steps,
+                self.dt,
+                self.parameters,
+            )
         except Exception as ex:
             e = ex
             logging.error(f"Error in sample {i}: {e} | Force profile: {force_profile}")
@@ -86,29 +99,39 @@ class TrainingDataGenerator:
             serial_number=i + 1,
             force_profile=force_profile,
             result=output,
-            error=str(e) if e else None
+            error=str(e) if e else None,
         )
 
     def generate_parallel(self, num_samples: int) -> None:
         timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
-        filepath = self.output_dir / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        filepath = (
+            self.output_dir
+            / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        )
 
         args = [(i, self._generate_random_force_profile(i)) for i in range(num_samples)]
 
         with Pool(processes=cpu_count()) as pool:
             results = []
-            for idx, result in enumerate(pool.imap_unordered(self._run_sample, args), 1):
+            for idx, result in enumerate(
+                pool.imap_unordered(self._run_sample, args), 1
+            ):
                 results.append(result)
                 progress = (idx / num_samples) * 100
-                logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
+                logging.info(
+                    f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%"
+                )
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(results, f, indent=4)
         logging.info(f"Training data saved to {filepath}")
 
     def generate_sequential(self, num_samples: int) -> None:
         timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
-        filepath = self.output_dir / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        filepath = (
+            self.output_dir
+            / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        )
 
         data = []
         for i in range(num_samples):
@@ -119,16 +142,20 @@ class TrainingDataGenerator:
 
             if start and end:
                 elapsed = (end - start).total_seconds() / 10
-                logging.info(f"Average time per sample (samples 2–11): {elapsed:.4f} seconds")
+                logging.info(
+                    f"Average time per sample (samples 2–11): {elapsed:.4f} seconds"
+                )
 
             data.append(data_point)
 
             # Progress log
             progress = (i + 1) / num_samples * 100
-            logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
+            logging.info(
+                f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%"
+            )
 
             if (i + 1) % 100 == 0 or (i + 1) == num_samples:
-                with open(filepath, 'w') as f:
+                with open(filepath, "w") as f:
                     json.dump(data, f, indent=4)
 
         logging.info(f"Training data saved to {filepath}")
@@ -149,7 +176,12 @@ class TrainingDataGenerator:
             elif i % 5 == 2:
                 edge_cases.append(rng.uniform(-self.force_max, self.force_max, shape))
             elif i % 5 == 3:
-                profile = np.array([[(-1)**(r + c) * self.force_max for c in range(shape[1])] for r in range(3)])
+                profile = np.array(
+                    [
+                        [(-1) ** (r + c) * self.force_max for c in range(shape[1])]
+                        for r in range(3)
+                    ]
+                )
                 edge_cases.append(profile)
             elif i % 5 == 4:
                 profile = np.zeros(shape)
@@ -161,28 +193,36 @@ class TrainingDataGenerator:
 
     def generate_edge_cases(self, num_samples: int) -> None:
         timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
-        filepath = self.output_dir / f"edge_case_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        filepath = (
+            self.output_dir
+            / f"edge_case_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        )
 
         force_profiles = self._generate_edge_case_profiles(num_samples)
         args = [(i, force_profiles[i]) for i in range(num_samples)]
 
         with Pool(processes=cpu_count()) as pool:
             results = []
-            for idx, result in enumerate(pool.imap_unordered(self._run_sample, args), 1):
+            for idx, result in enumerate(
+                pool.imap_unordered(self._run_sample, args), 1
+            ):
                 results.append(result)
                 progress = (idx / num_samples) * 100
-                logging.info(f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%")
+                logging.info(
+                    f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%"
+                )
 
-        with open(filepath, 'w') as f:
+        with open(filepath, "w") as f:
             json.dump(results, f, indent=4)
         logging.info(f"Edge case data saved to {filepath}")
 
     @staticmethod
     def serialize_data(
-        serial_number: int, 
-        force_profile: np.ndarray, 
-        result: np.ndarray, 
-        error: str = None) -> Dict:
+        serial_number: int,
+        force_profile: np.ndarray,
+        result: np.ndarray,
+        error: str = None,
+    ) -> Dict:
         """
         Serialize the data into a dictionary format for saving or further processing.
         If there is no error, exclude the error field from the dictionary.

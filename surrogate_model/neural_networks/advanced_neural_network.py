@@ -1,11 +1,14 @@
 import torch
 from torch import nn
 
+
 class AdvancedNNSurrogateModel(nn.Module):
     def __init__(self):
         super().__init__()
         self.model = nn.Sequential(
-            nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3, 3), padding=1),  # Input: (1, 3, 10)
+            nn.Conv2d(
+                in_channels=1, out_channels=16, kernel_size=(3, 3), padding=1
+            ),  # Input: (1, 3, 10)
             nn.ReLU(),
             nn.BatchNorm2d(16),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1),
@@ -15,7 +18,7 @@ class AdvancedNNSurrogateModel(nn.Module):
             nn.Linear(32 * 3 * 10, 256),
             nn.ReLU(),
             nn.Dropout(0.3),
-            nn.Linear(256, 100)
+            nn.Linear(256, 100),
         )
         self.train_losses = []
         self.val_losses = []
@@ -43,9 +46,10 @@ class AdvancedNNSurrogateModel(nn.Module):
 
     def __len__(self):
         return len(list(self.model))
-    
+
     def plot_loss(self):
         import matplotlib.pyplot as plt
+
         if not self.train_losses:
             print("No training history found.")
             return
@@ -59,7 +63,9 @@ class AdvancedNNSurrogateModel(nn.Module):
         plt.yscale("log")  # Set y-axis to logarithmic scale
         plt.title("Training and Validation Loss (Log Scale)")
         plt.legend()
-        plt.grid(True, which="both", linestyle="--", linewidth=0.5)  # Improve grid visibility for log scale
+        plt.grid(
+            True, which="both", linestyle="--", linewidth=0.5
+        )  # Improve grid visibility for log scale
         plt.tight_layout()
         plt.show()
 
@@ -67,7 +73,7 @@ class AdvancedNNSurrogateModel(nn.Module):
     def get_scheduler(optimizer, epochs):
         """Get a learning rate scheduler."""
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode='min', factor=0.5, patience=10, verbose=True
+            optimizer, mode="min", factor=0.5, patience=10, verbose=True
         )
 
     @staticmethod
@@ -75,6 +81,8 @@ class AdvancedNNSurrogateModel(nn.Module):
         """Create a DataLoader for the dataset."""
         dataset = torch.utils.data.TensorDataset(
             torch.tensor(X.reshape(-1, 3, 10), dtype=torch.float32),
-            torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
+            torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32),
         )
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        return torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=shuffle
+        )
