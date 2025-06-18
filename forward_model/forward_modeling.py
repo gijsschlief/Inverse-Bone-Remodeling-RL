@@ -1,6 +1,5 @@
 import logging
-from typing import Any, Dict
-from pathlib import Path
+from typing import Any, Dict, Optional
 
 import numpy as np
 
@@ -16,7 +15,7 @@ def forward_model(
     initial_density: np.ndarray,
     time_steps: int = 100,
     dt: float = 1.0,
-    parameters: Dict[str, Any] | None = None,
+    parameters: Optional[Dict[str, Any]] = None,
 ) -> np.ndarray:
     """
     Calculate the bone density profile based on the force locations on the model.
@@ -55,7 +54,7 @@ def forward_model(
     simulation.run()
 
     # Plot density if the plot parameter is enabled
-    if parameters.get("plot", False):
+    if isinstance(parameters, dict) and parameters.get("plot", False):
         simulation.plot_density()
 
     # Convert the final density function to a NumPy array

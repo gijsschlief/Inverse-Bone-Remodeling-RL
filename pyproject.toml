@@ -25,5 +25,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [mypy]
-mypy_path = "src"
+mypy_path = "/home/gijs/Desktop/Thesis/bone_remodeling"
 

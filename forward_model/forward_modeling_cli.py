@@ -6,9 +6,9 @@ import sys
 import time
 
 import numpy as np
-from fenics import set_log_level, LogLevel
+from fenics import set_log_level, LogLevel  # type: ignore
 
-from Thesis_code.forward_model.forward_modeling import forward_model
+from bone_remodeling.forward_model.forward_modeling import forward_model
 
 
 def setup_logging(verbose: bool) -> None:

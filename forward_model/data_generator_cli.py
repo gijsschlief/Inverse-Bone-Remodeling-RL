@@ -4,14 +4,15 @@ import time
 import logging
 
 import numpy as np
-from fenics import set_log_level, LogLevel
+from fenics import set_log_level, LogLevel  # type: ignore
 
-from Thesis_code.forward_model.data_generator import TrainingDataGenerator
+from forward_model.data_generator import TrainingDataGenerator  # type: ignore
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
+
 
 def main() -> None:
     parser = argparse.ArgumentParser(

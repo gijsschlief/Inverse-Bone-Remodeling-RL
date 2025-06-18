@@ -4,11 +4,11 @@ import logging
 import os
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Dict, Tuple, List, Any
+from typing import Dict, Tuple, List, Any, Optional
 
 import numpy as np
 
-from Thesis_code.forward_model.forward_modeling import forward_model
+from forward_model.forward_modeling import forward_model  # type: ignore
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -221,7 +221,7 @@ class TrainingDataGenerator:
         serial_number: int,
         force_profile: np.ndarray,
         result: np.ndarray,
-        error: str = None,
+        error: Optional[str] = None,
     ) -> Dict:
         """
         Serialize the data into a dictionary format for saving or further processing.

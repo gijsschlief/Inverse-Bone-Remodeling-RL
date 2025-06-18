@@ -1,10 +1,34 @@
 from pathlib import Path
 import logging
-from typing import Any
+from typing import Any, Optional
 
-from fenics import *
+from fenics import (  # type: ignore
+    UnitSquareMesh,
+    VectorFunctionSpace,
+    FunctionSpace,
+    Function,
+    TestFunction,
+    TrialFunction,
+    Constant,
+    DirichletBC,
+    SubDomain,
+    MeshFunction,
+    Measure,
+    Expression,
+    cells,
+    near,
+    project,
+    inner,
+    grad,
+    div,
+    Identity,
+    dot,
+    File,
+    solve,
+    dx,
+)
 import numpy as np
-import ufl
+import ufl  # type: ignore
 
 
 class DensitySimulation:
@@ -476,7 +500,7 @@ class DensitySimulation:
             logging.error(f"Failed to save the output to {self.full_file_path}: {e}")
             raise RuntimeError(f"Failed to save the output: {e}")
 
-    def _check_convergence(self, time: int = None) -> bool:
+    def _check_convergence(self, time: Optional[float] = None) -> bool:
         """
         Return True if simulation converged by checking the cells
         """
@@ -498,7 +522,7 @@ class DensitySimulation:
         """
         Run the full simulation loop.
         """
-        time = 0
+        time = 0.0
         while time <= self.total_time:
             self._solve_elasticity_problem()
             density_fenics = self._update_density()
