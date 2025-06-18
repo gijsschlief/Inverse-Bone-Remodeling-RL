@@ -74,7 +74,3 @@ def evaluate_surrogate_model(
     average_similarity = np.mean(similarity_scores)
     logging.info(f"Model Accuracy (Average Similarity): {average_similarity}")
     return val_logits, y_val_tensor, average_similarity
-
-
-if __name__ == "__main__":
-    evaluate_surrogate_model()
