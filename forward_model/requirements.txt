@@ -3,6 +3,7 @@ pyvista
 numpy
 
 # Optional dependencies for linting, testing and formatting
+ruff
 pypi
 black
 pytest

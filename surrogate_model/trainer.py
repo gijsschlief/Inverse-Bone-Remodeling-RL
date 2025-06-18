@@ -1,6 +1,5 @@
 import os
-from typing import Tuple, List
-import glob
+from typing import Tuple
 import logging
 
 import torch
@@ -46,7 +45,12 @@ def load_data(
             - y_val: Validation labels
             - y_test: Test labels
     """
-    _, force_profiles, final_output_densities = forward_data_reader(path_pattern)
+    result = forward_data_reader(path_pattern)
+    if result is None:
+        raise ValueError("Data loading failed. Please check the input path.")
+    _, force_profiles, final_output_densities = result
+    if force_profiles is None or final_output_densities is None:
+        raise ValueError("Data loading failed. Please check the input path.")
     X = force_profiles
     y = final_output_densities
     return splitting(X, y)
