@@ -1,48 +1,97 @@
+"""Command line interface for running the forward model simulation.
+
+This script allows users to run the forward model simulation with various parameters
+and options for force profiles, density profiles, and output settings.
+It supports command line arguments for flexibility and ease of use.
+
+Usage:
+    python forward_modeling_cli.py [options]
+
+Options:
+    --time_steps <int>                Number of time steps for the simulation.
+    --dt <float>                      Time step size.
+    -rho_min, --min_density <float>   Minimum bone density.
+    -rho_max, --max_density <float>   Maximum bone density.
+    --boundary_tolerance <float>      Tolerance for convergence criteria.
+    -B, --remodeling_rate_coefficient <float>
+                                      Coefficient for density change.
+    -k, --stimulus_threshold <float>  Threshold for density change.
+    -P, --poisson_ratio <float>       Poisson's ratio.
+    -M, --elastic_modulus_scale <float>
+                                      Modulus of elasticity.
+    -gamma, --modulus_exponent <float> Exponent for density elasticity.
+    --output_basename <str>           Base name for output files.
+    --file_extension <str>            File extension for output files.
+    --convergence_tolerance <float>   Convergence threshold for density change.
+    --output_dir <str>                Location of the data files.
+    --initial_density_value <float>   Initial density value to fill the array (default: 0.8).
+    --n_rows <int>                    Number of rows in the initial density array (default: 10).
+    --n_columns <int>                 Number of columns in the initial density array (default: 10).
+    -f, --force <side,location,magnitude>
+                                      Specify a force in the format side ('top' / 'left' / 'right'), location [int], magnitude [float].
+                                      Use multiple -f or --force arguments for multiple forces.
+    --reset                           Reset parameters to default by deleting parameters.json.
+    --save                            Save the simulation results.
+    -p, --plot                        Plot the density simulation.
+    -v, --verbose                     Enable verbose output.
+
+This script reads parameters from a JSON file and allows users to reset or modify them
+through command line arguments. It runs the forward model simulation and logs the results.
+"""
+
 import argparse
-import logging
 import json
-from pathlib import Path
+import logging
 import sys
 import time
+from pathlib import Path
 
 import numpy as np
-from fenics import set_log_level, LogLevel  # type: ignore
-
 from bone_remodeling.forward_model.forward_modeling import forward_model
+from fenics import LogLevel, set_log_level  # type: ignore
 
 
 def setup_logging(verbose: bool) -> None:
-    """
-    Set up logging based on verbosity.
-    """
+    """Set up logging based on verbosity."""
     if verbose:
         logging.basicConfig(
-            level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+            level=logging.INFO,
+            format="%(asctime)s - %(levelname)s - %(message)s",
         )
     else:
         logging.basicConfig(level=logging.WARNING, format="%(message)s")
 
 
 def main() -> None:
-    """
-    Main function to run the forward model simulation.
+    """Run the forward bone remodeling simulation.
+
     This function parses command line arguments and initializes the simulation.
     It sets up the force profile and parameters, runs the simulation, and logs the results.
     """
     # Data
     parser = argparse.ArgumentParser(description="Run the forward model simulation.")
     parser.add_argument(
-        "--time_steps", type=int, help="Number of time steps for the simulation."
+        "--time_steps",
+        type=int,
+        help="Number of time steps for the simulation.",
     )
     parser.add_argument("--dt", type=float, help="Time step size.")
     parser.add_argument(
-        "-rho_min", "--min_density", type=float, help="Minimum bone density."
+        "-rho_min",
+        "--min_density",
+        type=float,
+        help="Minimum bone density.",
     )
     parser.add_argument(
-        "-rho_max", "--max_density", type=float, help="Maximum bone density."
+        "-rho_max",
+        "--max_density",
+        type=float,
+        help="Maximum bone density.",
     )
     parser.add_argument(
-        "--boundary_tolerance", type=float, help="Tolerance for convergence criteria."
+        "--boundary_tolerance",
+        type=float,
+        help="Tolerance for convergence criteria.",
     )
     parser.add_argument(
         "-B",
@@ -51,11 +100,17 @@ def main() -> None:
         help="Coefficient for density change.",
     )
     parser.add_argument(
-        "-k", "--stimulus_threshold", type=float, help="Threshold for density change."
+        "-k",
+        "--stimulus_threshold",
+        type=float,
+        help="Threshold for density change.",
     )
     parser.add_argument("-P", "--poisson_ratio", type=float, help="Poisson's ratio.")
     parser.add_argument(
-        "-M", "--elastic_modulus_scale", type=float, help="Modulus of elasticity."
+        "-M",
+        "--elastic_modulus_scale",
+        type=float,
+        help="Modulus of elasticity.",
     )
     parser.add_argument(
         "-gamma",
@@ -64,10 +119,14 @@ def main() -> None:
         help="Exponent for density elasticity.",
     )
     parser.add_argument(
-        "--output_basename", type=str, help="Base name for output files."
+        "--output_basename",
+        type=str,
+        help="Base name for output files.",
     )
     parser.add_argument(
-        "--file_extension", type=str, help="File extension for output files."
+        "--file_extension",
+        type=str,
+        help="File extension for output files.",
     )
     parser.add_argument(
         "--convergence_tolerance",
@@ -110,13 +169,21 @@ def main() -> None:
         help="Reset parameters to default by deleting parameters.json.",
     )
     parser.add_argument(
-        "--save", action="store_true", help="Save the simulation results."
+        "--save",
+        action="store_true",
+        help="Save the simulation results.",
     )
     parser.add_argument(
-        "-p", "--plot", action="store_true", help="Plot the density simulation."
+        "-p",
+        "--plot",
+        action="store_true",
+        help="Plot the density simulation.",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose output."
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output.",
     )
 
     args = parser.parse_args()
@@ -135,7 +202,7 @@ def main() -> None:
             logging.info(f"Parameters reset to default by deleting {parameters_file}.")
         else:
             logging.info("No parameters.json file found to reset.")
-        return
+        return None
 
     # Initialize logging based on verbosity
     if args.verbose:
@@ -146,7 +213,7 @@ def main() -> None:
 
     # Initialize force profile based on command-line arguments
     force_profile = np.zeros(
-        (3, max(args.n_rows, args.n_columns))
+        (3, max(args.n_rows, args.n_columns)),
     )  # Initialize an empty force profile
     if args.force:
         for force in args.force:
@@ -164,11 +231,11 @@ def main() -> None:
                     force_profile[2, location] = magnitude
                 else:
                     logging.warning(
-                        f"Invalid side '{side}' specified in force argument: {force}"
+                        f"Invalid side '{side}' specified in force argument: {force}",
                     )
             except ValueError:
                 logging.warning(
-                    f"Invalid force argument format: {force}. Expected format: side,location,magnitude"
+                    f"Invalid force argument format: {force}. Expected format: side,location,magnitude",
                 )
     else:
         logging.warning("No forces specified. Using default force profile.")
@@ -176,7 +243,7 @@ def main() -> None:
 
     # Load existing parameters from JSON file if it exists
     if parameters_file.exists():
-        with open(parameters_file, "r") as f:
+        with open(parameters_file) as f:
             parameters = json.load(f)
     else:
         parameters = {}

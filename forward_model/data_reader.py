@@ -1,20 +1,35 @@
+"""Data reader for forward model data.
+
+This module provides functionality to read and parse forward model data from JSON files.
+It supports reading a single file, multiple files, or all JSON files in a directory.
+The data is expected to be in a specific format, and the module converts it into NumPy arrays
+for further processing.
+
+Example usage:
+    >>> from bone_remodeling.forward_model.data_reader import forward_data_reader
+    >>> data = forward_data_reader("path/to/data.json")
+    >>> if data:
+    ...     serial_numbers, force_profiles, final_output_densities = data
+"""
+
 import json
-from typing import List, Any, Dict, Tuple, Optional, Union, Sequence
 import logging
+from collections.abc import Sequence
 from pathlib import Path
+from typing import Any, Optional, Union
 
 import numpy as np
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 
 def forward_data_reader(
     file_path: Union[Path, str, Sequence[Union[str, Path]]],
-) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
-    """
-    Reads and parses forward model data from a JSON file or multiple JSON files in a directory.
+) -> Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """Read and parse forward model data from a JSON file or multiple JSON files in a directory.
 
     Args:
         file_path (Path | str | List[str | Path]): Path to the JSON file or a list of paths to JSON files.
@@ -28,17 +43,18 @@ def forward_data_reader(
 
     Raises:
         ValueError: If the file path is not valid or if the file format is incorrect.
+
     """
     if not isinstance(file_path, (str, Path, list)):
         logging.error(
-            f"Invalid file path type: {type(file_path)}. Expected str, Path, or List[str]."
+            f"Invalid file path type: {type(file_path)}. Expected str, Path, or List[str].",
         )
         return None
     if isinstance(file_path, list):
         if not all(isinstance(fp, (str, Path)) for fp in file_path):
             logging.error("All items in the list must be of type str or Path.")
             return None
-        file_paths: List[Path] = [
+        file_paths: list[Path] = [
             Path(fp) if not isinstance(fp, Path) else fp for fp in file_path
         ]
         return _forward_data_load_multiple(file_paths)
@@ -54,16 +70,15 @@ def forward_data_reader(
         return _forward_data_load_multiple(file_list)
 
     logging.error(
-        f"Invalid file path: {file_path}. It must be a file or a directory containing JSON files."
+        f"Invalid file path: {file_path}. It must be a file or a directory containing JSON files.",
     )
     return None
 
 
 def _forward_data_load_multiple(
     file_paths: Sequence[Path],
-) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
-    """
-    Reads and parses multiple JSON files containing forward model data.
+) -> Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """Read and parse multiple JSON files containing forward model data.
 
     Args:
         file_paths (List[Path]): List of paths to the JSON files.
@@ -74,6 +89,7 @@ def _forward_data_load_multiple(
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.
             - final_output_densities: Array of final output densities.
+
     """
     all_entries = []
 
@@ -92,16 +108,15 @@ def _forward_data_load_multiple(
         return None
 
     logging.info(
-        f"In total loaded {len(all_entries)} entries from {len(file_paths)} files."
+        f"In total loaded {len(all_entries)} entries from {len(file_paths)} files.",
     )
     return _convert_forward_data_to_numpy(all_entries)
 
 
 def _forward_data_load_single(
     data_path: Path,
-) -> Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
-    """
-    Reads and parses a single JSON file containing forward model data.
+) -> Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    """Read and parse a single JSON file containing forward model data.
 
     Args:
         data_path (Path): Path to the JSON file.
@@ -112,6 +127,7 @@ def _forward_data_load_single(
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.
             - final_output_densities: Array of final output densities.
+
     """
     if not data_path.is_file():
         logging.error(f"File does not exist: {data_path}")
@@ -128,19 +144,22 @@ def _forward_data_load_single(
         return _convert_forward_data_to_numpy(data)
 
     except FileNotFoundError:
-        logging.error(f"File not found: {data_path}")
+        logging.exception(f"File not found: {data_path}")
     except json.JSONDecodeError:
-        logging.error(f"JSON decode error in file: {data_path}")
+        logging.exception(f"JSON decode error in file: {data_path}")
     except Exception as e:
-        logging.error(f"An unexpected error occurred: {e}")
+        logging.exception(f"An unexpected error occurred: {e}")
     return None
 
 
 def _convert_forward_data_to_numpy(
-    data: List[Dict[str, Any]],
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Converts a list of dictionaries containing forward model data into NumPy arrays.
+    data: list[dict[str, Any]],
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Convert a list of dictionaries containing forward model data into NumPy arrays.
+
+    This function extracts serial numbers, force profiles, and final output densities
+    from the provided data. It handles potential errors in the data format and logs
+    any issues encountered during the extraction process.
 
     Args:
         data (List[Dict[str, Any]]): List of dictionaries containing forward model data.
@@ -151,6 +170,7 @@ def _convert_forward_data_to_numpy(
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.
             - final_output_densities: Array of final output densities.
+
     """
     serial_numbers = []
     force_profiles = []
@@ -173,7 +193,7 @@ def _convert_forward_data_to_numpy(
 
     for error_msg, count in error_counts.items():
         logging.warning(
-            f"Skipped {count} malformed entr{'y' if count == 1 else 'ies'} (e.g., {error_msg})"
+            f"Skipped {count} malformed entr{'y' if count == 1 else 'ies'} (e.g., {error_msg})",
         )
 
     force_profiles_array = np.array(force_profiles, dtype=np.float32)

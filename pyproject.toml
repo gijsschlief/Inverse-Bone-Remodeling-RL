@@ -19,6 +19,9 @@ numpy = "^2.2.6"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.5"
+mypy = "^1.5.0"
+black = "^23.9.1"
+ruff = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -27,3 +30,21 @@ build-backend = "poetry.core.masonry.api"
 [mypy]
 mypy_path = "/home/gijs/Desktop/Thesis/bone_remodeling"
 
+[tool.ruff]
+lint.select = [
+  "F",    # Pyflakes: basic bugs
+  "E",    # pycodestyle: style
+  "W",    # pycodestyle: warnings
+  "I",    # isort: import sorting
+  "B",    # Bugbear: common mistakes
+  "C4",   # flake8-comprehensions: better comprehensions
+  "RUF",  # Ruff-specific fixes
+  "D",    # Docstrings
+]
+lint.ignore = [
+  "E501",    # Line length (Black/Ruff formatter handles this)
+  "B008",    # Function call in default arg (valid for small projects)
+  "D213",    # Multi-line docstring summary should start at the second line
+  "D211",    # No blank lines allowed before class docstring
+  "D203",    # 1 blank line required before class docstring
+]

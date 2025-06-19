@@ -1,22 +1,49 @@
+"""Command-line interface for generating data for the forward model.
+
+This script parses command-line arguments, initializes the TrainingDataGenerator,
+and generates data in the specified mode (parallel, sequential, or edge cases).
+"""
+
 import argparse
-from pathlib import Path
-import time
 import logging
+import time
+from pathlib import Path
 
 import numpy as np
-from fenics import set_log_level, LogLevel  # type: ignore
+from fenics import LogLevel, set_log_level  # type: ignore
 
 from forward_model.data_generator import TrainingDataGenerator  # type: ignore
 
 # Configure logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
+    """Parse command line arguments and generate training data.
+
+    It initializes the TrainingDataGenerator with the provided parameters and
+    generates data in the specified mode (parallel, sequential, or edge cases).
+    The generated data is saved in the specified output directory.
+
+    Command line arguments:
+    - `--output_dir`: Directory to save the generated data.
+    - `--num_samples`: Number of samples to generate.
+    - `--initial_density_value`: Initial value to fill the density array.
+    - `--x_shape`: Number of rows in the initial density array.
+    - `--y_shape`: Number of columns in the initial density array.
+    - `--force_max`: Maximum force magnitude.
+    - `--force_count_max`: Maximum number of force applications.
+    - `--batch_seed`: Random seed for reproducibility.
+    - `-m` or `--mode`: Generation mode ('parallel', 'sequential', or 'edge').
+    - `-v` or `--verbose`: Enable verbose output.
+    The script logs the time taken for the simulation and any errors encountered.
+    """
     parser = argparse.ArgumentParser(
-        description="Generate training or edge case data for the forward model."
+        description="Generate training or edge case data for the forward model.",
     )
     default_dir = Path(__file__).resolve().parent.parent.parent / "data" / "raw"
     parser.add_argument(
@@ -26,7 +53,10 @@ def main() -> None:
         help="Directory to save output.",
     )
     parser.add_argument(
-        "--num_samples", type=int, default=10, help="Number of samples to generate."
+        "--num_samples",
+        type=int,
+        default=10,
+        help="Number of samples to generate.",
     )
     parser.add_argument(
         "--initial_density_value",
@@ -47,7 +77,10 @@ def main() -> None:
         help="Number of columns in the initial density array.",
     )
     parser.add_argument(
-        "--force_max", type=int, default=2, help="Maximum force magnitude."
+        "--force_max",
+        type=int,
+        default=2,
+        help="Maximum force magnitude.",
     )
     parser.add_argument(
         "--force_count_max",
@@ -70,7 +103,10 @@ def main() -> None:
         help="Generation mode: 'parallel', 'sequential', or 'edge'.",
     )
     parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose output."
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Enable verbose output.",
     )
 
     args = parser.parse_args()
@@ -99,7 +135,7 @@ def main() -> None:
         generator.generate_edge_cases(args.num_samples)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
-    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+    logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 
 if __name__ == "__main__":
