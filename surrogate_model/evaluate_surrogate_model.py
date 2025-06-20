@@ -36,6 +36,9 @@ def main():
         logging.error("Failed to validate the surrogate model.")
         return
 
+    #FILTER THE MATRICES BEFORE MOVING ON!
+
+
     average_similarity = average_similarity_score(predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim")
 
     logging.info(f"The average similarity = {average_similarity}")
