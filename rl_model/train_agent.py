@@ -1,6 +1,9 @@
+"""Train a reinforcement learning agent using Stable-Baselines3 with a custom reward function."""
+
 import gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.envs import DummyVecEnv
+
 from rl_model.reward_calculation import calculate_similarity
 
 

@@ -1,3 +1,5 @@
+"""Unified CLI for Thesis Modules."""
+
 import argparse
 import subprocess
 import sys
@@ -10,6 +12,7 @@ CLI_MODULES = {
 
 
 def main():
+    """Handle CLI arguments and execute the appropriate module."""
     parser = argparse.ArgumentParser(description="Unified CLI for Thesis modules.")
     parser.add_argument(
         "module", choices=CLI_MODULES.keys(), help="Which module to run"
@@ -23,7 +26,7 @@ def main():
         sys.exit(1)
 
     # Call the module as a subprocess with the remaining CLI args
-    command = [sys.executable, str(module_path)] + remaining_args
+    command = [sys.executable, str(module_path), *remaining_args]
     sys.exit(subprocess.call(command))
 
 

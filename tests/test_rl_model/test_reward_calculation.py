@@ -1,9 +1,13 @@
+"""Test cases for the reward calculation module in the RL model."""
+
 import numpy as np
 import pytest
+
 from rl_model.reward_calculation import calculate_similarity
 
 
 def test_calculate_similarity_invalid_method():
+    """Test that an invalid method raises a ValueError."""
     A = np.array([[1, 2], [3, 4]])
     B = np.array([[1, 2], [3, 4]])
     with pytest.raises(ValueError, match="Unknown method: invalid"):
@@ -11,6 +15,7 @@ def test_calculate_similarity_invalid_method():
 
 
 def test_calculate_similarity_type_mismatch():
+    """Test that a TypeError is raised when inputs are not numpy arrays."""
     A = [[1, 2], [3, 4]]  # Not a numpy array
     B = np.array([[1, 2], [3, 4]])
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -20,6 +25,7 @@ def test_calculate_similarity_type_mismatch():
 
 
 def test_calculate_similarity_none_input():
+    """Test that a ValueError is raised when either input is None."""
     A = None
     B = np.array([[1, 2], [3, 4]])
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -29,6 +35,7 @@ def test_calculate_similarity_none_input():
 
 
 def test_calculate_similarity_negative_baseline():
+    """Test that a ValueError is raised when baseline is negative."""
     A = np.array([[1, 2], [3, 4]])
     B = np.array([[1, 2], [3, 5]])
     methods = ["mse", "mae", "wasserstein"]
@@ -38,6 +45,7 @@ def test_calculate_similarity_negative_baseline():
 
 
 def test_calculate_similarity_large_random_matrices():
+    """Test that similarity calculation works for large random matrices."""
     A = np.random.rand(1000, 1000)
     B = np.random.rand(1000, 1000)
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -49,6 +57,7 @@ def test_calculate_similarity_large_random_matrices():
 
 
 def test_calculate_similarity_identical_matrices():
+    """Test that similarity calculation returns 1 for identical matrices."""
     A = np.random.rand(10, 10)
     B = A.copy()
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -58,6 +67,7 @@ def test_calculate_similarity_identical_matrices():
 
 
 def test_calculate_similarity_different_shapes():
+    """Test that a ValueError is raised for matrices of different shapes."""
     A = np.random.rand(10, 10)
     B = np.random.rand(5, 5)
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -69,6 +79,7 @@ def test_calculate_similarity_different_shapes():
 
 
 def test_calculate_similarity_all_zeros():
+    """Test that a ValueError is raised when both matrices are all zeros."""
     A = np.zeros((10, 10))
     B = np.zeros((10, 10))
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -80,6 +91,7 @@ def test_calculate_similarity_all_zeros():
 
 
 def test_calculate_similarity_random_matrices_with_baseline():
+    """Test that similarity calculation works with a baseline for random matrices."""
     A = np.random.rand(10, 10)
     B = np.random.rand(10, 10)
     baseline = 2.0
@@ -92,6 +104,7 @@ def test_calculate_similarity_random_matrices_with_baseline():
 
 
 def test_calculate_similarity_varied_size_matrices():
+    """Test that similarity calculation works for matrices of varied sizes."""
     sizes = [(7, 7), (10, 10), (15, 15), (50, 50), (100, 100)]
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for size in sizes:
@@ -105,6 +118,7 @@ def test_calculate_similarity_varied_size_matrices():
 
 
 def test_calculate_similarity_empty_matrices():
+    """Test that a ValueError is raised when either matrix is empty."""
     A = np.array([])
     B = np.array([])
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
@@ -114,6 +128,7 @@ def test_calculate_similarity_empty_matrices():
 
 
 def test_calculate_similarity_random_matrices():
+    """Test that similarity calculation works for random matrices."""
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for method in methods:
         for _ in range(1000):  # Test with 100 random pairs of matrices
@@ -126,6 +141,7 @@ def test_calculate_similarity_random_matrices():
 
 
 def test_calculate_similarity_similar_but_not_equal_matrices():
+    """Test that similarity calculation works for matrices that are similar but not equal."""
     A = np.random.rand(10, 10)
     B = A + np.random.normal(
         0, 0.1, (10, 10)
@@ -139,6 +155,7 @@ def test_calculate_similarity_similar_but_not_equal_matrices():
 
 
 def test_calculate_similarity_thresholding():
+    """Test that similarity calculation works with thresholding."""
     A = np.random.rand(10, 10)
     B = np.random.rand(10, 10)
     threshold = 0.5
@@ -151,6 +168,7 @@ def test_calculate_similarity_thresholding():
 
 
 def test_calculate_similarity_unused_baseline_warning():
+    """Test that a warning is raised when baseline is unused for certain methods."""
     A = np.random.rand(10, 10)
     B = np.random.rand(10, 10)
     methods = ["cosine", "iou", "dice", "ssim"]
@@ -163,6 +181,7 @@ def test_calculate_similarity_unused_baseline_warning():
 
 
 def test_calculate_similarity_unused_threshold_warning():
+    """Test that a warning is raised when threshold is unused for certain methods."""
     A = np.random.rand(10, 10)
     B = np.random.rand(10, 10)
     methods = ["mse", "mae", "cosine", "ssim", "wasserstein"]
@@ -175,6 +194,7 @@ def test_calculate_similarity_unused_threshold_warning():
 
 
 def test_calculate_similarity_dissimilar_matrices():
+    """Test that similarity calculation returns negative values for dissimilar matrices."""
     A = np.ones((10, 10))
     B = np.random.rand(10, 10) * 0.1
     methods = ["mse", "mae", "iou", "dice", "wasserstein"]
@@ -191,6 +211,7 @@ def test_calculate_similarity_dissimilar_matrices():
 
 
 def test_calculate_similarity_warning_and_result():
+    """Test that a warning is raised and result is valid for cosine method with baseline."""
     A = np.random.rand(10, 10)
     B = np.random.rand(10, 10)
     with pytest.warns(
@@ -204,6 +225,7 @@ def test_calculate_similarity_warning_and_result():
 
 
 def test_calculate_similarity_cosine_orthogonal():
+    """Test that cosine similarity returns 0 for orthogonal matrices."""
     A = np.array([[1, 0], [0, 1]])
     B = np.array([[0, 1], [-1, 0]])  # Orthogonal to A
     result = calculate_similarity(A, B, method="cosine")
@@ -213,6 +235,7 @@ def test_calculate_similarity_cosine_orthogonal():
 
 
 def test_calculate_similarity_cosine_opposite():
+    """Test that cosine similarity returns -1 for opposite matrices."""
     A = np.array([[1, 0], [0, 1]])
     B = -A  # Opposite to A
     result = calculate_similarity(A, B, method="cosine")
