@@ -1,5 +1,8 @@
-import numpy as np
+"""Splitting module for bone remodeling surrogate model."""
+
 from typing import Tuple
+
+import numpy as np
 
 
 def splitting(
@@ -10,10 +13,10 @@ def splitting(
     val_size: float = 0.15,
     test_size: float = 0.15,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Splits the data into training, validation, and test sets without using sklearn.
+    """Split data into training, validation, and test sets without using sklearn.
 
     Args:
+    ----
         X (np.ndarray): Input features.
         Y (np.ndarray): Target labels.
         train_size (float): Proportion of the dataset to include in the training set.
@@ -22,13 +25,16 @@ def splitting(
         random_state (int): Random seed for reproducibility.
 
     Raises:
+    ------
         ValueError: If train_size, val_size, or test_size are not floats between 0 and 1.
         AssertionError: If train_size, val_size, and test_size do not sum to 1.
         ValueError: If X and Y are not numpy arrays or have different lengths.
         ValueError: If X or Y is empty.
 
     Returns:
+    -------
         tuple: Split data (X_train, X_val, X_test, y_train, y_val, y_test).
+
     """
     np.random.seed(random_state)
 

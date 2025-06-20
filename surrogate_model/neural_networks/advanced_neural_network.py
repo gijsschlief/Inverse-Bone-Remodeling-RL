@@ -1,9 +1,40 @@
+"""Advanced Neural Network Surrogate Model for Bone Remodeling Simulation."""
+
 import torch
 from torch import nn
 
 
 class AdvancedNNSurrogateModel(nn.Module):
+    """Advanced Neural Network Surrogate Model for Bone Remodeling Simulation.
+
+    This model uses convolutional layers to process input data and predict bone density profiles.
+    It includes methods for training, validation, saving, loading, and plotting loss history.
+
+    Attributes
+    ----------
+        model (nn.Sequential): The neural network architecture.
+        train_losses (list): List to store training losses.
+        val_losses (list): List to store validation losses.
+
+    Methods
+    -------
+        forward(x):
+            Forward pass through the model.
+        save_model(file_path):
+            Save the model state to a file.
+        load_model(file_path):
+            Load the model state from a file.
+        plot_loss():
+            Plot training and validation loss history.
+        get_scheduler(optimizer, epochs):
+            Get a learning rate scheduler.
+        create_dataloader(X, y, batch_size=32, shuffle=True):
+            Create a DataLoader for the dataset.
+
+    """
+
     def __init__(self):
+        """Initialize the AdvancedNNSurrogateModel."""
         super().__init__()
         self.model = nn.Sequential(
             nn.Conv2d(
@@ -24,30 +55,38 @@ class AdvancedNNSurrogateModel(nn.Module):
         self.val_losses = []
 
     def forward(self, x):
+        """Forward pass through the model."""
         x = x.unsqueeze(1)  # reshape from (N, 3, 10) to (N, 1, 3, 10)
         out = self.model(x)
         return out.view(-1, 10, 10)  # reshape to (N, 10, 10)
 
     def save_model(self, file_path):
+        """Save the model state to a file."""
         torch.save(self.state_dict(), file_path)
 
     def load_model(self, file_path):
+        """Load the model state from a file."""
         self.load_state_dict(torch.load(file_path))
         self.eval()
 
     def __str__(self):
+        """Model represented as String."""
         return f"AdvancedNNSurrogateModel(\n  {self.model}\n)"
 
     def __repr__(self):
+        """Model represented as String."""
         return self.__str__()
 
     def __call__(self, x):
+        """Call the forward method when the model is called."""
         return self.forward(x)
 
     def __len__(self):
+        """Return the number of layers in the model."""
         return len(list(self.model))
 
     def plot_loss(self):
+        """Plot training and validation loss history."""
         import matplotlib.pyplot as plt
 
         if not self.train_losses:

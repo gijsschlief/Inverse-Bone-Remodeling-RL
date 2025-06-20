@@ -1,16 +1,17 @@
+"""Trainer script for the AdvancedNNSurrogateModel."""
+
+import logging
 import os
 from typing import Tuple
-import logging
 
-import torch
 import numpy as np
-
-from surrogate_model.neural_networks.advanced_neural_network import (
+import torch
+from bone_remodeling.forward_model.data_reader import forward_data_reader
+from bone_remodeling.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.surrogate_model.neural_networks.advanced_neural_network import (
     AdvancedNNSurrogateModel,
 )
-from Thesis_code.forward_model.data_reader import forward_data_reader
-from Thesis_code.surrogate_model.splitter import splitting
-from rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.surrogate_model.splitter import splitting
 
 # Set up logging
 logging.basicConfig(
@@ -30,13 +31,14 @@ DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
 def load_data(
     path_pattern: str,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Load and preprocess data using forward_data_reader, which handles directories and checks.
+    """Load and preprocess data using forward_data_reader, which handles directories and checks.
 
     Args:
+    ----
         path_pattern (str): Path to the JSON file or directory.
 
     Returns:
+    -------
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
             - X_train: Training features
             - X_val: Validation features
@@ -44,6 +46,12 @@ def load_data(
             - y_train: Training labels
             - y_val: Validation labels
             - y_test: Test labels
+
+    Raises:
+    ------
+        ValueError: If data loading fails or if the input path is invalid.
+        AssertionError: If the loaded data does not match expected dimensions.
+
     """
     result = forward_data_reader(path_pattern)
     if result is None:
@@ -59,6 +67,23 @@ def load_data(
 def prepare_tensors(
     X_data: np.ndarray, y_data: np.ndarray, device: torch.device
 ) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Prepare input and output tensors for the model.
+
+    Args:
+    ----
+        X_data (np.ndarray): Input features.
+        y_data (np.ndarray): Target labels.
+        device (torch.device): Device to which tensors will be moved.
+
+    Returns:
+    -------
+        Tuple[torch.Tensor, torch.Tensor]: Input and output tensors reshaped for the model.
+
+    Raises:
+    ------
+        ValueError: If the input data is not in the expected shape.
+
+    """
     num_samples = X_data.shape[0]
     X_tensor = torch.tensor(X_data.reshape(num_samples, 3, 10).astype(np.float32)).to(
         device
@@ -82,6 +107,23 @@ def train_model(
     patience: int = PATIENCE,
     min_delta: float = MIN_DELTA,
 ) -> None:
+    """Train the AdvancedNNSurrogateModel with early stopping and learning rate scheduling.
+
+    Args:
+    ----
+        model (AdvancedNNSurrogateModel): The model to be trained.
+        X_train (torch.Tensor): Training input features.
+        y_train (torch.Tensor): Training target labels.
+        X_val (torch.Tensor): Validation input features.
+        y_val (torch.Tensor): Validation target labels.
+        device (torch.device): Device to which tensors will be moved.
+        epochs (int): Number of training epochs.
+        batch_size (int): Size of each training batch.
+        lr (float): Learning rate for the optimizer.
+        patience (int): Number of epochs with no improvement after which training will be stopped.
+        min_delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+
+    """
     loss_fn = torch.nn.MSELoss()
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = model.get_scheduler(optimizer, epochs)
@@ -134,6 +176,7 @@ def train_model(
 
 
 def save_model_safely(model: AdvancedNNSurrogateModel, path: str) -> None:
+    """Save the model to a file, ensuring no overwriting of existing files."""
     if os.path.exists(path):
         base_path, ext = os.path.splitext(path)
         counter = 1
@@ -147,6 +190,7 @@ def save_model_safely(model: AdvancedNNSurrogateModel, path: str) -> None:
 def evaluate_model(
     model: AdvancedNNSurrogateModel, X_val: torch.Tensor, y_val: torch.Tensor
 ) -> None:
+    """Evaluate the model on the validation set and log the results."""
     model.eval()
     with torch.no_grad():
         val_logits = model(X_val)
@@ -163,6 +207,7 @@ def evaluate_model(
 
 
 def main() -> None:
+    """Train and evaluate the surrogate model."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logging.info(f"Loading data from {DATA_FILE_PATH}")

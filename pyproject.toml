@@ -28,7 +28,8 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [mypy]
-mypy_path = "/home/gijs/Desktop/Thesis/bone_remodeling"
+mypy_path = "."
+ignore_missing_imports = true
 
 [tool.ruff]
 lint.select = [

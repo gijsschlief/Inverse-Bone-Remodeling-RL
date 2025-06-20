@@ -1,3 +1,5 @@
+"""Neural Network Surrogate Model for Bone Remodeling Simulation."""
+
 import logging
 
 import torch
@@ -5,7 +7,31 @@ from torch import nn
 
 
 class NNSurrogateModel(nn.Module):
+    """Neural Network Surrogate Model for Bone Remodeling Simulation.
+
+    This model uses a fully connected architecture to process input data and predict bone density profiles.
+    It includes methods for training, validation, saving, loading, and plotting loss history.
+
+    Attributes
+    ----------
+        train_losses (list): List to store training losses.
+        val_losses (list): List to store validation losses.
+
+    Methods
+    -------
+        forward(x):
+            Forward pass through the model.
+        save_model(file_path):
+            Save the model state to a file.
+        load_model(file_path):
+            Load the model state from a file.
+        plot_loss():
+            Plot training and validation loss history.
+
+    """
+
     def __init__(self):
+        """Initialize the NNSurrogateModel."""
         super().__init__()
         self.flatten = nn.Flatten()
         self.linear_relu_stack = nn.Sequential(
@@ -21,6 +47,7 @@ class NNSurrogateModel(nn.Module):
         self.val_losses = []
 
     def forward(self, x):
+        """Forward pass through the model."""
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits.view(-1, 10, 10)  # Reshape output to 10x10
@@ -51,6 +78,7 @@ class NNSurrogateModel(nn.Module):
         return len(self.linear_relu_stack)
 
     def plot_loss(self):
+        """Plot training and validation loss history."""
         import matplotlib.pyplot as plt
 
         if not self.train_losses:

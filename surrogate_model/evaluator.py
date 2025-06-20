@@ -1,3 +1,5 @@
+"""Evaluator for Surrogate Model."""
+
 import logging
 
 import numpy as np
@@ -13,16 +15,23 @@ logging.basicConfig(
 def evaluate_surrogate_model(
     model: torch.nn.Module, X_val: np.ndarray, y_val: np.ndarray
 ) -> tuple:
-    """
-    Evaluate the surrogate model on validation data and calculate similarity scores.
+    """Evaluate the surrogate model on validation data and calculate similarity scores.
+
+    This function takes a trained surrogate model and validation data, evaluates the model,
+    and computes the similarity between the predicted and actual validation outputs.
+    It returns the model's predictions, the actual validation outputs, and the average similarity score.
+    The validation data should be in the form of numpy arrays, where `X_val` is the input data
+    and `y_val` is the target data. The model should be a PyTorch neural network module.
+
     Args:
+    ----
         model: The trained surrogate model.
         X_val: Validation input data.
         y_val: Validation target data.
 
     Raises:
+    ------
         ValueError: If the input data is not in the correct format or if the model is not a torch.nn.Module.
-        RuntimeError: If there is an issue with the model evaluation.
 
     """
     if not isinstance(X_val, np.ndarray) or not isinstance(y_val, np.ndarray):

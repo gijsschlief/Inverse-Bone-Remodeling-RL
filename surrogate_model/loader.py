@@ -1,6 +1,8 @@
+"""Module for loading and using a surrogate model for bone remodeling simulations."""
+
 import logging
-from typing import Optional, Type
 from pathlib import Path
+from typing import Optional, Type
 
 import torch
 
@@ -14,18 +16,45 @@ logging.basicConfig(
 
 
 class SurrogateModelLoader:
+    """Class to load a surrogate model from a .pth file.
+
+    This class handles the loading of a PyTorch model from a specified path and provides
+    a method to run forward estimation on input data points.
+
+    Attributes
+    ----------
+        model_path (str): Path to the .pth file containing the model weights.
+        model_class (Type[torch.nn.Module]): The class of the model to be loaded.
+        model (Optional[torch.nn.Module]): The loaded model instance, if auto_load is True.
+        auto_load (bool): Whether to automatically load the model upon initialization.
+
+    Methods
+    -------
+        load() -> None:
+            Loads the model from the specified path.
+        forward(data_points: torch.Tensor) -> torch.Tensor:
+            Runs forward estimation on the given data points.
+        __call__(x: torch.Tensor) -> torch.Tensor:
+            Calls the forward method of the model.
+        __init__(model_path: str, model_class: Type[torch.nn.Module], auto_load: bool = True) -> None:
+            Initializes the loader with the path to the model and the model class.
+
+    """
+
     def __init__(
         self,
-        model_path: str,
+        model_path: Path,
         model_class: Type[torch.nn.Module],
         auto_load: bool = True,
     ) -> None:
-        """
-        Initialize the loader with the path to the model and the model class.
+        """Initialize the loader with the path to the model and the model class.
 
         Args:
+        ----
             model_path (str): Path to the .pth file containing the model weights.
             model_class (torch.nn.Module): The class of the model to be loaded.
+            auto_load (bool): Whether to automatically load the model upon initialization.
+
         """
         self.model_path = model_path
         self.model_class = model_class
@@ -35,9 +64,7 @@ class SurrogateModelLoader:
             self.load()
 
     def load(self) -> None:
-        """
-        Load the surrogate model from the .pth file.
-        """
+        """Load the surrogate model from the .pth file."""
         self.model = self.model_class()
         self.model.load_state_dict(
             torch.load(self.model_path, map_location="cpu", weights_only=False)
@@ -45,14 +72,16 @@ class SurrogateModelLoader:
         self.model.eval()  # Set the model to evaluation mode
 
     def forward(self, data_points: torch.Tensor) -> torch.Tensor:
-        """
-        Run forward estimation on the given data points.
+        """Run forward estimation on the given data points.
 
         Args:
+        ----
             data_points (torch.Tensor): Input data points for the model.
 
         Returns:
+        -------
             torch.Tensor: Model predictions.
+
         """
         if self.model is None:
             raise ValueError("Model is not loaded. Call load_model() first.")
@@ -62,19 +91,15 @@ class SurrogateModelLoader:
         return predictions
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """
-        Call the forward method of the model.
-        """
+        """Call the forward method of the model."""
         return self.forward(x)
 
 
 def load_surrogate_model(
     model_path: str = "data/models/trained_model.pth",
     model_class: Type[torch.nn.Module] = AdvancedNNSurrogateModel,
-) -> torch.nn.Module:
-    """
-    Main function to load data, preprocess it, load the surrogate model, and evaluate its performance.
-    """
+) -> torch.nn.Module | None:
+    """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     path = Path(model_path)
 
     # Check if the model path is valid

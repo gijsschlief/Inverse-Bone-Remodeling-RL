@@ -1,19 +1,20 @@
+"""Evaluate the surrogate model's performance on validation data."""
+
 import logging
 
-from forward_model.data_reader import forward_data_reader
+from bone_remodeling.forward_model.data_reader import forward_data_reader
+
 from surrogate_model.evaluator import evaluate_surrogate_model
+from surrogate_model.loader import load_surrogate_model
 from surrogate_model.neural_networks.advanced_neural_network import (
     AdvancedNNSurrogateModel,
 )
-from surrogate_model.loader import load_surrogate_model
-from Thesis_code.surrogate_model.splitter import splitting
-from Thesis_code.surrogate_model.visualizer import plot_surrogate_model
+from surrogate_model.splitter import splitting
+from surrogate_model.visualizer import plot_surrogate_model
 
 
 def main():
-    """
-    Main function to load data, preprocess it, load the surrogate model, and evaluate its performance.
-    """
+    """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     # Load the surrogate model and data
     model = load_surrogate_model(
         "/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth",

@@ -1,10 +1,12 @@
+"""Visualize the surrogate model's predictions against actual validation data."""
+
 import logging
 import random
 from typing import List
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -17,12 +19,15 @@ def plot_surrogate_model(
     sample_count: int = 3,
     show_plot: bool = True,
 ) -> List[plt.Figure]:
-    """
-    Compare the surrogate model's predictions with the actual validation data.
+    """Compare the surrogate model's predictions with the actual validation data.
+
     Args:
+    ----
         val_logits (torch.Tensor): Predicted density matrices from the surrogate model.
         y_val_tensor (torch.Tensor): Actual density matrices from the validation set.
         sample_count (int): Number of random samples to visualize. Default is 3.
+        show_plot (bool): Whether to display the plots. Default is True.
+
     """
     if not isinstance(val_logits, torch.Tensor) or not isinstance(
         y_val_tensor, torch.Tensor
@@ -80,7 +85,18 @@ def plot_surrogate_model(
     return figures
 
 
-def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax):
+def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
+    """Plot a density matrix with annotations.
+
+    Args:
+    ----
+        matrix (np.ndarray): The density matrix to plot.
+        title (str): Title of the plot.
+        ax: Matplotlib axis to plot on.
+        vmin (float): Minimum value for color scaling.
+        vmax (float): Maximum value for color scaling.
+
+    """
     ax.imshow(matrix, cmap="viridis", interpolation="nearest", vmin=vmin, vmax=vmax)
     ax.set_title(title)
     ax.set_xlabel("Columns")
