@@ -6,7 +6,6 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -14,8 +13,8 @@ logging.basicConfig(
 
 
 def plot_surrogate_model(
-    val_logits: torch.Tensor,
-    y_val_tensor: torch.Tensor,
+    predicted_matrices: np.ndarray,
+    true_matrices: np.ndarray,
     sample_count: int = 3,
     show_plot: bool = True,
 ) -> List[plt.Figure]:
@@ -23,35 +22,35 @@ def plot_surrogate_model(
 
     Args:
     ----
-        val_logits (torch.Tensor): Predicted density matrices from the surrogate model.
-        y_val_tensor (torch.Tensor): Actual density matrices from the validation set.
+        predicted_matrices (np.ndarray): Predicted density matrices from the surrogate model.
+        true_matrices (np.ndarray): Actual density matrices from the validation set.
         sample_count (int): Number of random samples to visualize. Default is 3.
         show_plot (bool): Whether to display the plots. Default is True.
 
     """
-    if not isinstance(val_logits, torch.Tensor) or not isinstance(
-        y_val_tensor, torch.Tensor
+    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
+        true_matrices, np.ndarray
     ):
         raise ValueError(
-            "Both val_logits and y_val_tensor must be torch.Tensor objects."
+            "Both predicted_matrices and true_matrices must be numpy.ndarray objects."
         )
-    if val_logits.shape != y_val_tensor.shape:
-        raise ValueError("val_logits and y_val_tensor must have the same shape.")
-    if sample_count <= 0 or sample_count > len(y_val_tensor):
+    if predicted_matrices.shape != true_matrices.shape:
+        raise ValueError("predicted_matrices and true_matrices must have the same shape.")
+    if sample_count <= 0 or sample_count > len(true_matrices):
         raise ValueError(
             "sample_count must be a positive integer less than or equal to the number of validation samples."
         )
 
-    random_indices = random.sample(range(len(y_val_tensor)), sample_count)
+    random_indices = random.sample(range(len(true_matrices)), sample_count)
 
-    max_true_value = torch.max(y_val_tensor).item()
-    min_true_value = torch.min(y_val_tensor).item()
+    max_true_value = np.max(true_matrices)
+    min_true_value = np.min(true_matrices)
 
     logging.info("=== Surrogate Model Comparison ===")
     figures = []
     for idx in random_indices:
-        predicted_matrix = val_logits[idx].cpu().numpy()
-        actual_matrix = y_val_tensor[idx].cpu().numpy()
+        predicted_matrix = predicted_matrices[idx]
+        actual_matrix = true_matrices[idx]
 
         logging.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
         logging.info(f"Predicted Density Matrix:\n{predicted_matrix}")
@@ -109,15 +108,19 @@ def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
                 f"{matrix[i, j]:.2f}",
                 ha="center",
                 va="center",
-                color="white",
+                color = "white",
                 fontsize=8,
             )
 
+def main() -> None:
+    """Demonstrate the surrogate model visualization."""
+    # Example usage with random data
+    predicted_matrices = np.random.randn(5, 10, 10)  # Random predicted matrices
+    true_matrices = np.random.randn(5, 10, 10)       # Random actual matrices
+    plot_surrogate_model(
+        predicted_matrices=predicted_matrices, true_matrices=true_matrices, sample_count=3
+    )
+
 
 if __name__ == "__main__":
-    # Example val_logits and y_val_tensor for demonstration purposes
-    val_logits = torch.randn(5, 10, 10)
-    y_val_tensor = torch.randn(5, 10, 10)
-    plot_surrogate_model(
-        val_logits=val_logits, y_val_tensor=y_val_tensor, sample_count=1
-    )
+    main()

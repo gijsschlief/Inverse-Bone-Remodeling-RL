@@ -4,7 +4,7 @@ import logging
 
 from bone_remodeling.forward_model.data_reader import forward_data_reader
 
-from surrogate_model.evaluator import evaluate_surrogate_model
+from surrogate_model.evaluator import average_similarity_score, validate_surrogate_model
 from surrogate_model.loader import load_surrogate_model
 from surrogate_model.neural_networks.advanced_neural_network import (
     AdvancedNNSurrogateModel,
@@ -24,13 +24,13 @@ def main():
     )
     _, X_val, _, _, y_val, _ = splitting(force_profiles, final_output_densities)
 
-    val_logits, y_val_tensor, average_similarity = evaluate_surrogate_model(
-        model, X_val, y_val
-    )
+    predicted_matrices, true_matrices = validate_surrogate_model(model, X_val, y_val)
+
+    average_similarity = average_similarity_score(predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim")
 
     logging.info(f"The average similarity = {average_similarity}")
 
-    plot_surrogate_model(val_logits, y_val_tensor, sample_count=3, show_plot=True)
+    plot_surrogate_model(predicted_matrices=predicted_matrices, true_matrices=true_matrices, sample_count=3, show_plot=True)
     return
 
 

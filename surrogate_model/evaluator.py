@@ -1,6 +1,7 @@
 """Evaluator for Surrogate Model."""
 
 import logging
+from typing import Tuple
 
 import numpy as np
 import torch
@@ -11,29 +12,38 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+def validate_surrogate_model(
+    model: torch.nn.Module,
+    X_val: np.ndarray,
+    y_val: np.ndarray,
+    device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+) -> Tuple[np.ndarray, np.ndarray]:
+    """Run the surrogate model on validation data and return predicted and true matrices.
 
-def evaluate_surrogate_model(
-    model: torch.nn.Module, X_val: np.ndarray, y_val: np.ndarray
-) -> tuple:
-    """Evaluate the surrogate model on validation data and calculate similarity scores.
-
-    This function takes a trained surrogate model and validation data, evaluates the model,
-    and computes the similarity between the predicted and actual validation outputs.
-    It returns the model's predictions, the actual validation outputs, and the average similarity score.
-    The validation data should be in the form of numpy arrays, where `X_val` is the input data
-    and `y_val` is the target data. The model should be a PyTorch neural network module.
+    This function takes a trained surrogate model and validation data, runs the model to get predictions,
+    and returns the predicted matrices and the true matrices. It ensures that the input data is in the correct
+    format and reshapes it appropriately for the model. It also checks that the model is a PyTorch module and
+    moves it to the specified device if necessary.
 
     Args:
     ----
         model: The trained surrogate model.
         X_val: Validation input data.
         y_val: Validation target data.
+        device: The device to run the model on (default is CUDA if available, otherwise CPU).
 
     Raises:
     ------
         ValueError: If the input data is not in the correct format or if the model is not a torch.nn.Module.
 
+    Returns:
+    -------
+        Tuple[np.ndarray, np.ndarray]: A tuple containing the predicted matrices and the true matrices.
+
     """
+    if device is None:
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
     if not isinstance(X_val, np.ndarray) or not isinstance(y_val, np.ndarray):
         raise ValueError("Both X_val and y_val must be numpy.ndarray objects.")
 
@@ -47,39 +57,48 @@ def evaluate_surrogate_model(
     else:
         num_samples = X_val.shape[0]
     if not isinstance(model, torch.nn.Module):
-        raise ValueError("Model must be of type torch.nn.Module")
-
-    # Ensure the model is in evaluation mode and on the correct device
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+        raise ValueError("The model must be an instance of torch.nn.Module.")
+    if next(model.parameters()).device != device:
+        model.to(device)
     model.eval()
 
     with torch.no_grad():
-        X_val_tensor = torch.tensor(
-            X_val.reshape(num_samples, 3, 10).astype(np.float32)
-        ).to(device)
-        y_val_tensor = torch.tensor(
-            y_val.reshape(num_samples, 10, 10).astype(np.float32)
-        ).to(device)
+        # Validate that X_val can be reshaped to (num_samples, 3, 10)
+        if X_val.size != num_samples * 3 * 10:
+            raise ValueError(
+                f"X_val with shape {X_val.shape} cannot be reshaped to ({num_samples}, 3, 10). "
+            )
+        # Validate that y_val can be reshaped to (num_samples, 10, 10)
+        if y_val.size != num_samples * 10 * 10:
+            raise ValueError(
+                f"y_val with shape {y_val.shape} cannot be reshaped to ({num_samples}, 10, 10). "
+                "Ensure y_val has the correct number of elements."
+            )
+        y_val_tensor = torch.from_numpy(y_val.reshape(num_samples, 10, 10).astype(np.float32)).to(device)
+        X_val_tensor = torch.from_numpy(X_val.reshape(num_samples, 3, 10).astype(np.float32)).to(device)
 
-        val_logits = model(X_val_tensor)
-        loss_fn = torch.nn.MSELoss()  # Define the loss function
-        val_loss = loss_fn(val_logits, y_val_tensor)
+    # Run the model to get predictions
+    val_logits: torch.Tensor = model(X_val_tensor)
+    predicted_matrices = val_logits.detach().cpu().numpy()
+    true_matrices = y_val_tensor.detach().cpu().numpy()
+    return predicted_matrices, true_matrices
 
-        logging.info(f"Validation Loss: {val_loss.item()}")
+def average_similarity_score(
+    predicted_matrices: np.ndarray,
+    true_matrices: np.ndarray,
+    num_samples: int | None = None,
+    baseline: float = 0.1,
+    threshold: float = 0.5,
+    method: str = "ssim"
+) -> float:
+    """Calculate the similarity score between predicted and true matrices."""
+    if num_samples is None:
+        num_samples = min(predicted_matrices.shape[0], true_matrices.shape[0])
+    similarity_scores: list = []
 
-    # Calculate similarity between predicted and actual validation data
-    similarity_scores = []
     for i in range(num_samples):
-        predicted_matrix = val_logits[i].cpu().numpy()
-        actual_matrix = y_val_tensor[i].cpu().numpy()
         similarity = calculate_similarity(
-            predicted_matrix, actual_matrix, method="ssim", baseline=0.1, threshold=0.5
+            predicted_matrices[i], true_matrices[i], method=method, baseline=baseline, threshold=threshold
         )
         similarity_scores.append(similarity)
-
-    # Calculate average similarity as accuracy metric
-    # print(f"Similarity Scores: {similarity_scores}")
-    average_similarity = np.mean(similarity_scores)
-    logging.info(f"Model Accuracy (Average Similarity): {average_similarity}")
-    return val_logits, y_val_tensor, average_similarity
+    return float(np.mean(similarity_scores))
