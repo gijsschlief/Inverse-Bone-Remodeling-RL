@@ -91,14 +91,55 @@ def average_similarity_score(
     threshold: float = 0.5,
     method: str = "ssim"
 ) -> float:
-    """Calculate the similarity score between predicted and true matrices."""
+    """Calculate the similarity score between predicted and true matrices with error logging."""
+    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(true_matrices, np.ndarray):
+        logging.error("Both predicted_matrices and true_matrices must be numpy.ndarray objects.")
+        raise ValueError("Both predicted_matrices and true_matrices must be numpy.ndarray objects.")
+
+    if predicted_matrices.shape[1:] != true_matrices.shape[1:]:
+        logging.error(
+            f"Shape mismatch: predicted_matrices has shape {predicted_matrices.shape}, "
+            f"true_matrices has shape {true_matrices.shape}."
+        )
+        raise ValueError("predicted_matrices and true_matrices must have the same shape except for the first dimension.")
+
     if num_samples is None:
         num_samples = min(predicted_matrices.shape[0], true_matrices.shape[0])
+
+    if num_samples > predicted_matrices.shape[0] or num_samples > true_matrices.shape[0]:
+        logging.error(
+            f"num_samples ({num_samples}) is greater than the number of available samples: "
+            f"predicted_matrices ({predicted_matrices.shape[0]}), true_matrices ({true_matrices.shape[0]})."
+        )
+        raise ValueError("num_samples exceeds the available number of samples in the input arrays.")
+
     similarity_scores: list = []
 
     for i in range(num_samples):
-        similarity = calculate_similarity(
-            predicted_matrices[i], true_matrices[i], method=method, baseline=baseline, threshold=threshold
-        )
-        similarity_scores.append(similarity)
-    return float(np.mean(similarity_scores))
+        try:
+            similarity = calculate_similarity(
+                predicted_matrices[i], true_matrices[i], method=method, baseline=baseline, threshold=threshold
+            )
+            similarity_scores.append(similarity)
+        except Exception as e:
+            logging.error(
+                f"Error calculating similarity for sample {i}: {e}. "
+                f"predicted_matrix shape: {predicted_matrices[i].shape}, "
+                f"true_matrix shape: {true_matrices[i].shape}"
+            )
+            raise
+
+    if not similarity_scores:
+        logging.error("No similarity scores were calculated. Check input data.")
+        raise ValueError("No similarity scores calculated.")
+
+    # Filter out NaN values before calculating the mean
+    filtered_scores = [score for score in similarity_scores if not np.isnan(score)]
+    if not filtered_scores:
+        logging.error("All similarity scores are NaN. Check input data.")
+        raise ValueError("All similarity scores are NaN.")
+    mean_score = np.mean(filtered_scores)
+    if np.isnan(mean_score):
+        logging.error("Mean similarity score is NaN. Check if similarity_scores contains valid values.")
+        raise ValueError("Mean similarity score is NaN.")
+    return float(mean_score)
