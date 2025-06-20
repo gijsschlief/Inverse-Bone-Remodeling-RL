@@ -5,7 +5,13 @@ import warnings
 import numpy as np
 
 
-def calculate_similarity(A: np.ndarray, B: np.ndarray, method: str ="mse", baseline: float =0.1, threshold: float=0.5) -> float:
+def calculate_similarity(
+    A: np.ndarray,
+    B: np.ndarray,
+    method: str = "mse",
+    baseline: float = 0.1,
+    threshold: float = 0.5,
+) -> float:
     """Calculate similarity or distance between two matrices A and B using the specified method.
 
     Args:
@@ -39,12 +45,14 @@ def calculate_similarity(A: np.ndarray, B: np.ndarray, method: str ="mse", basel
     if method not in ["mse", "mae", "wasserstein"] and baseline != 0.1:
         warnings.warn(
             f"The 'baseline' parameter is not used for the '{method}' method. Please set it to its default value of 0.1.",
-            UserWarning, stacklevel=2,
+            UserWarning,
+            stacklevel=2,
         )
     if method not in ["iou", "dice"] and threshold != 0.5:
         warnings.warn(
             f"The 'threshold' parameter is not used for the '{method}' method. Please set it to its default value of 0.5.",
-            UserWarning, stacklevel=2,
+            UserWarning,
+            stacklevel=2,
         )
 
     if method == "mse":

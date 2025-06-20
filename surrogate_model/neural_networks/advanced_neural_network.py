@@ -41,7 +41,9 @@ class AdvancedNNSurrogateModel(torch.nn.Module):
             ),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(16),
-            torch.nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1),
+            torch.nn.Conv2d(
+                in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1
+            ),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
             torch.nn.Flatten(),
@@ -106,7 +108,9 @@ class AdvancedNNSurrogateModel(torch.nn.Module):
         plt.show()
 
     @staticmethod
-    def get_scheduler(optimizer: torch.optim.Optimizer, epochs: int) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
+    def get_scheduler(
+        optimizer: torch.optim.Optimizer, epochs: int
+    ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Create a learning rate scheduler for the surrogate model."""
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.5, patience=10, verbose=True

@@ -35,7 +35,9 @@ def plot_surrogate_model(
             "Both predicted_matrices and true_matrices must be numpy.ndarray objects."
         )
     if predicted_matrices.shape != true_matrices.shape:
-        raise ValueError("predicted_matrices and true_matrices must have the same shape.")
+        raise ValueError(
+            "predicted_matrices and true_matrices must have the same shape."
+        )
     if sample_count <= 0 or sample_count > len(true_matrices):
         raise ValueError(
             "sample_count must be a positive integer less than or equal to the number of validation samples."
@@ -108,17 +110,20 @@ def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
                 f"{matrix[i, j]:.2f}",
                 ha="center",
                 va="center",
-                color = "white",
+                color="white",
                 fontsize=8,
             )
+
 
 def main() -> None:
     """Demonstrate the surrogate model visualization."""
     # Example usage with random data
     predicted_matrices = np.random.randn(5, 10, 10)  # Random predicted matrices
-    true_matrices = np.random.randn(5, 10, 10)       # Random actual matrices
+    true_matrices = np.random.randn(5, 10, 10)  # Random actual matrices
     plot_surrogate_model(
-        predicted_matrices=predicted_matrices, true_matrices=true_matrices, sample_count=3
+        predicted_matrices=predicted_matrices,
+        true_matrices=true_matrices,
+        sample_count=3,
     )
 
 

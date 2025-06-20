@@ -22,7 +22,9 @@ def main():
     if model is None:
         logging.error("Failed to load the surrogate model.")
         return
-    _, force_profiles, final_output_densities = forward_data_reader("/home/gijs/Desktop/Thesis/data/raw/")
+    _, force_profiles, final_output_densities = forward_data_reader(
+        "/home/gijs/Desktop/Thesis/data/raw/"
+    )
     if force_profiles is None or final_output_densities is None:
         logging.error("Failed to load the data.")
         return
@@ -36,15 +38,22 @@ def main():
         logging.error("Failed to validate the surrogate model.")
         return
 
-    #FILTER THE MATRICES BEFORE MOVING ON!
+    # FILTER THE MATRICES BEFORE MOVING ON!
 
-
-    average_similarity = average_similarity_score(predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim")
+    average_similarity = average_similarity_score(
+        predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"
+    )
 
     logging.info(f"The average similarity = {average_similarity}")
 
-    plot_surrogate_model(predicted_matrices=predicted_matrices, true_matrices=true_matrices, sample_count=3, show_plot=True)
+    plot_surrogate_model(
+        predicted_matrices=predicted_matrices,
+        true_matrices=true_matrices,
+        sample_count=3,
+        show_plot=True,
+    )
     return
+
 
 if __name__ == "__main__":
     main()

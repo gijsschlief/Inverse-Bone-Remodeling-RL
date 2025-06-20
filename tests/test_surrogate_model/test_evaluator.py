@@ -22,6 +22,7 @@ class DummyModel(torch.nn.Module):
         out = self.linear(x)
         return out.view(x.size(0), *self.output_shape)
 
+
 @pytest.fixture
 def dummy_data():
     """Create dummy data for testing."""
@@ -30,10 +31,12 @@ def dummy_data():
     y_val = np.random.rand(num_samples, 10, 10).astype(np.float32)
     return X_val, y_val
 
+
 @pytest.fixture
 def dummy_model():
     """Create a dummy model for testing."""
     return DummyModel()
+
 
 def test_validate_surrogate_model_shapes(dummy_model, dummy_data):
     """Test that validate_surrogate_model returns predictions and true matrices with correct shapes."""
@@ -47,6 +50,7 @@ def test_validate_surrogate_model_shapes(dummy_model, dummy_data):
     assert preds.shape == (X_val.shape[0], 10, 10)
     assert trues.shape == (y_val.shape[0], 10, 10)
 
+
 def test_validate_surrogate_model_wrong_type(dummy_model, dummy_data):
     """Test that validate_surrogate_model raises ValueError for wrong input types."""
     X_val, y_val = dummy_data
@@ -55,22 +59,36 @@ def test_validate_surrogate_model_wrong_type(dummy_model, dummy_data):
     with pytest.raises(ValueError):
         evaluator.validate_surrogate_model(dummy_model, X_val, list(y_val))
 
+
 def test_validate_surrogate_model_wrong_model(dummy_data):
     """Test that validate_surrogate_model raises ValueError for non-model input."""
     X_val, y_val = dummy_data
-    class NotAModel: pass
+
+    class NotAModel:
+        pass
+
     with pytest.raises(ValueError):
-        evaluator.validate_surrogate_model(NotAModel(), X_val.reshape(X_val.shape[0], -1), y_val.reshape(y_val.shape[0], -1))
+        evaluator.validate_surrogate_model(
+            NotAModel(),
+            X_val.reshape(X_val.shape[0], -1),
+            y_val.reshape(y_val.shape[0], -1),
+        )
+
 
 def test_validate_surrogate_model_shape_mismatch(dummy_model, dummy_data):
     """Test that validate_surrogate_model raises ValueError for shape mismatch."""
     X_val, y_val = dummy_data
     # X_val wrong shape
     with pytest.raises(ValueError):
-        evaluator.validate_surrogate_model(dummy_model, np.random.rand(5, 2, 10), y_val.reshape(5, -1))
+        evaluator.validate_surrogate_model(
+            dummy_model, np.random.rand(5, 2, 10), y_val.reshape(5, -1)
+        )
     # y_val wrong shape
     with pytest.raises(ValueError):
-        evaluator.validate_surrogate_model(dummy_model, X_val.reshape(5, -1), np.random.rand(5, 9, 10))
+        evaluator.validate_surrogate_model(
+            dummy_model, X_val.reshape(5, -1), np.random.rand(5, 9, 10)
+        )
+
 
 def test_validate_surrogate_model_sample_mismatch(dummy_model, dummy_data):
     """Test that validate_surrogate_model handles different number of samples in X_val and y_val."""
@@ -82,6 +100,7 @@ def test_validate_surrogate_model_sample_mismatch(dummy_model, dummy_data):
     assert preds.shape[0] == 3
     assert trues.shape[0] == 3
 
+
 def test_average_similarity_score(monkeypatch):
     """Test average_similarity_score with a known similarity value."""
     # Patch calculate_similarity to return a known value
@@ -90,6 +109,7 @@ def test_average_similarity_score(monkeypatch):
     trues = np.ones((4, 10, 10))
     score = evaluator.average_similarity_score(preds, trues)
     assert score == 0.5
+
 
 def test_average_similarity_score_partial(monkeypatch):
     """Test average_similarity_score with num_samples parameter."""

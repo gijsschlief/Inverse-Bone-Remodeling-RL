@@ -12,6 +12,7 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
 )
 
+
 def validate_surrogate_model(
     model: torch.nn.Module,
     X_val: np.ndarray,
@@ -74,8 +75,12 @@ def validate_surrogate_model(
                 f"y_val with shape {y_val.shape} cannot be reshaped to ({num_samples}, 10, 10). "
                 "Ensure y_val has the correct number of elements."
             )
-        y_val_tensor = torch.from_numpy(y_val.reshape(num_samples, 10, 10).astype(np.float32)).to(device)
-        X_val_tensor = torch.from_numpy(X_val.reshape(num_samples, 3, 10).astype(np.float32)).to(device)
+        y_val_tensor = torch.from_numpy(
+            y_val.reshape(num_samples, 10, 10).astype(np.float32)
+        ).to(device)
+        X_val_tensor = torch.from_numpy(
+            X_val.reshape(num_samples, 3, 10).astype(np.float32)
+        ).to(device)
 
     # Run the model to get predictions
     val_logits: torch.Tensor = model(X_val_tensor)
@@ -83,42 +88,60 @@ def validate_surrogate_model(
     true_matrices = y_val_tensor.detach().cpu().numpy()
     return predicted_matrices, true_matrices
 
+
 def average_similarity_score(
     predicted_matrices: np.ndarray,
     true_matrices: np.ndarray,
     num_samples: int | None = None,
     baseline: float = 0.1,
     threshold: float = 0.5,
-    method: str = "ssim"
+    method: str = "ssim",
 ) -> float:
     """Calculate the similarity score between predicted and true matrices with error logging."""
-    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(true_matrices, np.ndarray):
-        logging.error("Both predicted_matrices and true_matrices must be numpy.ndarray objects.")
-        raise ValueError("Both predicted_matrices and true_matrices must be numpy.ndarray objects.")
+    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
+        true_matrices, np.ndarray
+    ):
+        logging.error(
+            "Both predicted_matrices and true_matrices must be numpy.ndarray objects."
+        )
+        raise ValueError(
+            "Both predicted_matrices and true_matrices must be numpy.ndarray objects."
+        )
 
     if predicted_matrices.shape[1:] != true_matrices.shape[1:]:
         logging.error(
             f"Shape mismatch: predicted_matrices has shape {predicted_matrices.shape}, "
             f"true_matrices has shape {true_matrices.shape}."
         )
-        raise ValueError("predicted_matrices and true_matrices must have the same shape except for the first dimension.")
+        raise ValueError(
+            "predicted_matrices and true_matrices must have the same shape except for the first dimension."
+        )
 
     if num_samples is None:
         num_samples = min(predicted_matrices.shape[0], true_matrices.shape[0])
 
-    if num_samples > predicted_matrices.shape[0] or num_samples > true_matrices.shape[0]:
+    if (
+        num_samples > predicted_matrices.shape[0]
+        or num_samples > true_matrices.shape[0]
+    ):
         logging.error(
             f"num_samples ({num_samples}) is greater than the number of available samples: "
             f"predicted_matrices ({predicted_matrices.shape[0]}), true_matrices ({true_matrices.shape[0]})."
         )
-        raise ValueError("num_samples exceeds the available number of samples in the input arrays.")
+        raise ValueError(
+            "num_samples exceeds the available number of samples in the input arrays."
+        )
 
     similarity_scores: list = []
 
     for i in range(num_samples):
         try:
             similarity = calculate_similarity(
-                predicted_matrices[i], true_matrices[i], method=method, baseline=baseline, threshold=threshold
+                predicted_matrices[i],
+                true_matrices[i],
+                method=method,
+                baseline=baseline,
+                threshold=threshold,
             )
             similarity_scores.append(similarity)
         except Exception as e:
@@ -140,6 +163,8 @@ def average_similarity_score(
         raise ValueError("All similarity scores are NaN.")
     mean_score = np.mean(filtered_scores)
     if np.isnan(mean_score):
-        logging.error("Mean similarity score is NaN. Check if similarity_scores contains valid values.")
+        logging.error(
+            "Mean similarity score is NaN. Check if similarity_scores contains valid values."
+        )
         raise ValueError("Mean similarity score is NaN.")
     return float(mean_score)

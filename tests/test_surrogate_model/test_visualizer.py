@@ -29,6 +29,7 @@ def test_plot_surrogate_model_returns_figures(monkeypatch):
     for fig in figures:
         assert hasattr(fig, "savefig")  # matplotlib Figure
 
+
 def test_plot_surrogate_model_invalid_array_type():
     """Test that plot_surrogate_model raises ValueError for invalid array type."""
     # Arrange
@@ -39,6 +40,7 @@ def test_plot_surrogate_model_invalid_array_type():
     with pytest.raises(ValueError):
         visualizer.plot_surrogate_model(true_matrices, predicted_matrices)
 
+
 def test_plot_surrogate_model_shape_mismatch():
     """Test that plot_surrogate_model raises ValueError for shape mismatch."""
     true_matrices = np.ones((3, 4, 4))
@@ -46,18 +48,25 @@ def test_plot_surrogate_model_shape_mismatch():
     with pytest.raises(ValueError, match="must have the same shape"):
         visualizer.plot_surrogate_model(true_matrices, predicted_matrices)
 
+
 def test_plot_surrogate_model_invalid_sample_count():
     """Test that plot_surrogate_model raises ValueError for invalid sample_count."""
     true_matrices = np.ones((3, 4, 4))
     predicted_matrices = np.ones((3, 4, 4))
     with pytest.raises(ValueError, match="sample_count must be a positive integer"):
-        visualizer.plot_surrogate_model(true_matrices, predicted_matrices, sample_count=0)
+        visualizer.plot_surrogate_model(
+            true_matrices, predicted_matrices, sample_count=0
+        )
     with pytest.raises(ValueError, match="sample_count must be a positive integer"):
-        visualizer.plot_surrogate_model(true_matrices, predicted_matrices, sample_count=4)
+        visualizer.plot_surrogate_model(
+            true_matrices, predicted_matrices, sample_count=4
+        )
+
 
 def test_plot_density_matrix_creates_annotations():
     """Test that plot_density_matrix creates text annotations for matrix values."""
     import matplotlib.pyplot as plt
+
     matrix = np.array([[1.0, 2.0], [3.0, 4.0]])
     fig, ax = plt.subplots()
     visualizer.plot_density_matrix(matrix, "Test Matrix", ax, vmin=1.0, vmax=4.0)
@@ -66,9 +75,12 @@ def test_plot_density_matrix_creates_annotations():
     assert ax.get_xlabel() == "Columns"
     assert ax.get_ylabel() == "Rows"
     # Check that text annotations exist
-    texts = [child for child in ax.get_children() if isinstance(child, matplotlib.text.Text)]
+    texts = [
+        child for child in ax.get_children() if isinstance(child, matplotlib.text.Text)
+    ]
     assert any("1.00" in t.get_text() for t in texts)
     plt.close(fig)
+
 
 if __name__ == "__main__":
     pytest.main([__file__])
