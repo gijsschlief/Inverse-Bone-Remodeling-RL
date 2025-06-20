@@ -29,7 +29,13 @@ def main() -> None:
     generates data in the specified mode (parallel, sequential, or edge cases).
     The generated data is saved in the specified output directory.
 
-    Command line arguments:
+    Usage:
+    -----
+    python data_generator_cli.py [Options]
+
+    Options:
+    ------
+    - `--help`: Show this help message and exit.
     - `--output_dir`: Directory to save the generated data.
     - `--num_samples`: Number of samples to generate.
     - `--initial_density_value`: Initial value to fill the density array.
@@ -40,7 +46,7 @@ def main() -> None:
     - `--batch_seed`: Random seed for reproducibility.
     - `-m` or `--mode`: Generation mode ('parallel', 'sequential', or 'edge').
     - `-v` or `--verbose`: Enable verbose output.
-    The script logs the time taken for the simulation and any errors encountered.
+
     """
     parser = argparse.ArgumentParser(
         description="Generate training or edge case data for the forward model.",

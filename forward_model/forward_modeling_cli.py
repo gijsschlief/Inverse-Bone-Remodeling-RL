@@ -5,6 +5,7 @@ and options for force profiles, density profiles, and output settings.
 It supports command line arguments for flexibility and ease of use.
 
 Usage:
+-----
     python forward_modeling_cli.py [options]
 
 Options:
@@ -35,8 +36,6 @@ Options:
     -p, --plot                        Plot the density simulation.
     -v, --verbose                     Enable verbose output.
 
-This script reads parameters from a JSON file and allows users to reset or modify them
-through command line arguments. It runs the forward model simulation and logs the results.
 """
 
 import argparse

@@ -15,7 +15,6 @@ from surrogate_model.visualizer import plot_surrogate_model
 
 def main():
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
-    # Load the surrogate model and data
     model = load_surrogate_model(
         "/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth",
         AdvancedNNSurrogateModel,
