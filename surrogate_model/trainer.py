@@ -23,10 +23,10 @@ logging.basicConfig(
 )
 
 # Constants
-EPOCHS = 300
+EPOCHS = 1000
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 20
+PATIENCE = 100
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
@@ -65,7 +65,7 @@ def load_data(
         raise ValueError("Data loading failed. Please check the input path.")
     X = force_profiles
     y = final_output_densities
-    return splitting(X, y)
+    return splitting(X, y, random_state=0)
 
 
 def sanitize_data(
@@ -314,9 +314,9 @@ def main() -> None:
     )
     train_model(model, X_train, y_train, X_val, y_val, device)
 
-    model.plot_loss()
-
     save_model_safely(model, MODEL_PATH)
+
+    model.plot_loss()
 
     logging.info("Evaluating model on validation set.")
 
