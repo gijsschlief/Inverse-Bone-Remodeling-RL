@@ -53,7 +53,7 @@ class LargeSurrogateModel(torch.nn.Module):
             torch.nn.BatchNorm2d(32),
 
             torch.nn.Conv2d(32, 1, kernel_size=1),
-            torch.nn.Sigmoid()
+            torch.nn.ReLU()
         )
         self.train_losses: List[float] = []
         self.val_losses: List[float] = []
