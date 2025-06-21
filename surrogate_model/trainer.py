@@ -22,7 +22,7 @@ logging.basicConfig(
 EPOCHS = 300
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 20
+PATIENCE = 100
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
@@ -63,6 +63,33 @@ def load_data(
     y = final_output_densities
     return splitting(X, y)
 
+def sanitize_data(x_data: np.ndarray, y_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Sanitize the input data by filtering out rows with NaN values in either x_data or y_data.
+
+    Args:
+    ----
+        x_data (np.ndarray): Input features to be sanitized.
+        y_data (np.ndarray): Target labels to be sanitized.
+
+    Returns:
+    -------
+        Tuple[np.ndarray, np.ndarray]: Sanitized x_data and y_data with NaN rows removed.
+
+    Raises:
+    ------
+        ValueError: If the input data is not a numpy array.
+
+    """
+    if not isinstance(x_data, np.ndarray) or not isinstance(y_data, np.ndarray):
+        raise ValueError("Both x_data and y_data must be numpy arrays.")
+    # Flatten all but the first dimension to check for NaNs per sample
+    x_mask = ~np.isnan(x_data.reshape(x_data.shape[0], -1)).any(axis=1)
+    y_mask = ~np.isnan(y_data.reshape(y_data.shape[0], -1)).any(axis=1)
+    mask = x_mask & y_mask
+    removed = x_data.shape[0] - np.count_nonzero(mask)
+    if removed > 0:
+        logging.error(f"sanitize_data: Removed {removed} datapoints due to NaN values.")
+    return x_data[mask], y_data[mask]
 
 def prepare_tensors(
     X_data: np.ndarray, y_data: np.ndarray, device: torch.device
@@ -84,6 +111,8 @@ def prepare_tensors(
         ValueError: If the input data is not in the expected shape.
 
     """
+    X_data, y_data = sanitize_data(X_data, y_data)
+
     num_samples = X_data.shape[0]
     X_tensor = torch.tensor(X_data.reshape(num_samples, 3, 10).astype(np.float32)).to(
         device
@@ -140,9 +169,19 @@ def train_model(
             optimizer.zero_grad()
             logits = model(batch_X)
             loss = loss_fn(logits, batch_y)
-            loss.backward()
-            optimizer.step()
-            total_loss += loss.item()
+            if torch.isnan(loss):
+                logging.error("Loss is NaN, skipping this batch.")
+                continue
+            if torch.isinf(loss):
+                logging.error("Loss is Inf, skipping this batch.")
+                continue
+            if not torch.isfinite(loss):
+                logging.error("Loss is not finite, skipping this batch.")
+                continue
+            else:
+                loss.backward()
+                optimizer.step()
+                total_loss += loss.item()
 
         avg_train_loss = total_loss / len(
             model.create_dataloader(X_train, y_train, batch_size=batch_size)

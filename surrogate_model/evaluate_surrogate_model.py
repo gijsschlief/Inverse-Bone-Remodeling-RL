@@ -15,8 +15,8 @@ from surrogate_model.splitter import splitting
 from surrogate_model.visualizer import plot_surrogate_model
 
 
-def filter_matrices(predicted_matrices: np.ndarray, true_matrices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """Filter lists of numpy arrays based on entries without NaN values."""
+def sanitize_matrices(predicted_matrices: np.ndarray, true_matrices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+    """Sanitize the predicted and true matrices by filtering out any entries that contain NaN values."""
     if not isinstance(predicted_matrices, np.ndarray) or not isinstance(true_matrices, np.ndarray):
         logging.error(
             "Both predicted_matrices and true_matrices must be lists of numpy arrays."
@@ -67,7 +67,7 @@ def main() -> None:
 
     predicted_matrices, true_matrices = validate_surrogate_model(model, X_val, y_val)
 
-    predicted_matrices, true_matrices = filter_matrices(predicted_matrices, true_matrices)
+    predicted_matrices, true_matrices = sanitize_matrices(predicted_matrices, true_matrices)
 
     average_similarity = average_similarity_score(
         predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"
