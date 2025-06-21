@@ -141,17 +141,21 @@ def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
         torch.Tensor: SSIM loss value.
 
     """
-    predicted_np = predicted.cpu().numpy()
-    target_np = target.cpu().numpy()
+    predicted = predicted.unsqueeze(1)
+    target = target.unsqueeze(1)
 
     ssim_value = ssim(
-        predicted_np,
-        target_np,
-        multichannel=True,
-        data_range=predicted_np.max() - predicted_np.min(),
+        predicted,
+        target,
+        data_range=target.max() - target.min(),
     )
     return 1 - torch.tensor(ssim_value, dtype=torch.float32).to(predicted.device)
 
+def combined_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """Weighted combination of MSE and SSIM losses."""
+    mse = torch.nn.functional.mse_loss(predicted, target)
+    ssim_l = ssim_loss(predicted, target)
+    return 0.5 * mse + 0.5 * ssim_l
 
 def train_model(
     model: MediumSurrogateModel,
@@ -183,7 +187,7 @@ def train_model(
         min_delta (float): Minimum change in the monitored quantity to qualify as an improvement.
 
     """
-    loss_fn = torch.nn.MSELoss()
+    loss_fn = combined_loss
     optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
     scheduler = model.get_scheduler(optimizer, epochs)
 
@@ -198,6 +202,7 @@ def train_model(
         ):
             optimizer.zero_grad()
             logits = model(batch_X)
+            logits = torch.clamp(logits, 0.01, 1.73)
             loss = loss_fn(logits, batch_y)
             if torch.isnan(loss):
                 logging.error("Loss is NaN, skipping this batch.")
@@ -221,7 +226,8 @@ def train_model(
         model.eval()
         with torch.no_grad():
             val_logits = model(X_val)
-            val_loss = loss_fn(val_logits, y_val)
+            val_logits = torch.clamp(val_logits, 0.01, 1.73)
+            val_loss = combined_loss(val_logits, y_val)
         model.val_losses.append(val_loss)
         scheduler.step(val_loss)
 
