@@ -39,18 +39,21 @@ class LargeSurrogateModel(torch.nn.Module):
             torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
+
             torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
+
             torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
-            torch.nn.AdaptiveAvgPool2d((3, 10)),
-            torch.nn.Flatten(),
-            torch.nn.Linear(64 * 3 * 10, 512),
+
+            torch.nn.Conv2d(64, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.4),
-            torch.nn.Linear(512, 100),
+            torch.nn.BatchNorm2d(32),
+
+            torch.nn.Conv2d(32, 1, kernel_size=1),  # output: (N, 1, 10, 10)
+            torch.nn.Sigmoid()  # constrain output to [0, 1], SSIM works best with normalized images
         )
         self.train_losses: List[float] = []
         self.val_losses: List[float] = []

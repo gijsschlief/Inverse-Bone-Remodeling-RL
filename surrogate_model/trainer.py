@@ -1,4 +1,4 @@
-"""Trainer script for the AdvancedNNSurrogateModel."""
+"""Trainer script for the SurrogateModel."""
 
 import logging
 import os
