@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Optional, Type
 
 import torch
-
-from surrogate_model.neural_networks.advanced_neural_network import (
-    AdvancedNNSurrogateModel,
+from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
+    MediumSurrogateModel,
 )
 
 logging.basicConfig(
@@ -97,7 +96,7 @@ class SurrogateModelLoader:
 
 def load_surrogate_model(
     model_path: str = "data/models/trained_model.pth",
-    model_class: Type[torch.nn.Module] = AdvancedNNSurrogateModel,
+    model_class: Type[torch.nn.Module] = MediumSurrogateModel,
 ) -> torch.nn.Module | None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     path = Path(model_path)

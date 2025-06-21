@@ -1,4 +1,4 @@
-"""Advanced Neural Network Surrogate Model for Bone Remodeling Simulation."""
+"""Large Neural Network Surrogate Model for Bone Remodeling Simulation."""
 
 from typing import List
 
@@ -6,8 +6,8 @@ import numpy as np
 import torch
 
 
-class AdvancedNNSurrogateModel(torch.nn.Module):
-    """Advanced Neural Network Surrogate Model for bone remodeling simulation.
+class LargeSurrogateModel(torch.nn.Module):
+    """Large Neural Network Surrogate Model for bone remodeling simulation.
 
     This model uses a convolutional neural network architecture to predict
     bone density matrices based on input features. It is designed to handle
@@ -36,21 +36,21 @@ class AdvancedNNSurrogateModel(torch.nn.Module):
         """Initialize the AdvancedNNSurrogateModel with a neural network architecture."""
         super().__init__()
         self.model = torch.nn.Sequential(
-            torch.nn.Conv2d(
-                in_channels=1, out_channels=16, kernel_size=(3, 3), padding=1
-            ),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm2d(16),
-            torch.nn.Conv2d(
-                in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1
-            ),
+            torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
-            torch.nn.Flatten(),
-            torch.nn.Linear(32 * 3 * 10, 256),
+            torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.3),
-            torch.nn.Linear(256, 100),
+            torch.nn.BatchNorm2d(64),
+            torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm2d(64),
+            torch.nn.AdaptiveAvgPool2d((3, 10)),
+            torch.nn.Flatten(),
+            torch.nn.Linear(64 * 3 * 10, 512),
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.4),
+            torch.nn.Linear(512, 100),
         )
         self.train_losses: List[float] = []
         self.val_losses: List[float] = []

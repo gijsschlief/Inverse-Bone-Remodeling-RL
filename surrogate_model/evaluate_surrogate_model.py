@@ -5,19 +5,23 @@ from typing import Tuple
 
 import numpy as np
 from bone_remodeling.forward_model.data_reader import forward_data_reader
+from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
+    MediumSurrogateModel,
+)
 
 from surrogate_model.evaluator import average_similarity_score, validate_surrogate_model
 from surrogate_model.loader import load_surrogate_model
-from surrogate_model.neural_networks.advanced_neural_network import (
-    AdvancedNNSurrogateModel,
-)
 from surrogate_model.splitter import splitting
 from surrogate_model.visualizer import plot_surrogate_model
 
 
-def sanitize_matrices(predicted_matrices: np.ndarray, true_matrices: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+def sanitize_matrices(
+    predicted_matrices: np.ndarray, true_matrices: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """Sanitize the predicted and true matrices by filtering out any entries that contain NaN values."""
-    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(true_matrices, np.ndarray):
+    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
+        true_matrices, np.ndarray
+    ):
         logging.error(
             "Both predicted_matrices and true_matrices must be lists of numpy arrays."
         )
@@ -37,15 +41,18 @@ def sanitize_matrices(predicted_matrices: np.ndarray, true_matrices: np.ndarray)
             nan_count += 1
 
     if nan_count > 0:
-        logging.error(f"Found {nan_count} entries with NaN values in predicted or true matrices. These entries were filtered out.")
+        logging.error(
+            f"Found {nan_count} entries with NaN values in predicted or true matrices. These entries were filtered out."
+        )
 
     return np.array(filtered_predicted), np.array(filtered_true)
+
 
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth",
-        AdvancedNNSurrogateModel,
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth",
+        MediumSurrogateModel,
     )
     if model is None:
         logging.error("Failed to load the surrogate model.")
@@ -67,7 +74,9 @@ def main() -> None:
 
     predicted_matrices, true_matrices = validate_surrogate_model(model, X_val, y_val)
 
-    predicted_matrices, true_matrices = sanitize_matrices(predicted_matrices, true_matrices)
+    predicted_matrices, true_matrices = sanitize_matrices(
+        predicted_matrices, true_matrices
+    )
 
     average_similarity = average_similarity_score(
         predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"

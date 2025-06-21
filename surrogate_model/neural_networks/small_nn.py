@@ -1,4 +1,4 @@
-"""Neural Network Surrogate Model for Bone Remodeling Simulation."""
+"""Small Neural Network Surrogate Model for Bone Remodeling Simulation."""
 
 import logging
 
@@ -6,8 +6,8 @@ import torch
 from torch import nn
 
 
-class NNSurrogateModel(nn.Module):
-    """Neural Network Surrogate Model for Bone Remodeling Simulation.
+class SmallSurrogateModel(nn.Module):
+    """Small Neural Network Surrogate Model for Bone Remodeling Simulation.
 
     This model uses a fully connected architecture to process input data and predict bone density profiles.
     It includes methods for training, validation, saving, loading, and plotting loss history.

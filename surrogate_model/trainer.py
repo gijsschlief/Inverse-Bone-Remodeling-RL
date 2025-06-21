@@ -8,10 +8,11 @@ import numpy as np
 import torch
 from bone_remodeling.forward_model.data_reader import forward_data_reader
 from bone_remodeling.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.surrogate_model.neural_networks.advanced_neural_network import (
-    AdvancedNNSurrogateModel,
+from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
+    MediumSurrogateModel,
 )
 from bone_remodeling.surrogate_model.splitter import splitting
+from pytorch_msssim import ssim
 
 # Set up logging
 logging.basicConfig(
@@ -22,7 +23,7 @@ logging.basicConfig(
 EPOCHS = 300
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 100
+PATIENCE = 20
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
@@ -63,7 +64,10 @@ def load_data(
     y = final_output_densities
     return splitting(X, y)
 
-def sanitize_data(x_data: np.ndarray, y_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
+
+def sanitize_data(
+    x_data: np.ndarray, y_data: np.ndarray
+) -> Tuple[np.ndarray, np.ndarray]:
     """Sanitize the input data by filtering out rows with NaN values in either x_data or y_data.
 
     Args:
@@ -90,6 +94,7 @@ def sanitize_data(x_data: np.ndarray, y_data: np.ndarray) -> Tuple[np.ndarray, n
     if removed > 0:
         logging.error(f"sanitize_data: Removed {removed} datapoints due to NaN values.")
     return x_data[mask], y_data[mask]
+
 
 def prepare_tensors(
     X_data: np.ndarray, y_data: np.ndarray, device: torch.device
@@ -123,8 +128,33 @@ def prepare_tensors(
     return X_tensor, y_tensor
 
 
+def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+    """Calculate the Structural Similarity Index (SSIM) loss between predicted and target tensors.
+
+    Args:
+    ----
+        predicted (torch.Tensor): Predicted output tensor.
+        target (torch.Tensor): Target output tensor.
+
+    Returns:
+    -------
+        torch.Tensor: SSIM loss value.
+
+    """
+    predicted_np = predicted.cpu().numpy()
+    target_np = target.cpu().numpy()
+
+    ssim_value = ssim(
+        predicted_np,
+        target_np,
+        multichannel=True,
+        data_range=predicted_np.max() - predicted_np.min(),
+    )
+    return 1 - torch.tensor(ssim_value, dtype=torch.float32).to(predicted.device)
+
+
 def train_model(
-    model: AdvancedNNSurrogateModel,
+    model: MediumSurrogateModel,
     X_train: torch.Tensor,
     y_train: torch.Tensor,
     X_val: torch.Tensor,
@@ -214,7 +244,7 @@ def train_model(
             break
 
 
-def save_model_safely(model: AdvancedNNSurrogateModel, path: str) -> None:
+def save_model_safely(model: MediumSurrogateModel, path: str) -> None:
     """Save the model to a file, ensuring no overwriting of existing files."""
     if os.path.exists(path):
         base_path, ext = os.path.splitext(path)
@@ -227,7 +257,7 @@ def save_model_safely(model: AdvancedNNSurrogateModel, path: str) -> None:
 
 
 def evaluate_model(
-    model: AdvancedNNSurrogateModel, X_val: torch.Tensor, y_val: torch.Tensor
+    model: MediumSurrogateModel, X_val: torch.Tensor, y_val: torch.Tensor
 ) -> None:
     """Evaluate the model on the validation set and log the results."""
     model.eval()
@@ -257,7 +287,7 @@ def main() -> None:
     X_train, y_train = prepare_tensors(X_train_np, y_train_np, device)
     X_val, y_val = prepare_tensors(X_val_np, y_val_np, device)
 
-    model = AdvancedNNSurrogateModel().to(device)
+    model = MediumSurrogateModel().to(device)
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(
