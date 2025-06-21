@@ -113,7 +113,7 @@ class MediumSurrogateModel(torch.nn.Module):
     ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Create a learning rate scheduler for the surrogate model."""
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=10, verbose=True
+            optimizer, mode="min", factor=0.5, patience=10
         )
 
     @staticmethod
@@ -121,10 +121,15 @@ class MediumSurrogateModel(torch.nn.Module):
         X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True
     ) -> torch.utils.data.DataLoader:
         """Create a DataLoader for the surrogate model."""
-        dataset = torch.utils.data.TensorDataset(
-            torch.tensor(X.reshape(-1, 3, 10), dtype=torch.float32),
-            torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32),
-        )
-        return torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle
-        )
+        if isinstance(X, torch.Tensor):
+            X_tensor = X.clone().detach()
+        else:
+            X_tensor = torch.tensor(X.reshape(-1, 3, 10), dtype=torch.float32)
+
+        if isinstance(y, torch.Tensor):
+            y_tensor = y.clone().detach()
+        else:
+            y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
+
+        dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
+        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)

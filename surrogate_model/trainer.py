@@ -8,6 +8,9 @@ import numpy as np
 import torch
 from bone_remodeling.forward_model.data_reader import forward_data_reader
 from bone_remodeling.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.surrogate_model.neural_networks.large_nn import (
+    LargeSurrogateModel,
+)
 from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
 )
@@ -97,14 +100,16 @@ def sanitize_data(
 
 
 def prepare_tensors(
-    X_data: np.ndarray, y_data: np.ndarray, device: torch.device
+    X_data: np.ndarray | torch.Tensor,
+    y_data: np.ndarray | torch.Tensor,
+    device: torch.device
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Prepare input and output tensors for the model.
 
     Args:
     ----
-        X_data (np.ndarray): Input features.
-        y_data (np.ndarray): Target labels.
+        X_data (np.ndarray or torch.Tensor): Input features.
+        y_data (np.ndarray or torch.Tensor): Target labels.
         device (torch.device): Device to which tensors will be moved.
 
     Returns:
@@ -117,15 +122,22 @@ def prepare_tensors(
 
     """
     X_data, y_data = sanitize_data(X_data, y_data)
-
     num_samples = X_data.shape[0]
-    X_tensor = torch.tensor(X_data.reshape(num_samples, 3, 10).astype(np.float32)).to(
-        device
-    )
-    y_tensor = torch.tensor(y_data.reshape(num_samples, 10, 10).astype(np.float32)).to(
-        device
-    )
-    return X_tensor, y_tensor
+
+    # Handle X
+    if isinstance(X_data, torch.Tensor):
+        X_tensor = X_data.clone().detach().to(torch.float32).reshape(num_samples, 3, 10)
+    else:
+        X_tensor = torch.tensor(X_data, dtype=torch.float32).reshape(num_samples, 3, 10)
+
+    # Handle y
+    if isinstance(y_data, torch.Tensor):
+        y_tensor = y_data.clone().detach().to(torch.float32).reshape(num_samples, 10, 10)
+    else:
+        y_tensor = torch.tensor(y_data, dtype=torch.float32).reshape(num_samples, 10, 10)
+
+    return X_tensor.to(device), y_tensor.to(device)
+
 
 
 def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -147,9 +159,10 @@ def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     ssim_value = ssim(
         predicted,
         target,
+        win_size=1,
         data_range=target.max() - target.min(),
     )
-    return 1 - torch.tensor(ssim_value, dtype=torch.float32).to(predicted.device)
+    return 1 - torch.tensor(ssim_value).clone().detach().float().to(predicted.device)
 
 def combined_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     """Weighted combination of MSE and SSIM losses."""
@@ -230,7 +243,6 @@ def train_model(
             val_loss = combined_loss(val_logits, y_val)
         model.val_losses.append(val_loss)
         scheduler.step(val_loss)
-
         # Early stopping logic
         if val_loss + min_delta < best_val_loss:
             best_val_loss = val_loss
@@ -238,14 +250,15 @@ def train_model(
         else:
             epochs_no_improve += 1
 
-        if (epoch + 1) % 10 == 0:
+        # Log every epoch for the first 10, then every 10 epochs
+        if epoch < 10 or (epoch + 1) % 10 == 0:
             logging.info(
-                f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}"
+            f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}"
             )
 
         if epochs_no_improve >= patience:
             logging.info(
-                f"Early stopping at epoch {epoch} (no improvement in {patience} epochs)."
+            f"Early stopping at epoch {epoch} (no improvement in {patience} epochs)."
             )
             break
 
@@ -293,7 +306,7 @@ def main() -> None:
     X_train, y_train = prepare_tensors(X_train_np, y_train_np, device)
     X_val, y_val = prepare_tensors(X_val_np, y_val_np, device)
 
-    model = MediumSurrogateModel().to(device)
+    model = LargeSurrogateModel().to(device)
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(

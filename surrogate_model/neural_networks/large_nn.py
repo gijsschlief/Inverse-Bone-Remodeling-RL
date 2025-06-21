@@ -36,15 +36,15 @@ class LargeSurrogateModel(torch.nn.Module):
         """Initialize the AdvancedNNSurrogateModel with a neural network architecture."""
         super().__init__()
         self.model = torch.nn.Sequential(
-            torch.nn.Conv2d(in_channels=1, out_channels=32, kernel_size=3, padding=1),
+            torch.nn.Conv2d(3, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
 
-            torch.nn.Conv2d(in_channels=32, out_channels=64, kernel_size=3, padding=1),
+            torch.nn.Conv2d(32, 64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
 
-            torch.nn.Conv2d(in_channels=64, out_channels=64, kernel_size=3, padding=1),
+            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
 
@@ -52,17 +52,28 @@ class LargeSurrogateModel(torch.nn.Module):
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
 
-            torch.nn.Conv2d(32, 1, kernel_size=1),  # output: (N, 1, 10, 10)
-            torch.nn.Sigmoid()  # constrain output to [0, 1], SSIM works best with normalized images
+            torch.nn.Conv2d(32, 1, kernel_size=1),
+            torch.nn.Sigmoid()
         )
         self.train_losses: List[float] = []
         self.val_losses: List[float] = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
-        x = x.unsqueeze(1)  # reshape from (N, 3, 10) to (N, 1, 3, 10)
-        out = self.model(x)
-        return out.view(-1, 10, 10)  # reshape to (N, 10, 10)
+        # x shape: (N, 3, 10)
+        top = x[:, 0, :]   # (N, 10)
+        left = x[:, 1, :]  # (N, 10)
+        right = x[:, 2, :] # (N, 10)
+
+        # Expand to spatial (10x10)
+        top_map = top.unsqueeze(1).expand(-1, 10, -1)    # (N, 10, 10)
+        left_map = left.unsqueeze(2).expand(-1, -1, 10)  # (N, 10, 10)
+        right_map = right.unsqueeze(2).expand(-1, -1, 10)# (N, 10, 10)
+
+        x_img = torch.stack([top_map, left_map, right_map], dim=1)  # (N, 3, 10, 10)
+
+        out = self.model(x_img)  # (N, 1, 10, 10)
+        return out.view(-1, 10, 10)
 
     def save_model(self, file_path: str) -> None:
         """Save the model state to a file."""
@@ -116,7 +127,7 @@ class LargeSurrogateModel(torch.nn.Module):
     ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Create a learning rate scheduler for the surrogate model."""
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=10, verbose=True
+            optimizer, mode="min", factor=0.5, patience=10
         )
 
     @staticmethod
@@ -124,10 +135,15 @@ class LargeSurrogateModel(torch.nn.Module):
         X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True
     ) -> torch.utils.data.DataLoader:
         """Create a DataLoader for the surrogate model."""
-        dataset = torch.utils.data.TensorDataset(
-            torch.tensor(X.reshape(-1, 3, 10), dtype=torch.float32),
-            torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32),
-        )
-        return torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle
-        )
+        if isinstance(X, torch.Tensor):
+            X_tensor = X.clone().detach()
+        else:
+            X_tensor = torch.tensor(X.reshape(-1, 3, 10), dtype=torch.float32)
+
+        if isinstance(y, torch.Tensor):
+            y_tensor = y.clone().detach()
+        else:
+            y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
+
+        dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
+        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
