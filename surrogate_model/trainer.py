@@ -35,6 +35,7 @@ PATIENCE = 20
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
+NORMALIZE = True  # Set to False if you want to skip normalization
 
 
 def load_data(
@@ -315,17 +316,18 @@ def main() -> None:
         DATA_FILE_PATH
     )
 
-    logging.info("Data loaded successfully. Sanitizing data...")
+    logging.info("Sanitizing data...")
     X_train_np, y_train_np = sanitize_data(X_train_np, y_train_np)
     X_val_np, y_val_np = sanitize_data(X_val_np, y_val_np)
     X_test_np, y_test_np = sanitize_data(X_test_np, y_test_np)
 
-    logging.info("Data sanitized successfully. Normalizing data...")
-    X_train, X_val, X_test, X_mean, X_std  = normalize_data(X_train_np, X_val_np, X_test_np)
-    y_train, y_val, y_test, y_mean, y_std = normalize_data(y_train_np, y_val_np, y_test_np)
-    logging.info(f"Normalization parameters: X_mean={X_mean}, X_std={X_std}, y_mean={y_mean}, y_std={y_std}")
+    if NORMALIZE:
+        logging.info("Normalizing data...")
+        X_train, X_val, X_test, X_mean, X_std  = normalize_data(X_train_np, X_val_np, X_test_np)
+        y_train, y_val, y_test, y_mean, y_std = normalize_data(y_train_np, y_val_np, y_test_np)
+        logging.info(f"Normalization parameters: X_mean={X_mean}, X_std={X_std}, y_mean={y_mean}, y_std={y_std}")
 
-    logging.info("Data normalization complete. Preparing tensors...")
+    logging.info("Preparing tensors...")
     X_train, y_train = prepare_tensors(X_train, y_train, device)
     X_val, y_val = prepare_tensors(X_val, y_val, device)
     X_test, y_test = prepare_tensors(X_test, y_test, device)
@@ -339,13 +341,14 @@ def main() -> None:
     train_model(model, X_train, y_train, X_val, y_val, device)
 
     model_path = save_model_safely(model, MODEL_PATH)
-    save_normalization_params(
-        model_path.with_suffix(".npz"),
-        X_mean,
-        X_std,
-        y_mean,
-        y_std,
-    )
+    if NORMALIZE:
+        save_normalization_params(
+            model_path.with_suffix(".npz"),
+            X_mean,
+            X_std,
+            y_mean,
+            y_std,
+        )
     logging.info(f"Model saved to {model_path}")
 
     model.plot_loss()
