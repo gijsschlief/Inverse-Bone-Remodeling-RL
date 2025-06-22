@@ -9,6 +9,7 @@ import torch
 from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
 )
+from bone_remodeling.surrogate_model.normalizor import load_normalization_params
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

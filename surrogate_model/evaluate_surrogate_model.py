@@ -14,7 +14,10 @@ from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
 
 from surrogate_model.evaluator import average_similarity_score, validate_surrogate_model
 from surrogate_model.loader import load_surrogate_model
-from surrogate_model.normalizor import normalize_data, unnormalize_data
+from surrogate_model.normalizor import (
+    normalize_data,
+    unnormalize_data,
+)
 from surrogate_model.splitter import splitting
 from surrogate_model.visualizer import plot_surrogate_model
 
@@ -55,7 +58,7 @@ def sanitize_matrices(
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model_and_normalization_params = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_12.pth",
         MediumSurrogateModel,
     )
     if model_and_normalization_params is None:
