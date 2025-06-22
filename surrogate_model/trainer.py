@@ -28,7 +28,7 @@ logging.basicConfig(
 )
 
 # Constants
-EPOCHS = 200
+EPOCHS = 1000
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
 PATIENCE = 50
@@ -324,7 +324,7 @@ def main() -> None:
     X_val, y_val = prepare_tensors(X_val, y_val, device)
     X_test, y_test = prepare_tensors(X_test, y_test, device)
 
-    model = MediumSurrogateModel().to(device)
+    model = LargeSurrogateModel().to(device)
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(

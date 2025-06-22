@@ -1,4 +1,4 @@
-"""Large Neural Network Surrogate Model for bone remodeling simulation."""
+"""Module for the reversed LargeSurrogateModel neural network."""
 
 from typing import List
 
@@ -6,44 +6,38 @@ import numpy as np
 import torch
 
 
-class LargeSurrogateModel(torch.nn.Module):
-    """Large Neural Network Surrogate Model for bone remodeling simulation."""
+class ReversedSurrogateModel(torch.nn.Module):
+    """Reversed Neural Network Surrogate Model for bone remodeling simulation."""
 
     def __init__(self) -> None:
-        """Initialize the LargeSurrogateModel."""
+        """Initialize the reversed ReversedSurrogateModel."""
         super().__init__()
 
+        # Fully connected input block (no early dropout)
+        self.input_fc = torch.nn.Sequential(
+            torch.nn.Flatten(),                      # (N, 3, 10) → (N, 30)
+            torch.nn.Linear(30, 512),
+            torch.nn.ReLU(),
+
+            torch.nn.Linear(512, 1024),
+            torch.nn.ReLU(),
+
+            torch.nn.Linear(1024, 128 * 5 * 5),      # Prepare for upsampling
+            torch.nn.ReLU(),
+            torch.nn.Dropout(0.3)                    # Only here, after features are richer
+        )
+
+        # Reshape to (N, 128, 5, 5) and upsample
         self.conv_block = torch.nn.Sequential(
-            torch.nn.Conv2d(1, 32, kernel_size=3, padding=1),
+            torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            torch.nn.ReLU(),
+            torch.nn.BatchNorm2d(64),
+
+            torch.nn.Conv2d(64, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
 
-            torch.nn.Conv2d(32, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm2d(64),
-
-            torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm2d(64),
-
-            torch.nn.Conv2d(64, 128, kernel_size=3, padding=1),
-            torch.nn.ReLU(),
-            torch.nn.BatchNorm2d(128),
-        )
-
-        self.global_pool = torch.nn.AdaptiveAvgPool2d((3, 10))  # keep spatial shape fixed
-
-        self.fc = torch.nn.Sequential(
-            torch.nn.Flatten(),  # (N, 128, 3, 10) => (N, 128*3*10)
-            torch.nn.Linear(128 * 3 * 10, 1024),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.3),
-
-            torch.nn.Linear(1024, 512),
-            torch.nn.ReLU(),
-            torch.nn.Dropout(0.3),
-
-            torch.nn.Linear(512, 100),
+            torch.nn.Conv2d(32, 1, kernel_size=3, padding=1),  # Final 10×10 map
         )
 
         self.train_losses: List[float] = []
@@ -51,11 +45,10 @@ class LargeSurrogateModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
-        x = x.unsqueeze(1)  # (N, 3, 10) → (N, 1, 3, 10)
-        x = self.conv_block(x)           # → (N, 128, 3, 10)
-        x = self.global_pool(x)          # → (N, 128, 3, 10)
-        x = self.fc(x)                   # → (N, 100)
-        return x.view(-1, 10, 10)        # → (N, 10, 10)
+        x = self.input_fc(x)                  # (N, 128*5*5)
+        x = x.view(-1, 128, 5, 5)             # (N, 128, 5, 5)
+        x = self.conv_block(x)                # (N, 1, 10, 10)
+        return x.squeeze(1)                   # (N, 10, 10)
 
     def save_model(self, file_path: str) -> None:
         """Save the model state to a file."""
@@ -68,22 +61,22 @@ class LargeSurrogateModel(torch.nn.Module):
 
     def __str__(self) -> str:
         """Return a string representation of the model."""
-        return f"LargeSurrogateModel(\n  {self.conv_block}\n  {self.fc}\n)"
+        return f"LargeSurrogateModel(\n  {self.input_fc}\n  {self.conv_block}\n)"
 
     def __repr__(self) -> str:
         """Return a string representation of the model."""
         return self.__str__()
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Call the model with input tensor x."""
+        """Call the model with input tensor."""
         return self.forward(x)
 
     def __len__(self) -> int:
-        """Return the total number of layers in the model."""
-        return len(list(self.conv_block)) + len(list(self.fc))
+        """Return the number of layers in the model."""
+        return len(list(self.input_fc)) + len(list(self.conv_block))
 
     def plot_loss(self) -> None:
-        """Plot the training and validation loss over epochs."""
+        """Plot the training and validation loss history."""
         import matplotlib.pyplot as plt
 
         if not self.train_losses:
@@ -105,7 +98,7 @@ class LargeSurrogateModel(torch.nn.Module):
 
     @staticmethod
     def get_scheduler(optimizer: torch.optim.Optimizer, epochs: int):
-        """Create a learning rate scheduler for the surrogate model."""
+        """Get a learning rate scheduler for the surrogate model."""
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.5, patience=10
         )
