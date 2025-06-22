@@ -31,7 +31,7 @@ logging.basicConfig(
 EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 20
+PATIENCE = 50
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
@@ -161,7 +161,7 @@ def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     predicted = predicted.unsqueeze(1)
     target = target.unsqueeze(1)
 
-    return 1 - ssim(predicted, target, win_size=3, data_range=target.max - target.min())
+    return 1 - ssim(predicted, target, win_size=3, data_range=target.max() - target.min())
 
 def combined_loss(predicted: torch.Tensor, target: torch.Tensor, alpha: float = 0.5) -> torch.Tensor:
     """Weighted combination of MSE and SSIM losses."""
