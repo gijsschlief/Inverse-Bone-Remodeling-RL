@@ -2,6 +2,7 @@
 
 import logging
 import os
+from pathlib import Path
 from typing import Tuple
 
 import numpy as np
@@ -121,7 +122,6 @@ def prepare_tensors(
         ValueError: If the input data is not in the expected shape.
 
     """
-    X_data, y_data = sanitize_data(X_data, y_data)
     num_samples = X_data.shape[0]
 
     # Handle X
@@ -169,6 +169,41 @@ def combined_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor
     mse = torch.nn.functional.mse_loss(predicted, target)
     ssim_l = ssim_loss(predicted, target)
     return 0.5 * mse + 0.5 * ssim_l
+
+def normalize_data(train: np.ndarray, val: np.ndarray, test: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Normalize datasets based on training statistics."""
+    mean = train.mean(axis=0, keepdims=True)
+    std = train.std(axis=0, keepdims=True) + 1e-8  # avoid division by zero
+    return (train - mean) / std, (val - mean) / std, (test - mean) / std, mean, std
+
+def unnormalize(tensor: torch.Tensor, mean: np.ndarray, std: np.ndarray) -> torch.Tensor:
+    """Unnormalize a tensor using mean and std."""
+    mean_tensor = torch.tensor(mean, dtype=torch.float32, device=tensor.device)
+    std_tensor = torch.tensor(std, dtype=torch.float32, device=tensor.device)
+    return tensor * std_tensor + mean_tensor
+
+def save_normalization_params(path: Path, X_mean: np.ndarray, X_std: np.ndarray, y_mean: np.ndarray, y_std: np.ndarray) -> None:
+    """Save normalization parameters to a file."""
+    try:
+        np.savez(path, X_mean=X_mean, X_std=X_std, y_mean=y_mean, y_std=y_std)
+        logging.info(f"Normalization parameters saved to {path}")
+    except Exception as e:
+        logging.error(f"Failed to save normalization parameters: {e}")
+        raise ValueError(f"Failed to save normalization parameters to {path}") from e
+
+def load_normalization_params(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Load normalization parameters from a file."""
+    if not path.exists():
+        raise FileNotFoundError(f"Normalization parameters file not found: {path}")
+    if not path.suffix == '.npz':
+        raise ValueError(f"Expected a .npz file, got {path.suffix}")
+    if not path.is_file():
+        raise ValueError(f"Expected a file, but found a directory: {path}")
+    if not path.stat().st_size > 0:
+        raise ValueError(f"File is empty: {path}")
+    logging.info(f"Loading normalization parameters from {path}")
+    data = np.load(path)
+    return data['X_mean'], data['X_std'], data['y_mean'], data['y_std']
 
 def train_model(
     model: MediumSurrogateModel,
@@ -271,7 +306,7 @@ def train_model(
         model.load_state_dict(best_model_state)
         logging.info("Loaded best model state after training.")
 
-def save_model_safely(model: MediumSurrogateModel, path: str) -> None:
+def save_model_safely(model: MediumSurrogateModel, path: str) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
     if os.path.exists(path):
         base_path, ext = os.path.splitext(path)
@@ -280,7 +315,7 @@ def save_model_safely(model: MediumSurrogateModel, path: str) -> None:
             counter += 1
         path = f"{base_path}_{counter}{ext}"
     model.save_model(path)
-    logging.info(f"Model saved to {path}")
+    return Path(path)
 
 
 def evaluate_model(
@@ -290,7 +325,7 @@ def evaluate_model(
     model.eval()
     with torch.no_grad():
         val_logits = model(X_val)
-        val_loss = torch.nn.MSELoss()(val_logits, y_val).item()
+        val_loss = combined_loss(val_logits, y_val).item()
 
     similarities = [
         calculate_similarity(val_logits[i].cpu().numpy(), y_val[i].cpu().numpy())
@@ -311,10 +346,22 @@ def main() -> None:
         DATA_FILE_PATH
     )
 
-    X_train, y_train = prepare_tensors(X_train_np, y_train_np, device)
-    X_val, y_val = prepare_tensors(X_val_np, y_val_np, device)
+    logging.info("Data loaded successfully. Sanitizing data...")
+    X_train_np, y_train_np = sanitize_data(X_train_np, y_train_np)
+    X_val_np, y_val_np = sanitize_data(X_val_np, y_val_np)
+    X_test_np, y_test_np = sanitize_data(X_test_np, y_test_np)
 
-    model = LargeSurrogateModel().to(device)
+    logging.info("Data sanitized successfully. Normalizing data...")
+    X_train, X_val, X_test, X_mean, X_std  = normalize_data(X_train_np, X_val_np, X_test_np)
+    y_train, y_val, y_test, y_mean, y_std = normalize_data(y_train_np, y_val_np, y_test_np)
+    logging.info(f"Normalization parameters: X_mean={X_mean}, X_std={X_std}, y_mean={y_mean}, y_std={y_std}")
+
+    logging.info("Data normalization complete. Preparing tensors...")
+    X_train, y_train = prepare_tensors(X_train, y_train, device)
+    X_val, y_val = prepare_tensors(X_val, y_val, device)
+    X_test, y_test = prepare_tensors(X_test, y_test, device)
+
+    model = MediumSurrogateModel().to(device)
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(
@@ -322,7 +369,14 @@ def main() -> None:
     )
     train_model(model, X_train, y_train, X_val, y_val, device)
 
-    save_model_safely(model, MODEL_PATH)
+    model_path = save_model_safely(model, MODEL_PATH)
+    save_normalization_params(
+        model_path.with_suffix(".npz"),
+        X_mean,
+        X_std,
+        y_mean,
+        y_std,
+    )
 
     model.plot_loss()
 

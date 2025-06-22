@@ -54,7 +54,7 @@ def sanitize_matrices(
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth",
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_10.pth",
         MediumSurrogateModel,
     )
     if model is None:
