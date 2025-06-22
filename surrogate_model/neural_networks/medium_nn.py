@@ -33,7 +33,7 @@ class MediumSurrogateModel(torch.nn.Module):
     """
 
     def __init__(self) -> None:
-        """Initialize the AdvancedNNSurrogateModel with a neural network architecture."""
+        """Initialize the MediumSurrogateModel with a neural network architecture."""
         super().__init__()
         self.model = torch.nn.Sequential(
             torch.nn.Conv2d(
@@ -72,7 +72,7 @@ class MediumSurrogateModel(torch.nn.Module):
 
     def __str__(self) -> str:
         """Return a string representation of the model."""
-        return f"AdvancedNNSurrogateModel(\n  {self.model}\n)"
+        return f"MediumSurrogateModel(\n  {self.model}\n)"
 
     def __repr__(self) -> str:
         """Return a string representation of the model."""

@@ -161,19 +161,13 @@ def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     predicted = predicted.unsqueeze(1)
     target = target.unsqueeze(1)
 
-    ssim_value = ssim(
-        predicted,
-        target,
-        win_size=3,
-        data_range=1,
-    )
-    return 1 - torch.tensor(ssim_value).clone().detach().float().to(predicted.device)
+    return 1 - ssim(predicted, target, win_size=3, data_range=target.max - target.min())
 
-def combined_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+def combined_loss(predicted: torch.Tensor, target: torch.Tensor, alpha: float = 0.5) -> torch.Tensor:
     """Weighted combination of MSE and SSIM losses."""
     mse = torch.nn.functional.mse_loss(predicted, target)
     ssim_l = ssim_loss(predicted, target)
-    return 0.5 * mse + 0.5 * ssim_l
+    return alpha * mse + (1 - alpha) * ssim_l
 
 def train_model(
     model: MediumSurrogateModel,
@@ -188,11 +182,11 @@ def train_model(
     patience: int = PATIENCE,
     min_delta: float = MIN_DELTA,
 ) -> None:
-    """Train the AdvancedNNSurrogateModel with early stopping and learning rate scheduling.
+    """Train the SurrogateModel with early stopping and learning rate scheduling.
 
     Args:
     ----
-        model (AdvancedNNSurrogateModel): The model to be trained.
+        model (SurrogateModel): The model to be trained.
         X_train (torch.Tensor): Training input features.
         y_train (torch.Tensor): Training target labels.
         X_val (torch.Tensor): Validation input features.
