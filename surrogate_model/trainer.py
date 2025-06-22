@@ -164,8 +164,8 @@ def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     ssim_value = ssim(
         predicted,
         target,
-        win_size=1,
-        data_range=target.max() - target.min(),
+        win_size=3,
+        data_range=1,
     )
     return 1 - torch.tensor(ssim_value).clone().detach().float().to(predicted.device)
 
@@ -220,7 +220,6 @@ def train_model(
         ):
             optimizer.zero_grad()
             logits = model(batch_X)
-            logits = torch.clamp(logits, 0.01, 1.73)
             loss = loss_fn(logits, batch_y)
             if torch.isnan(loss):
                 logging.error("Loss is NaN, skipping this batch.")
@@ -246,7 +245,6 @@ def train_model(
         model.eval()
         with torch.no_grad():
             val_logits = model(X_val)
-            val_logits = torch.clamp(val_logits, 0.01, 1.73)
             val_loss = combined_loss(val_logits, y_val)
         model.val_losses.append(val_loss)
         scheduler.step(val_loss)
