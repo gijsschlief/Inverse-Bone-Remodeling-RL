@@ -14,6 +14,7 @@ from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
 
 from surrogate_model.evaluator import average_similarity_score, validate_surrogate_model
 from surrogate_model.loader import load_surrogate_model
+from surrogate_model.normalizor import normalize_data, unnormalize_data
 from surrogate_model.splitter import splitting
 from surrogate_model.visualizer import plot_surrogate_model
 
@@ -53,10 +54,14 @@ def sanitize_matrices(
 
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
-    model = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_10.pth",
+    model_and_normalization_params = load_surrogate_model(
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
         MediumSurrogateModel,
     )
+    if model_and_normalization_params is None:
+        logging.error("Failed to load the surrogate model and normalization parameters.")
+        return
+    model, X_mean, X_std, y_mean, y_std = model_and_normalization_params
     if model is None:
         logging.error("Failed to load the surrogate model.")
         return
@@ -70,18 +75,33 @@ def main() -> None:
     if force_profiles is None or final_output_densities is None:
         logging.error("Failed to load the data.")
         return
-    _, X_val, _, _, y_val, _ = splitting(
+    X_train, X_val, X_test, y_train, y_val, y_test = splitting(
         force_profiles, final_output_densities, random_state=0
     )
     if X_val is None or y_val is None:
         logging.error("Failed to split the data into validation sets.")
         return
 
+    # Normalize the validation data if normalization parameters are available
+    if X_mean is not None and X_std is not None:
+        X_train, X_val, X_test, _, _ = normalize_data(X_train, X_val, X_test, X_mean, X_std)
+
+    if y_mean is not None and y_std is not None:
+        y_train, y_val, y_test, _, _ = normalize_data(y_train, y_val, y_test, y_mean, y_std)
+        output_normalized = True
+    else:
+        output_normalized = False
+
     predicted_matrices, true_matrices = validate_surrogate_model(model, X_val, y_val)
 
     predicted_matrices, true_matrices = sanitize_matrices(
         predicted_matrices, true_matrices
     )
+
+    if output_normalized:
+        predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
+        true_matrices = unnormalize_data(true_matrices, y_mean, y_std)
+
 
     average_similarity = average_similarity_score(
         predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"

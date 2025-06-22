@@ -2,8 +2,9 @@
 
 import logging
 from pathlib import Path
-from typing import Optional, Type
+from typing import Optional, Tuple, Type
 
+import numpy as np
 import torch
 from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
@@ -93,12 +94,23 @@ class SurrogateModelLoader:
         """Call the forward method of the model."""
         return self.forward(x)
 
-
 def load_surrogate_model(
     model_path: str = "data/models/trained_model.pth",
     model_class: Type[torch.nn.Module] = MediumSurrogateModel,
-) -> torch.nn.Module | None:
-    """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
+) -> Tuple[torch.nn.Module | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+    """Load data, preprocess it, load the surrogate model, and evaluate its performance.
+
+    Args:
+    ----
+        model_path (str): Path to the .pth file containing the model weights.
+        model_class (Type[torch.nn.Module]): The class of the model to be loaded.
+
+    Returns:
+    -------
+        Tuple[torch.nn.Module | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+            The loaded model and normalization parameters (if available).
+
+    """
     path = Path(model_path)
 
     # Check if the model path is valid
@@ -129,7 +141,13 @@ def load_surrogate_model(
 
     # Load the surrogate model
     model_loader = SurrogateModelLoader(model_path=path, model_class=model_class)
-    return model_loader.model
+
+    # If the model has normalization parameters, load them
+    if path.with_suffix('.npz').exists():
+        X_mean, X_std, y_mean, y_std = load_normalization_params(path=path.with_suffix('.npz'))
+        return model_loader.model, X_mean, X_std, y_mean, y_std
+
+    return model_loader.model, None, None, None, None
 
 
 if __name__ == "__main__":

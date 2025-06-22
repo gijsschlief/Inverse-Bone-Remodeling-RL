@@ -15,6 +15,10 @@ from bone_remodeling.surrogate_model.neural_networks.large_nn import (
 from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
 )
+from bone_remodeling.surrogate_model.normalizor import (
+    normalize_data,
+    save_normalization_params,
+)
 from bone_remodeling.surrogate_model.splitter import splitting
 from pytorch_msssim import ssim
 
@@ -169,41 +173,6 @@ def combined_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor
     mse = torch.nn.functional.mse_loss(predicted, target)
     ssim_l = ssim_loss(predicted, target)
     return 0.5 * mse + 0.5 * ssim_l
-
-def normalize_data(train: np.ndarray, val: np.ndarray, test: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Normalize datasets based on training statistics."""
-    mean = train.mean(axis=0, keepdims=True)
-    std = train.std(axis=0, keepdims=True) + 1e-8  # avoid division by zero
-    return (train - mean) / std, (val - mean) / std, (test - mean) / std, mean, std
-
-def unnormalize(tensor: torch.Tensor, mean: np.ndarray, std: np.ndarray) -> torch.Tensor:
-    """Unnormalize a tensor using mean and std."""
-    mean_tensor = torch.tensor(mean, dtype=torch.float32, device=tensor.device)
-    std_tensor = torch.tensor(std, dtype=torch.float32, device=tensor.device)
-    return tensor * std_tensor + mean_tensor
-
-def save_normalization_params(path: Path, X_mean: np.ndarray, X_std: np.ndarray, y_mean: np.ndarray, y_std: np.ndarray) -> None:
-    """Save normalization parameters to a file."""
-    try:
-        np.savez(path, X_mean=X_mean, X_std=X_std, y_mean=y_mean, y_std=y_std)
-        logging.info(f"Normalization parameters saved to {path}")
-    except Exception as e:
-        logging.error(f"Failed to save normalization parameters: {e}")
-        raise ValueError(f"Failed to save normalization parameters to {path}") from e
-
-def load_normalization_params(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """Load normalization parameters from a file."""
-    if not path.exists():
-        raise FileNotFoundError(f"Normalization parameters file not found: {path}")
-    if not path.suffix == '.npz':
-        raise ValueError(f"Expected a .npz file, got {path.suffix}")
-    if not path.is_file():
-        raise ValueError(f"Expected a file, but found a directory: {path}")
-    if not path.stat().st_size > 0:
-        raise ValueError(f"File is empty: {path}")
-    logging.info(f"Loading normalization parameters from {path}")
-    data = np.load(path)
-    return data['X_mean'], data['X_std'], data['y_mean'], data['y_std']
 
 def train_model(
     model: MediumSurrogateModel,
@@ -377,6 +346,7 @@ def main() -> None:
         y_mean,
         y_std,
     )
+    logging.info(f"Model saved to {model_path}")
 
     model.plot_loss()
 
