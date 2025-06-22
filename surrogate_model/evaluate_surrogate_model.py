@@ -55,7 +55,7 @@ def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model = load_surrogate_model(
         "/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth",
-        MediumSurrogateModel
+        MediumSurrogateModel,
     )
     if model is None:
         logging.error("Failed to load the surrogate model.")
@@ -70,7 +70,9 @@ def main() -> None:
     if force_profiles is None or final_output_densities is None:
         logging.error("Failed to load the data.")
         return
-    _, X_val, _, _, y_val, _ = splitting(force_profiles, final_output_densities, random_state=0)
+    _, X_val, _, _, y_val, _ = splitting(
+        force_profiles, final_output_densities, random_state=0
+    )
     if X_val is None or y_val is None:
         logging.error("Failed to split the data into validation sets.")
         return

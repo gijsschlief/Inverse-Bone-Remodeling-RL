@@ -39,21 +39,16 @@ class LargeSurrogateModel(torch.nn.Module):
             torch.nn.Conv2d(3, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
-
             torch.nn.Conv2d(32, 64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
-
             torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
-
             torch.nn.Conv2d(64, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
-
             torch.nn.Conv2d(32, 1, kernel_size=1),
-            torch.nn.ReLU()
         )
         self.train_losses: List[float] = []
         self.val_losses: List[float] = []
@@ -61,14 +56,14 @@ class LargeSurrogateModel(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
         # x shape: (N, 3, 10)
-        top = x[:, 0, :]   # (N, 10)
+        top = x[:, 0, :]  # (N, 10)
         left = x[:, 1, :]  # (N, 10)
-        right = x[:, 2, :] # (N, 10)
+        right = x[:, 2, :]  # (N, 10)
 
         # Expand to spatial (10x10)
-        top_map = top.unsqueeze(1).expand(-1, 10, -1)    # (N, 10, 10)
+        top_map = top.unsqueeze(1).expand(-1, 10, -1)  # (N, 10, 10)
         left_map = left.unsqueeze(2).expand(-1, -1, 10)  # (N, 10, 10)
-        right_map = right.unsqueeze(2).expand(-1, -1, 10)# (N, 10, 10)
+        right_map = right.unsqueeze(2).expand(-1, -1, 10)  # (N, 10, 10)
 
         x_img = torch.stack([top_map, left_map, right_map], dim=1)  # (N, 3, 10, 10)
 
@@ -146,4 +141,6 @@ class LargeSurrogateModel(torch.nn.Module):
             y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
 
         dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        return torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=shuffle
+        )

@@ -23,10 +23,10 @@ logging.basicConfig(
 )
 
 # Constants
-EPOCHS = 1000
+EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 100
+PATIENCE = 20
 MIN_DELTA = 1e-4
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
@@ -236,6 +236,8 @@ def train_model(
         )
         model.train_losses.append(avg_train_loss)
 
+        best_model_state = None
+
         model.eval()
         with torch.no_grad():
             val_logits = model(X_val)
@@ -247,6 +249,10 @@ def train_model(
         if val_loss + min_delta < best_val_loss:
             best_val_loss = val_loss
             epochs_no_improve = 0
+            best_model_state = model.state_dict()
+            logging.info(
+                f"Epoch {epoch + 1}: Validation loss improved to {val_loss:.4f}. Saving model state."
+            )
         else:
             epochs_no_improve += 1
 
@@ -261,7 +267,9 @@ def train_model(
             f"Early stopping at epoch {epoch} (no improvement in {patience} epochs)."
             )
             break
-
+    if best_model_state is not None:
+        model.load_state_dict(best_model_state)
+        logging.info("Loaded best model state after training.")
 
 def save_model_safely(model: MediumSurrogateModel, path: str) -> None:
     """Save the model to a file, ensuring no overwriting of existing files."""

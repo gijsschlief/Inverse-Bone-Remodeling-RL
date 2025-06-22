@@ -132,4 +132,6 @@ class MediumSurrogateModel(torch.nn.Module):
             y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
 
         dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        return torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=shuffle
+        )
