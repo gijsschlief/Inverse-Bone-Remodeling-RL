@@ -121,6 +121,8 @@ def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
                 color="white",
                 fontsize=8,
             )
+
+
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
     actual_matrix: np.ndarray,
@@ -161,7 +163,11 @@ def plot_difference_matrix(
                 f"{difference_matrix[i, j]:.2f}",
                 ha="center",
                 va="center",
-                color="black" if abs(difference_matrix[i, j]) < (vmax - vmin) / 4 else "white",
+                color=(
+                    "black"
+                    if abs(difference_matrix[i, j]) < (vmax - vmin) / 4
+                    else "white"
+                ),
                 fontsize=8,
             )
     plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
