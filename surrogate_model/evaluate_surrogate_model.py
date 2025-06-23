@@ -5,11 +5,11 @@ from typing import Tuple
 
 import numpy as np
 from bone_remodeling.forward_model.data_reader import forward_data_reader
-from bone_remodeling.surrogate_model.neural_networks.large_nn import (
-    LargeSurrogateModel,
-)
 from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
+)
+from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
+    ReversedSurrogateModel,
 )
 
 from surrogate_model.evaluator import average_similarity_score, validate_surrogate_model
@@ -58,8 +58,8 @@ def sanitize_matrices(
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model_and_normalization_params = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
-        MediumSurrogateModel,
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_15.pth",
+        ReversedSurrogateModel,
     )
     if model_and_normalization_params is None:
         logging.error("Failed to load the surrogate model and normalization parameters.")
