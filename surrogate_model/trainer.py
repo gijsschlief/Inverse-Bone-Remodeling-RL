@@ -9,11 +9,11 @@ import numpy as np
 import torch
 from bone_remodeling.forward_model.data_reader import forward_data_reader
 from bone_remodeling.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.surrogate_model.neural_networks.large_nn import (
-    LargeSurrogateModel,
-)
 from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
+)
+from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
+    ReversedSurrogateModel,
 )
 from bone_remodeling.surrogate_model.normalizor import (
     normalize_data,
@@ -31,8 +31,8 @@ logging.basicConfig(
 EPOCHS = 1000
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 50
-MIN_DELTA = 1e-4
+PATIENCE = 30
+MIN_DELTA = 1e-3
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
 NORMALIZE = True  # Set to False if you want to skip normalization
@@ -324,7 +324,7 @@ def main() -> None:
     X_val, y_val = prepare_tensors(X_val, y_val, device)
     X_test, y_test = prepare_tensors(X_test, y_test, device)
 
-    model = LargeSurrogateModel().to(device)
+    model = ReversedSurrogateModel().to(device)
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(
