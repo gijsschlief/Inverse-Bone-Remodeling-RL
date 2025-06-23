@@ -35,7 +35,7 @@ class ReversedSurrogateModel(torch.nn.Module):
             torch.nn.Conv2d(64, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
-            torch.nn.Conv2d(32, 1, kernel_size=3, padding=1),  # Final 10×10 map
+            torch.nn.Conv2d(32, 1, kernel_size=3, padding=1),  # Final 10x10 map
         )
 
         self.train_losses: List[float] = []

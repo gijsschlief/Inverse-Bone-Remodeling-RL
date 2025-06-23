@@ -57,8 +57,8 @@ def plot_surrogate_model(
         logging.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
         logging.info(f"Predicted Density Matrix:\n{predicted_matrix}")
 
-        # Plot original and predicted matrices side by side
-        figure, axes = plt.subplots(1, 2, figsize=(12, 6))
+        # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
+        figure, axes = plt.subplots(1, 3, figsize=(18, 6))
         plot_density_matrix(
             actual_matrix,
             "Original Density Matrix",
@@ -72,6 +72,14 @@ def plot_surrogate_model(
             axes[1],
             min_true_value,
             max_true_value,
+        )
+        plot_difference_matrix(
+            predicted_matrix,
+            actual_matrix,
+            "Difference Matrix (Predicted - Actual)",
+            axes[2],
+            vmin=-1.0,
+            vmax=1.0,
         )
 
         figures.append(figure)
@@ -113,6 +121,50 @@ def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
                 color="white",
                 fontsize=8,
             )
+def plot_difference_matrix(
+    predicted_matrix: np.ndarray,
+    actual_matrix: np.ndarray,
+    title: str,
+    ax,
+    vmin: float = -1.0,
+    vmax: float = 1.0,
+) -> None:
+    """Plot the difference between predicted and actual matrices with a diverging colormap.
+
+    Args:
+    ----
+        predicted_matrix (np.ndarray): The predicted density matrix.
+        actual_matrix (np.ndarray): The actual density matrix.
+        title (str): Title of the plot.
+        ax: Matplotlib axis to plot on.
+        vmin (float): Minimum value for color scaling. Default is -1.0.
+        vmax (float): Maximum value for color scaling. Default is 1.0.
+
+    """
+    difference_matrix = predicted_matrix - actual_matrix
+    # Use a diverging colormap: blue (under), white (exact), red (over)
+    im = ax.imshow(
+        difference_matrix,
+        cmap="seismic",
+        interpolation="nearest",
+        vmin=vmin,
+        vmax=vmax,
+    )
+    ax.set_title(title)
+    ax.set_xlabel("Columns")
+    ax.set_ylabel("Rows")
+    for i in range(difference_matrix.shape[0]):
+        for j in range(difference_matrix.shape[1]):
+            ax.text(
+                j,
+                i,
+                f"{difference_matrix[i, j]:.2f}",
+                ha="center",
+                va="center",
+                color="black" if abs(difference_matrix[i, j]) < (vmax - vmin) / 4 else "white",
+                fontsize=8,
+            )
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
 
 
 def main() -> None:
