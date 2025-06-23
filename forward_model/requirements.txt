@@ -1,4 +1,9 @@
 fenics==2019.1.0
-pytest
 pyvista
 numpy
+
+# Optional dependencies for linting, testing and formatting
+ruff
+pypi
+black
+pytest

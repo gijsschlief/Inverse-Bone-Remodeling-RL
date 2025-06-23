@@ -1,13 +1,18 @@
+"""Train a reinforcement learning agent using Stable-Baselines3 with a custom reward function."""
+
 import gym
 from stable_baselines3 import PPO
 from stable_baselines3.common.envs import DummyVecEnv
+
 from rl_model.reward_calculation import calculate_similarity
+
 
 # Define your custom reward calculation function
 def reward_calculate(observation, action, next_observation):
     # Replace this with your custom reward logic
     reward = -abs(next_observation[0])  # Example: penalize distance from a target
     return reward
+
 
 # Custom environment wrapper to integrate reward_calculate
 class CustomRewardEnv(gym.Wrapper):
@@ -21,8 +26,9 @@ class CustomRewardEnv(gym.Wrapper):
         reward = calculate_similarity(forward_model_estimate, observation, method="mse")
         return observation, reward, done, info
 
+
 # Create and wrap the environment
-env = gym.make('CartPole-v1')  # Replace with your environment
+env = gym.make("CartPole-v1")  # Replace with your environment
 env = CustomRewardEnv(env)
 env = DummyVecEnv([lambda: env])  # Vectorized environment for Stable-Baselines3
 

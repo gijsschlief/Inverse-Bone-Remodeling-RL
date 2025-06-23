@@ -1,3 +1,5 @@
+"""Unified CLI for Thesis Modules."""
+
 import argparse
 import subprocess
 import sys
@@ -8,9 +10,13 @@ CLI_MODULES = {
     "data-generator": "data_generator_cli.py",
 }
 
+
 def main():
+    """Handle CLI arguments and execute the appropriate module."""
     parser = argparse.ArgumentParser(description="Unified CLI for Thesis modules.")
-    parser.add_argument("module", choices=CLI_MODULES.keys(), help="Which module to run")
+    parser.add_argument(
+        "module", choices=CLI_MODULES.keys(), help="Which module to run"
+    )
     args, remaining_args = parser.parse_known_args()
 
     module_path = Path(__file__).resolve().parent / CLI_MODULES[args.module]
@@ -20,8 +26,9 @@ def main():
         sys.exit(1)
 
     # Call the module as a subprocess with the remaining CLI args
-    command = [sys.executable, str(module_path)] + remaining_args
+    command = [sys.executable, str(module_path), *remaining_args]
     sys.exit(subprocess.call(command))
+
 
 if __name__ == "__main__":
     main()
