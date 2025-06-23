@@ -15,28 +15,26 @@ class ReversedSurrogateModel(torch.nn.Module):
 
         # Fully connected input block (no early dropout)
         self.input_fc = torch.nn.Sequential(
-            torch.nn.Flatten(),                      # (N, 3, 10) → (N, 30)
+            torch.nn.Flatten(),  # (N, 3, 10) → (N, 30)
             torch.nn.Linear(30, 512),
             torch.nn.ReLU(),
-
             torch.nn.Linear(512, 1024),
             torch.nn.ReLU(),
-
-            torch.nn.Linear(1024, 128 * 5 * 5),      # Prepare for upsampling
+            torch.nn.Linear(1024, 128 * 5 * 5),  # Prepare for upsampling
             torch.nn.ReLU(),
-            torch.nn.Dropout(0.3)                    # Only here, after features are richer
+            torch.nn.Dropout(0.3),  # Only here, after features are richer
         )
 
         # Reshape to (N, 128, 5, 5) and upsample
         self.conv_block = torch.nn.Sequential(
-            torch.nn.ConvTranspose2d(128, 64, kernel_size=3, stride=2, padding=1, output_padding=1),
+            torch.nn.ConvTranspose2d(
+                128, 64, kernel_size=3, stride=2, padding=1, output_padding=1
+            ),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
-
             torch.nn.Conv2d(64, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
-
             torch.nn.Conv2d(32, 1, kernel_size=3, padding=1),  # Final 10×10 map
         )
 
@@ -45,10 +43,10 @@ class ReversedSurrogateModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
-        x = self.input_fc(x)                  # (N, 128*5*5)
-        x = x.view(-1, 128, 5, 5)             # (N, 128, 5, 5)
-        x = self.conv_block(x)                # (N, 1, 10, 10)
-        return x.squeeze(1)                   # (N, 10, 10)
+        x = self.input_fc(x)  # (N, 128*5*5)
+        x = x.view(-1, 128, 5, 5)  # (N, 128, 5, 5)
+        x = self.conv_block(x)  # (N, 1, 10, 10)
+        return x.squeeze(1)  # (N, 10, 10)
 
     def save_model(self, file_path: str) -> None:
         """Save the model state to a file."""
@@ -104,7 +102,9 @@ class ReversedSurrogateModel(torch.nn.Module):
         )
 
     @staticmethod
-    def create_dataloader(X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True):
+    def create_dataloader(
+        X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True
+    ):
         """Create a DataLoader for the surrogate model."""
         if isinstance(X, torch.Tensor):
             X_tensor = X.clone().detach()
@@ -117,4 +117,6 @@ class ReversedSurrogateModel(torch.nn.Module):
             y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
 
         dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        return torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=shuffle
+        )

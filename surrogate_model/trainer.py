@@ -108,7 +108,7 @@ def sanitize_data(
 def prepare_tensors(
     X_data: np.ndarray | torch.Tensor,
     y_data: np.ndarray | torch.Tensor,
-    device: torch.device
+    device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
     """Prepare input and output tensors for the model.
 
@@ -137,12 +137,15 @@ def prepare_tensors(
 
     # Handle y
     if isinstance(y_data, torch.Tensor):
-        y_tensor = y_data.clone().detach().to(torch.float32).reshape(num_samples, 10, 10)
+        y_tensor = (
+            y_data.clone().detach().to(torch.float32).reshape(num_samples, 10, 10)
+        )
     else:
-        y_tensor = torch.tensor(y_data, dtype=torch.float32).reshape(num_samples, 10, 10)
+        y_tensor = torch.tensor(y_data, dtype=torch.float32).reshape(
+            num_samples, 10, 10
+        )
 
     return X_tensor.to(device), y_tensor.to(device)
-
 
 
 def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
@@ -161,13 +164,19 @@ def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
     predicted = predicted.unsqueeze(1)
     target = target.unsqueeze(1)
 
-    return 1 - ssim(predicted, target, win_size=3, data_range=target.max() - target.min())
+    return 1 - ssim(
+        predicted, target, win_size=3, data_range=target.max() - target.min()
+    )
 
-def combined_loss(predicted: torch.Tensor, target: torch.Tensor, alpha: float = 0.5) -> torch.Tensor:
+
+def combined_loss(
+    predicted: torch.Tensor, target: torch.Tensor, alpha: float = 0.5
+) -> torch.Tensor:
     """Weighted combination of MSE and SSIM losses."""
     mse = torch.nn.functional.mse_loss(predicted, target)
     ssim_l = ssim_loss(predicted, target)
     return alpha * mse + (1 - alpha) * ssim_l
+
 
 def train_model(
     model: MediumSurrogateModel,
@@ -256,17 +265,18 @@ def train_model(
         # Log every epoch for the first 10, then every 10 epochs
         if epoch < 10 or (epoch + 1) % 10 == 0:
             logging.info(
-            f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}"
+                f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}"
             )
 
         if epochs_no_improve >= patience:
             logging.info(
-            f"Early stopping at epoch {epoch} (no improvement in {patience} epochs)."
+                f"Early stopping at epoch {epoch} (no improvement in {patience} epochs)."
             )
             break
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
         logging.info("Loaded best model state after training.")
+
 
 def save_model_safely(model: MediumSurrogateModel, path: str) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
@@ -315,9 +325,15 @@ def main() -> None:
 
     if NORMALIZE:
         logging.info("Normalizing data...")
-        X_train, X_val, X_test, X_mean, X_std  = normalize_data(X_train_np, X_val_np, X_test_np)
-        y_train, y_val, y_test, y_mean, y_std = normalize_data(y_train_np, y_val_np, y_test_np)
-        logging.info(f"Normalization parameters: X_mean={X_mean}, X_std={X_std}, y_mean={y_mean}, y_std={y_std}")
+        X_train, X_val, X_test, X_mean, X_std = normalize_data(
+            X_train_np, X_val_np, X_test_np
+        )
+        y_train, y_val, y_test, y_mean, y_std = normalize_data(
+            y_train_np, y_val_np, y_test_np
+        )
+        logging.info(
+            f"Normalization parameters: X_mean={X_mean}, X_std={X_std}, y_mean={y_mean}, y_std={y_std}"
+        )
 
     logging.info("Preparing tensors...")
     X_train, y_train = prepare_tensors(X_train, y_train, device)

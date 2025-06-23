@@ -62,7 +62,9 @@ def main() -> None:
         ReversedSurrogateModel,
     )
     if model_and_normalization_params is None:
-        logging.error("Failed to load the surrogate model and normalization parameters.")
+        logging.error(
+            "Failed to load the surrogate model and normalization parameters."
+        )
         return
     model, X_mean, X_std, y_mean, y_std = model_and_normalization_params
     if model is None:
@@ -87,10 +89,14 @@ def main() -> None:
 
     # Normalize the validation data if normalization parameters are available
     if X_mean is not None and X_std is not None:
-        X_train, X_val, X_test, _, _ = normalize_data(X_train, X_val, X_test, X_mean, X_std)
+        X_train, X_val, X_test, _, _ = normalize_data(
+            X_train, X_val, X_test, X_mean, X_std
+        )
 
     if y_mean is not None and y_std is not None:
-        y_train, y_val, y_test, _, _ = normalize_data(y_train, y_val, y_test, y_mean, y_std)
+        y_train, y_val, y_test, _, _ = normalize_data(
+            y_train, y_val, y_test, y_mean, y_std
+        )
         output_normalized = True
     else:
         output_normalized = False
@@ -104,7 +110,6 @@ def main() -> None:
     if output_normalized:
         predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
         true_matrices = unnormalize_data(true_matrices, y_mean, y_std)
-
 
     average_similarity = average_similarity_score(
         predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"

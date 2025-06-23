@@ -17,32 +17,29 @@ class LargeSurrogateModel(torch.nn.Module):
             torch.nn.Conv2d(1, 32, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(32),
-
             torch.nn.Conv2d(32, 64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
-
             torch.nn.Conv2d(64, 64, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
-
             torch.nn.Conv2d(64, 128, kernel_size=3, padding=1),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(128),
         )
 
-        self.global_pool = torch.nn.AdaptiveAvgPool2d((3, 10))  # keep spatial shape fixed
+        self.global_pool = torch.nn.AdaptiveAvgPool2d(
+            (3, 10)
+        )  # keep spatial shape fixed
 
         self.fc = torch.nn.Sequential(
             torch.nn.Flatten(),  # (N, 128, 3, 10) => (N, 128*3*10)
             torch.nn.Linear(128 * 3 * 10, 1024),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
-
             torch.nn.Linear(1024, 512),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
-
             torch.nn.Linear(512, 100),
         )
 
@@ -52,10 +49,10 @@ class LargeSurrogateModel(torch.nn.Module):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
         x = x.unsqueeze(1)  # (N, 3, 10) → (N, 1, 3, 10)
-        x = self.conv_block(x)           # → (N, 128, 3, 10)
-        x = self.global_pool(x)          # → (N, 128, 3, 10)
-        x = self.fc(x)                   # → (N, 100)
-        return x.view(-1, 10, 10)        # → (N, 10, 10)
+        x = self.conv_block(x)  # → (N, 128, 3, 10)
+        x = self.global_pool(x)  # → (N, 128, 3, 10)
+        x = self.fc(x)  # → (N, 100)
+        return x.view(-1, 10, 10)  # → (N, 10, 10)
 
     def save_model(self, file_path: str) -> None:
         """Save the model state to a file."""
@@ -111,7 +108,9 @@ class LargeSurrogateModel(torch.nn.Module):
         )
 
     @staticmethod
-    def create_dataloader(X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True):
+    def create_dataloader(
+        X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True
+    ):
         """Create a DataLoader for the surrogate model."""
         if isinstance(X, torch.Tensor):
             X_tensor = X.clone().detach()
@@ -124,4 +123,6 @@ class LargeSurrogateModel(torch.nn.Module):
             y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
 
         dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
-        return torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=shuffle)
+        return torch.utils.data.DataLoader(
+            dataset, batch_size=batch_size, shuffle=shuffle
+        )

@@ -8,7 +8,13 @@ import numpy as np
 import torch
 
 
-def normalize_data(train: np.ndarray, val: np.ndarray, test: np.ndarray, mean: np.ndarray | None = None, std: np.ndarray | None = None) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+def normalize_data(
+    train: np.ndarray,
+    val: np.ndarray,
+    test: np.ndarray,
+    mean: np.ndarray | None = None,
+    std: np.ndarray | None = None,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Normalize datasets based on training statistics.
 
     Args:
@@ -33,7 +39,10 @@ def normalize_data(train: np.ndarray, val: np.ndarray, test: np.ndarray, mean: n
     normalized_test = (test - mean) / std
     return normalized_train, normalized_val, normalized_test, mean, std
 
-def unnormalize_data(data: torch.Tensor | np.ndarray, mean: np.ndarray, std: np.ndarray) -> torch.Tensor | np.ndarray:
+
+def unnormalize_data(
+    data: torch.Tensor | np.ndarray, mean: np.ndarray, std: np.ndarray
+) -> torch.Tensor | np.ndarray:
     """Unnormalize data using the provided mean and standard deviation.
 
     Args:
@@ -56,7 +65,14 @@ def unnormalize_data(data: torch.Tensor | np.ndarray, mean: np.ndarray, std: np.
     std_tensor = torch.tensor(std, dtype=torch.float32, device=tensor.device)
     return tensor * std_tensor + mean_tensor
 
-def save_normalization_params(path: Path, X_mean: np.ndarray, X_std: np.ndarray, y_mean: np.ndarray, y_std: np.ndarray) -> None:
+
+def save_normalization_params(
+    path: Path,
+    X_mean: np.ndarray,
+    X_std: np.ndarray,
+    y_mean: np.ndarray,
+    y_std: np.ndarray,
+) -> None:
     """Save normalization parameters to a file.
 
     Args:
@@ -78,7 +94,10 @@ def save_normalization_params(path: Path, X_mean: np.ndarray, X_std: np.ndarray,
         logging.error(f"Failed to save normalization parameters: {e}")
         raise ValueError(f"Failed to save normalization parameters to {path}") from e
 
-def load_normalization_params(path: Path) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+def load_normalization_params(
+    path: Path,
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load normalization parameters from a file.
 
     Args:
@@ -92,7 +111,7 @@ def load_normalization_params(path: Path) -> Tuple[np.ndarray, np.ndarray, np.nd
     """
     if not path.exists():
         raise FileNotFoundError(f"Normalization parameters file not found: {path}")
-    if not path.suffix == '.npz':
+    if not path.suffix == ".npz":
         raise ValueError(f"Expected a .npz file, got {path.suffix}")
     if not path.is_file():
         raise ValueError(f"Expected a file, but found a directory: {path}")
@@ -101,8 +120,8 @@ def load_normalization_params(path: Path) -> Tuple[np.ndarray, np.ndarray, np.nd
     logging.info(f"Loading normalization parameters from {path}")
     data = np.load(path)
 
-    X_mean = data.get('X_mean')
-    X_std = data.get('X_std')
-    y_mean = data.get('y_mean')
-    y_std = data.get('y_std')
+    X_mean = data.get("X_mean")
+    X_std = data.get("X_std")
+    y_mean = data.get("y_mean")
+    y_std = data.get("y_std")
     return X_mean, X_std, y_mean, y_std

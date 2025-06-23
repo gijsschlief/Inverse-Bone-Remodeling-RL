@@ -95,10 +95,17 @@ class SurrogateModelLoader:
         """Call the forward method of the model."""
         return self.forward(x)
 
+
 def load_surrogate_model(
     model_path: str = "data/models/trained_model.pth",
     model_class: Type[torch.nn.Module] = MediumSurrogateModel,
-) -> Tuple[torch.nn.Module | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+) -> Tuple[
+    torch.nn.Module | None,
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
+    np.ndarray | None,
+]:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance.
 
     Args:
@@ -144,8 +151,10 @@ def load_surrogate_model(
     model_loader = SurrogateModelLoader(model_path=path, model_class=model_class)
 
     # If the model has normalization parameters, load them
-    if path.with_suffix('.npz').exists():
-        X_mean, X_std, y_mean, y_std = load_normalization_params(path=path.with_suffix('.npz'))
+    if path.with_suffix(".npz").exists():
+        X_mean, X_std, y_mean, y_std = load_normalization_params(
+            path=path.with_suffix(".npz")
+        )
         return model_loader.model, X_mean, X_std, y_mean, y_std
 
     return model_loader.model, None, None, None, None
