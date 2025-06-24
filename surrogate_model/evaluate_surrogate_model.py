@@ -1,9 +1,7 @@
 """Evaluate the surrogate model's performance on validation data."""
 
 import logging
-from typing import Tuple
 
-import numpy as np
 from bone_remodeling.forward_model.data_reader import forward_data_reader
 from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
@@ -15,41 +13,9 @@ from surrogate_model.normalizor import (
     normalize_data,
     unnormalize_data,
 )
+from surrogate_model.sanitizer import sanitize_data, sanitize_matrices
 from surrogate_model.splitter import splitting
 from surrogate_model.visualizer import plot_surrogate_model
-
-
-def sanitize_matrices(
-    predicted_matrices: np.ndarray, true_matrices: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Sanitize the predicted and true matrices by filtering out any entries that contain NaN values."""
-    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
-        true_matrices, np.ndarray
-    ):
-        logging.error(
-            "Both predicted_matrices and true_matrices must be lists of numpy arrays."
-        )
-        raise ValueError(
-            "Both predicted_matrices and true_matrices must be lists of numpy arrays."
-        )
-
-    filtered_predicted = []
-    filtered_true = []
-    nan_count = 0
-
-    for pred, true in zip(predicted_matrices, true_matrices):
-        if not np.isnan(pred).any() and not np.isnan(true).any():
-            filtered_predicted.append(pred)
-            filtered_true.append(true)
-        else:
-            nan_count += 1
-
-    if nan_count > 0:
-        logging.error(
-            f"Found {nan_count} entries with NaN values in predicted or true matrices. These entries were filtered out."
-        )
-
-    return np.array(filtered_predicted), np.array(filtered_true)
 
 
 def main() -> None:
@@ -77,6 +43,10 @@ def main() -> None:
     if force_profiles is None or final_output_densities is None:
         logging.error("Failed to load the data.")
         return
+    force_profiles, final_output_densities = sanitize_data(
+        force_profiles, final_output_densities
+    )
+
     x_train, x_val, x_test, y_train, y_val, y_test = splitting(
         force_profiles, final_output_densities, random_state=0
     )
@@ -86,6 +56,7 @@ def main() -> None:
 
     # Normalize the validation data if normalization parameters are available
     if x_mean is not None and x_std is not None:
+        x_val_unnormalized = x_val.copy()
         x_train, x_val, x_test, _, _ = normalize_data(
             x_train, x_val, x_test, x_mean, x_std
         )
@@ -100,9 +71,9 @@ def main() -> None:
 
     predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
 
-    predicted_matrices, true_matrices = sanitize_matrices(
-        predicted_matrices, true_matrices
-    )
+    # predicted_matrices, true_matrices = sanitize_matrices(
+    #    predicted_matrices, true_matrices
+    # )
 
     if output_normalized:
         predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
@@ -117,6 +88,7 @@ def main() -> None:
     plot_surrogate_model(
         predicted_matrices=predicted_matrices,
         true_matrices=true_matrices,
+        force_profiles=x_val_unnormalized,
         sample_count=3,
         show_plot=True,
     )

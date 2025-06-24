@@ -26,6 +26,7 @@ class SplitData(NamedTuple):
     validation_output: np.ndarray
     test_output: np.ndarray
 
+
 def splitting(
     input_features: np.ndarray,
     output_features: np.ndarray,
@@ -54,7 +55,11 @@ def splitting(
         SplitData: NamedTuple containing split data (training_input, validation_input, test_input, training_output, validation_output, test_output).
 
     """
-    seed = random_state if random_state is not None else np.random.randint(0, RANDOM_STATE_MAX)
+    seed = (
+        random_state
+        if random_state is not None
+        else np.random.randint(0, RANDOM_STATE_MAX)
+    )
     rng = np.random.default_rng(seed)
 
     # Cast ratios to float for user convenience and validate types
@@ -62,18 +67,26 @@ def splitting(
         train_data_ratio = float(train_data_ratio)
         validation_data_ratio = float(validation_data_ratio)
     except (TypeError, ValueError) as err:
-        raise ValueError("train_data_ratio and validation_data_ratio must be convertible to float.") from err
+        raise ValueError(
+            "train_data_ratio and validation_data_ratio must be convertible to float."
+        ) from err
     if not (0 < train_data_ratio < 1):
         raise ValueError("train_data_ratio must be between 0 and 1 (exclusive).")
     if not (0 < validation_data_ratio < 1):
         raise ValueError("validation_data_ratio must be between 0 and 1 (exclusive).")
     # Due to floating point arithmetic, the sum of ratios may slightly exceed 1; np.finfo(float).eps accounts for this precision issue.
     if (train_data_ratio + validation_data_ratio) >= 1 - np.finfo(float).eps:
-        raise ValueError("The sum of train_data_ratio and validation_data_ratio must be less than 1 (considering floating point precision).")
-    if not isinstance(input_features, np.ndarray) or not isinstance(output_features, np.ndarray):
+        raise ValueError(
+            "The sum of train_data_ratio and validation_data_ratio must be less than 1 (considering floating point precision)."
+        )
+    if not isinstance(input_features, np.ndarray) or not isinstance(
+        output_features, np.ndarray
+    ):
         raise ValueError("Input features and output features must be numpy arrays.")
     if input_features.shape[0] != output_features.shape[0]:
-        raise ValueError("Input features and output features must have the same number of samples (rows).")
+        raise ValueError(
+            "Input features and output features must have the same number of samples (rows)."
+        )
     if input_features.shape[0] == 0 or output_features.shape[0] == 0:
         raise ValueError("Input features and output features cannot be empty.")
 
@@ -86,8 +99,8 @@ def splitting(
 
     # Split the data
     train_indices = indices[:n_train]
-    val_indices = indices[n_train:n_train + n_val]
-    test_indices = indices[n_train + n_val:]
+    val_indices = indices[n_train : n_train + n_val]
+    test_indices = indices[n_train + n_val :]
 
     training_input = input_features[train_indices]
     validation_input = input_features[val_indices]
@@ -103,5 +116,5 @@ def splitting(
         test_input=test_input,
         training_output=training_output,
         validation_output=validation_output,
-        test_output=test_output
+        test_output=test_output,
     )

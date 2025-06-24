@@ -510,7 +510,7 @@ class DensitySimulation:
         SED_plot = project(SED_value, self.cell_density_space)
         return SED_plot.vector().get_local(), SED_plot
 
-    def _calculate_density_change(self, SED: np.ndarray) -> tuple[Function, np.ndarray]:
+    def _calculate_density_change(self, strain_energy_density: np.ndarray) -> tuple[Function, np.ndarray]:
         """Calculate the change in density based on the strain energy density (SED).
 
         Cells which have converged will no longer update in the simulation.
@@ -521,7 +521,7 @@ class DensitySimulation:
         stimulus = np.zeros_like(density)
 
         # Compute the stimulus and density change for active cells
-        stimulus[active_cells] = SED[active_cells] / density[active_cells]
+        stimulus[active_cells] = strain_energy_density[active_cells] / density[active_cells]
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
         density[active_cells] = density[active_cells] + self.dt * delta[active_cells]
 
@@ -566,7 +566,7 @@ class DensitySimulation:
             dot(self.zero_body_force, self.displacement_test_function) * dx
             + self.displacement_test_function[1] * self.top_force_expr * self.ds(1)
             + self.displacement_test_function[0] * self.right_force_expr * self.ds(2)
-            + self.displacement_test_function[1] * self.left_force_expr * self.ds(3)
+            + self.displacement_test_function[0] * self.left_force_expr * self.ds(3)
         )
 
         solver_parameters = {

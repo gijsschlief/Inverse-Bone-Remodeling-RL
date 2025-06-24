@@ -69,7 +69,9 @@ def test_plot_density_matrix_creates_annotations():
 
     matrix = np.array([[1.0, 2.0], [3.0, 4.0]])
     fig, ax = plt.subplots()
-    visualizer.plot_density_matrix(matrix, "Test Matrix", ax, vmin=1.0, vmax=4.0)
+    visualizer.plot_density_matrix(
+        matrix, "Test Matrix", ax, color_scale_min=1.0, color_scale_max=4.0
+    )
     # Check that the axis has the correct title and labels
     assert ax.get_title() == "Test Matrix"
     assert ax.get_xlabel() == "Columns"
