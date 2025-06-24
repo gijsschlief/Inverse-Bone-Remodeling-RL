@@ -5,9 +5,6 @@ from typing import Tuple
 
 import numpy as np
 from bone_remodeling.forward_model.data_reader import forward_data_reader
-from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
-    MediumSurrogateModel,
-)
 from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
@@ -66,7 +63,7 @@ def main() -> None:
             "Failed to load the surrogate model and normalization parameters."
         )
         return
-    model, X_mean, X_std, y_mean, y_std = model_and_normalization_params
+    model, x_mean, x_std, y_mean, y_std = model_and_normalization_params
     if model is None:
         logging.error("Failed to load the surrogate model.")
         return
@@ -80,17 +77,17 @@ def main() -> None:
     if force_profiles is None or final_output_densities is None:
         logging.error("Failed to load the data.")
         return
-    X_train, X_val, X_test, y_train, y_val, y_test = splitting(
+    x_train, x_val, x_test, y_train, y_val, y_test = splitting(
         force_profiles, final_output_densities, random_state=0
     )
-    if X_val is None or y_val is None:
+    if x_val is None or y_val is None:
         logging.error("Failed to split the data into validation sets.")
         return
 
     # Normalize the validation data if normalization parameters are available
-    if X_mean is not None and X_std is not None:
-        X_train, X_val, X_test, _, _ = normalize_data(
-            X_train, X_val, X_test, X_mean, X_std
+    if x_mean is not None and x_std is not None:
+        x_train, x_val, x_test, _, _ = normalize_data(
+            x_train, x_val, x_test, x_mean, x_std
         )
 
     if y_mean is not None and y_std is not None:
@@ -101,7 +98,7 @@ def main() -> None:
     else:
         output_normalized = False
 
-    predicted_matrices, true_matrices = validate_surrogate_model(model, X_val, y_val)
+    predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
 
     predicted_matrices, true_matrices = sanitize_matrices(
         predicted_matrices, true_matrices

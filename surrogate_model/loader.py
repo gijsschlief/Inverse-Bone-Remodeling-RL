@@ -137,7 +137,7 @@ def load_surrogate_model(
     if not path.is_file():
         logging.error(f"Model file does not exist: {model_path}")
         raise FileNotFoundError(f"Model file does not exist: {model_path}")
-    if not path.suffix == ".pth":
+    if path.suffix != ".pth":
         logging.error(f"Invalid model file format: {model_path}. Expected a .pth file.")
         raise ValueError(
             f"Invalid model file format: {model_path}. Expected a .pth file."
@@ -152,10 +152,10 @@ def load_surrogate_model(
 
     # If the model has normalization parameters, load them
     if path.with_suffix(".npz").exists():
-        X_mean, X_std, y_mean, y_std = load_normalization_params(
+        x_mean, x_std, y_mean, y_std = load_normalization_params(
             path=path.with_suffix(".npz")
         )
-        return model_loader.model, X_mean, X_std, y_mean, y_std
+        return model_loader.model, x_mean, x_std, y_mean, y_std
 
     return model_loader.model, None, None, None, None
 

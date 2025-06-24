@@ -15,7 +15,7 @@ logging.basicConfig(
 
 def validate_surrogate_model(
     model: torch.nn.Module,
-    X_val: np.ndarray,
+    x_val: np.ndarray,
     y_val: np.ndarray,
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
 ) -> Tuple[np.ndarray, np.ndarray]:
@@ -29,7 +29,7 @@ def validate_surrogate_model(
     Args:
     ----
         model: The trained surrogate model.
-        X_val: Validation input data.
+        x_val: Validation input data.
         y_val: Validation target data.
         device: The device to run the model on (default is CUDA if available, otherwise CPU).
 
@@ -45,18 +45,18 @@ def validate_surrogate_model(
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    if not isinstance(X_val, np.ndarray) or not isinstance(y_val, np.ndarray):
+    if not isinstance(x_val, np.ndarray) or not isinstance(y_val, np.ndarray):
         raise ValueError("Both X_val and y_val must be numpy.ndarray objects.")
 
-    if X_val.shape[0] != y_val.shape[0]:
+    if x_val.shape[0] != y_val.shape[0]:
         logging.warning(
             "X_val and y_val have different number of samples. Using the minimum of both."
         )
-        num_samples = np.min([X_val.shape[0], y_val.shape[0]])
-        X_val = X_val[:num_samples]
+        num_samples = np.min([x_val.shape[0], y_val.shape[0]])
+        x_val = x_val[:num_samples]
         y_val = y_val[:num_samples]
     else:
-        num_samples = X_val.shape[0]
+        num_samples = x_val.shape[0]
     if not isinstance(model, torch.nn.Module):
         raise ValueError("The model must be an instance of torch.nn.Module.")
     if next(model.parameters()).device != device:
@@ -65,9 +65,9 @@ def validate_surrogate_model(
 
     with torch.no_grad():
         # Validate that X_val can be reshaped to (num_samples, 3, 10)
-        if X_val.size != num_samples * 3 * 10:
+        if x_val.size != num_samples * 3 * 10:
             raise ValueError(
-                f"X_val with shape {X_val.shape} cannot be reshaped to ({num_samples}, 3, 10). "
+                f"X_val with shape {x_val.shape} cannot be reshaped to ({num_samples}, 3, 10). "
             )
         # Validate that y_val can be reshaped to (num_samples, 10, 10)
         if y_val.size != num_samples * 10 * 10:
@@ -78,12 +78,12 @@ def validate_surrogate_model(
         y_val_tensor = torch.from_numpy(
             y_val.reshape(num_samples, 10, 10).astype(np.float32)
         ).to(device)
-        X_val_tensor = torch.from_numpy(
-            X_val.reshape(num_samples, 3, 10).astype(np.float32)
+        x_val_tensor = torch.from_numpy(
+            x_val.reshape(num_samples, 3, 10).astype(np.float32)
         ).to(device)
 
     # Run the model to get predictions
-    val_logits: torch.Tensor = model(X_val_tensor)
+    val_logits: torch.Tensor = model(x_val_tensor)
     predicted_matrices = val_logits.detach().cpu().numpy()
     true_matrices = y_val_tensor.detach().cpu().numpy()
     return predicted_matrices, true_matrices

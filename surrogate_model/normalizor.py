@@ -68,8 +68,8 @@ def unnormalize_data(
 
 def save_normalization_params(
     path: Path,
-    X_mean: np.ndarray,
-    X_std: np.ndarray,
+    x_mean: np.ndarray,
+    x_std: np.ndarray,
     y_mean: np.ndarray,
     y_std: np.ndarray,
 ) -> None:
@@ -78,8 +78,8 @@ def save_normalization_params(
     Args:
     ----
         path (Path): Path to the .npz file where normalization parameters will be saved.
-        X_mean (np.ndarray): Mean of the input features.
-        X_std (np.ndarray): Standard deviation of the input features.
+        x_mean (np.ndarray): Mean of the input features.
+        x_std (np.ndarray): Standard deviation of the input features.
         y_mean (np.ndarray): Mean of the target variable.
         y_std (np.ndarray): Standard deviation of the target variable.
 
@@ -89,7 +89,7 @@ def save_normalization_params(
 
     """
     try:
-        np.savez(path, X_mean=X_mean, X_std=X_std, y_mean=y_mean, y_std=y_std)
+        np.savez(path, X_mean=x_mean, X_std=x_std, y_mean=y_mean, y_std=y_std)
     except Exception as e:
         logging.error(f"Failed to save normalization parameters: {e}")
         raise ValueError(f"Failed to save normalization parameters to {path}") from e
@@ -120,8 +120,8 @@ def load_normalization_params(
     logging.info(f"Loading normalization parameters from {path}")
     data = np.load(path)
 
-    X_mean = data.get("X_mean")
-    X_std = data.get("X_std")
+    x_mean = data.get("X_mean")
+    x_std = data.get("X_std")
     y_mean = data.get("y_mean")
     y_std = data.get("y_std")
-    return X_mean, X_std, y_mean, y_std
+    return x_mean, x_std, y_mean, y_std

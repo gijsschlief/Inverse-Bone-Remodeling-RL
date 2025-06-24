@@ -69,9 +69,9 @@ def load_data(
     _, force_profiles, final_output_densities = result
     if force_profiles is None or final_output_densities is None:
         raise ValueError("Data loading failed. Please check the input path.")
-    X = force_profiles
+    x = force_profiles
     y = final_output_densities
-    return splitting(X, y, random_state=0)
+    return splitting(x, y, random_state=0)
 
 
 def sanitize_data(
