@@ -1,9 +1,12 @@
 """Unified CLI for Thesis Modules."""
 
 import argparse
+import logging
 import subprocess
 import sys
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO)
 
 CLI_MODULES = {
     "forward-model": "forward_model/forward_modeling_cli.py",
@@ -11,7 +14,7 @@ CLI_MODULES = {
 }
 
 
-def main():
+def main() -> None:
     """Handle CLI arguments and execute the appropriate module."""
     parser = argparse.ArgumentParser(description="Unified CLI for Thesis modules.")
     parser.add_argument(
@@ -22,7 +25,7 @@ def main():
     module_path = Path(__file__).resolve().parent / CLI_MODULES[args.module]
 
     if not module_path.exists():
-        print(f"Module file not found: {module_path}")
+        logging.info(f"Module file not found: {module_path}")
         sys.exit(1)
 
     # Call the module as a subprocess with the remaining CLI args

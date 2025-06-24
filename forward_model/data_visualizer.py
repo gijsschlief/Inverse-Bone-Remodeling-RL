@@ -29,7 +29,7 @@ def visualize_force_comparison(
 
     """
 
-    def preprocess_force(fp):
+    def preprocess_force(fp: np.ndarray) -> np.ndarray:
         fp = np.asarray(fp)
         if fp.ndim == 3:
             fp = fp[:, np.newaxis, :, :]  # Ensure shape (N, 1, 3, 10)
@@ -107,7 +107,7 @@ def main() -> None:
     old_data = forward_data_reader(
         file_path="/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json"
     )
-    if data is None:
+    if old_data is None:
         logging.error("Failed to load the forward model data.")
         return
 

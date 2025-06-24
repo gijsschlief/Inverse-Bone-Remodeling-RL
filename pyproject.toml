@@ -41,6 +41,12 @@ lint.select = [
   "C4",   # flake8-comprehensions: better comprehensions
   "RUF",  # Ruff-specific fixes
   "D",    # Docstrings
+  "DOC",  # Docstrings: PEP 257
+  "ANN",  # Type annotations
+  "T201", # print statements
+  "PT",   # Pytest rules
+  "SIM",  # Simplify
+  "N",    # Naming conventions
 ]
 lint.ignore = [
   "E501",    # Line length (Black/Ruff formatter handles this)

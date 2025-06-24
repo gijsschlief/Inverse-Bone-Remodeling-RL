@@ -94,7 +94,7 @@ def plot_surrogate_model(
     return figures
 
 
-def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
+def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin: float, vmax: float) -> None:
     """Plot a density matrix with annotations.
 
     Args:

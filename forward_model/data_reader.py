@@ -132,7 +132,7 @@ def _forward_data_load_single(
     if not data_path.is_file():
         logging.error(f"File does not exist: {data_path}")
         return None
-    if not data_path.suffix == ".json":
+    if data_path.suffix != ".json":
         logging.error(f"Invalid file format: {data_path}. Expected a .json file.")
         return None
     if not data_path.is_absolute():
