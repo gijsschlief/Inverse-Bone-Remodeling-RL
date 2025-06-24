@@ -211,7 +211,7 @@ def plot_density_matrix(
                 if left_forces[i] < 0:
                     axis.arrow(
                         -0.5,
-                        i,
+                        height - 1 - i,
                         scaled_length * np.sign(left_forces[i]),
                         0,  # rightward
                         head_width=0.2,
@@ -222,7 +222,7 @@ def plot_density_matrix(
                 elif left_forces[i] > 0:
                     axis.arrow(
                         -0.5 - scaled_length - 0.15,
-                        i,
+                        height -1 - i,
                         scaled_length * np.sign(left_forces[i]),
                         0,  # leftward
                         head_width=0.2,
@@ -239,7 +239,7 @@ def plot_density_matrix(
                 if right_forces[i] < 0:
                     axis.arrow(
                         width - 0.5 + scaled_length + 0.15,
-                        i,
+                        height -1 - i,
                         scaled_length * np.sign(right_forces[i]),
                         0,  # rightward
                         head_width=0.2,
@@ -250,7 +250,7 @@ def plot_density_matrix(
                 elif right_forces[i] > 0:
                     axis.arrow(
                         width - 0.5,
-                        i,
+                        height -1 - i,
                         scaled_length * np.sign(right_forces[i]),
                         0,  # leftward
                         head_width=0.2,

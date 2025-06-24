@@ -120,16 +120,15 @@ def main() -> None:
 
     visualize_force_comparison(force_profiles, old_force_profiles)
 
-    _, axes = plt.subplots(1, 2, figsize=(12, 12))
-    for i in range(2):
-        random_index = np.random.randint(0, len(old_final_output_densities))
+    _, axes = plt.subplots(2, 2, figsize=(12, 12))
+    for i in range(4):
+        random_index = np.random.randint(0, len(final_output_densities))
         plot_density_matrix(
-            old_final_output_densities[random_index],
-            force_profile=old_force_profiles[random_index],
-            axis=axes[i],
+            final_output_densities[random_index],
+            force_profile=force_profiles[random_index],
+            axis=axes[i // 2, i % 2],
             title=f"Data at: {random_index}"
         )
-    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":

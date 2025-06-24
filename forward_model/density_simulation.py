@@ -185,7 +185,7 @@ class DensitySimulation:
         self._setup_subdomains()
         self._setup_force_expression()
 
-        self.elastic_modulus_function = self._calculate_E()
+        self.elastic_modulus_function = self._calculate_elasticity_modulus()
         self.shear_modules, self.first_lame_parameter = (
             self._calculate_lame_coefficients(self.elastic_modulus_function)
         )
@@ -456,16 +456,16 @@ class DensitySimulation:
         full_expression = " + ".join(expression_pieces) if expression_pieces else "0.0"
         return Expression(full_expression, degree=1)
 
-    def _calculate_E(self) -> Function:
+    def _calculate_elasticity_modulus(self) -> Function:
         """Calculate the modulus of elasticity (E) based on the current density values."""
-        E_function = Function(self.cell_density_space)
-        E_function.vector().zero()
-        E_array = self.elastic_modulus_scale * np.power(
+        elasticity_modulus_function = Function(self.cell_density_space)
+        elasticity_modulus_function.vector().zero()
+        elasticity_modulus_values = self.elastic_modulus_scale * np.power(
             self.current_density,
             self.modulus_exponent,
         )
-        E_function.vector().set_local(E_array)
-        return E_function
+        elasticity_modulus_function.vector().set_local(elasticity_modulus_values)
+        return elasticity_modulus_function
 
     def _calculate_lame_coefficients(
         self,
@@ -506,9 +506,9 @@ class DensitySimulation:
         stress_tensor: ufl.tensors.ListTensor,
     ) -> tuple[np.ndarray, Function]:
         """Calculate the strain energy density (SED) from the strain and stress tensors."""
-        SED_value = 0.5 * inner(stress_tensor, strain_tensor)
-        SED_plot = project(SED_value, self.cell_density_space)
-        return SED_plot.vector().get_local(), SED_plot
+        strain_energy_density = 0.5 * inner(stress_tensor, strain_tensor)
+        strain_energy_density_plot = project(strain_energy_density, self.cell_density_space)
+        return strain_energy_density_plot.vector().get_local(), strain_energy_density_plot
 
     def _calculate_density_change(self, strain_energy_density: np.ndarray) -> tuple[Function, np.ndarray]:
         """Calculate the change in density based on the strain energy density (SED).
@@ -595,8 +595,8 @@ class DensitySimulation:
             self.first_lame_parameter,
             strain_tensor,
         )
-        SED, _ = self._calculate_sed(strain_tensor, stress_tensor)
-        density_fenics = self._calculate_density_change(SED)
+        strain_energy_density, _ = self._calculate_sed(strain_tensor, stress_tensor)
+        density_fenics = self._calculate_density_change(strain_energy_density)
         return density_fenics
 
     def _save(self, to_save_data: Any) -> None:
@@ -621,7 +621,7 @@ class DensitySimulation:
 
     def _update_material_properties(self) -> None:
         """Update material properties for the next time step."""
-        self.elastic_modulus_function.assign(self._calculate_E())
+        self.elastic_modulus_function.assign(self._calculate_elasticity_modulus())
         self.shear_modules, self.first_lame_parameter = (
             self._calculate_lame_coefficients(self.elastic_modulus_function)
         )
