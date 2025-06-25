@@ -238,7 +238,10 @@ def main() -> None:
                 )
     else:
         logging.warning("No forces specified. Using default force profile.")
-        force_profile[0, 0] = 15
+        for i in range(max(args.n_rows, args.n_columns)):
+            # Default force profile: 15 at the top
+            if i < args.n_rows:
+                force_profile[0, i] = 0.4*i
 
     # Load existing parameters from JSON file if it exists
     if parameters_file.exists():

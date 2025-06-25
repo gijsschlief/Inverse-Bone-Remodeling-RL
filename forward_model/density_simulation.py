@@ -31,6 +31,7 @@ from fenics import (  # type: ignore
     TrialFunction,
     UnitSquareMesh,
     VectorFunctionSpace,
+    assemble_local,
     cells,
     div,
     dot,
@@ -53,7 +54,7 @@ class DensitySimulation:
 
     Attributes
     ----------
-        force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left and right and n is the exact location in that row.
+        force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, right and left and n is the exact location in that row.
         initial_density_field (np.ndarray): Initial bone density matrix.
         time_steps (int): Number of time steps for the simulation.
         dt (float): Time step size.
@@ -184,12 +185,11 @@ class DensitySimulation:
         self._setup_boundary_conditions()
         self._setup_subdomains()
         self._setup_force_expression()
-
+        self._initialize_reusable_objects()
         self.elastic_modulus_function = self._calculate_elasticity_modulus()
-        self.shear_modules, self.first_lame_parameter = (
-            self._calculate_lame_coefficients(self.elastic_modulus_function)
-        )
-        self.displacement = Function(self.displacement_space)
+        self.shear_modules, self.first_lame_parameter = self._calculate_lame_coefficients()
+        self._initialize_reusable_objects()
+        self._initialize_stiffness_and_load_form()
 
     def _initialize_core_parameters(
         self,
@@ -456,7 +456,37 @@ class DensitySimulation:
         full_expression = " + ".join(expression_pieces) if expression_pieces else "0.0"
         return Expression(full_expression, degree=1)
 
-    def _calculate_elasticity_modulus(self) -> Function:
+    def _initialize_reusable_objects(self) -> None:
+        """Initialize reusable objects for the simulation."""
+        self.sed_function = Function(self.cell_density_space)
+        self.density_function = Function(self.cell_density_space)
+        self.elasticity_modulus_function = Function(self.cell_density_space)
+        self.shear_function = Function(self.cell_density_space)
+        self.lame_function = Function(self.cell_density_space)
+        self.displacement = Function(self.displacement_space)
+
+    def _initialize_stiffness_and_load_form(self) -> None:
+        self.stiffness_form = (
+            2
+            * self.shear_function
+            * inner(
+                self._calculate_strain_tensor(self.displacement_trial),
+                self._calculate_strain_tensor(self.displacement_test_function),
+            )
+            * dx
+            + self.lame_function
+            * dot(div(self.displacement_trial), div(self.displacement_test_function))
+            * dx
+        )
+
+        self.load_form = (
+            dot(self.zero_body_force, self.displacement_test_function) * dx
+            + self.displacement_test_function[1] * self.top_force_expr * self.ds(1)
+            + self.displacement_test_function[0] * self.right_force_expr * self.ds(2)
+            + self.displacement_test_function[0] * self.left_force_expr * self.ds(3)
+        )
+
+    def _calculate_elasticity_modulus_slow(self) -> Function:
         """Calculate the modulus of elasticity (E) based on the current density values."""
         elasticity_modulus_function = Function(self.cell_density_space)
         elasticity_modulus_function.vector().zero()
@@ -467,7 +497,13 @@ class DensitySimulation:
         elasticity_modulus_function.vector().set_local(elasticity_modulus_values)
         return elasticity_modulus_function
 
-    def _calculate_lame_coefficients(
+    def _calculate_elasticity_modulus(self) -> Function:
+        """Calculate the modulus of elasticity (E) based on the current density values, with recreating the function object."""
+        values = self.elastic_modulus_scale * np.power(self.current_density, self.modulus_exponent)
+        self.elasticity_modulus_function.vector().set_local(values)
+        return self.elasticity_modulus_function
+
+    def _calculate_lame_coefficients_old(
         self,
         elastic_modulus_function: Function,
     ) -> tuple[Function, Function]:
@@ -477,6 +513,15 @@ class DensitySimulation:
             (1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio)
         )
         return shear_modulus, first_lame_parameter
+
+    def _calculate_lame_coefficients(self) -> tuple[Function, Function]:
+        """Calculate the Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
+        elastic_modulus = self.elasticity_modulus_function.vector().get_local()
+        shear_modulus = elastic_modulus / (2 * (1 + self.poisson_ratio))
+        first_lame_parameter = (elastic_modulus * self.poisson_ratio) / ((1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio))
+        self.shear_function.vector().set_local(shear_modulus)
+        self.lame_function.vector().set_local(first_lame_parameter)
+        return self.shear_function, self.lame_function
 
     def _calculate_strain_tensor(
         self,
@@ -500,7 +545,7 @@ class DensitySimulation:
         )
         return stress_tensor
 
-    def _calculate_sed(
+    def _calculate_strain_energy_density(
         self,
         strain_tensor: ufl.tensors.ListTensor,
         stress_tensor: ufl.tensors.ListTensor,
@@ -538,37 +583,12 @@ class DensitySimulation:
             | cells_converged_small_change
         )
 
-        # build Fenics Function for density
-        density_fenics = Function(self.cell_density_space)
-        density_fenics.vector().set_local(density.copy())
-
+        self.density_function.vector().set_local(density.copy())
         self.current_density = density
-        return density_fenics
+        return self.density_function
 
     def _solve_elasticity_problem(self) -> None:
         """Solve the elasticity problem for current displacement."""
-        # Define the weak form of the elasticity problem
-        stiffness_form = (
-            2
-            * self.shear_modules
-            * inner(
-                self._calculate_strain_tensor(self.displacement_trial),
-                self._calculate_strain_tensor(self.displacement_test_function),
-            )
-            * dx
-            + self.first_lame_parameter
-            * dot(div(self.displacement_trial), div(self.displacement_test_function))
-            * dx
-        )
-
-        # Define the linear form for the load
-        load_form = (
-            dot(self.zero_body_force, self.displacement_test_function) * dx
-            + self.displacement_test_function[1] * self.top_force_expr * self.ds(1)
-            + self.displacement_test_function[0] * self.right_force_expr * self.ds(2)
-            + self.displacement_test_function[0] * self.left_force_expr * self.ds(3)
-        )
-
         solver_parameters = {
             "linear_solver": "default",
             "preconditioner": "hypre_amg",
@@ -580,7 +600,7 @@ class DensitySimulation:
         }
 
         solve(
-            stiffness_form == load_form,
+            self.stiffness_form == self.load_form,
             self.displacement,
             self.boundary_conditions,
             solver_parameters=solver_parameters,
@@ -595,7 +615,7 @@ class DensitySimulation:
             self.first_lame_parameter,
             strain_tensor,
         )
-        strain_energy_density, _ = self._calculate_sed(strain_tensor, stress_tensor)
+        strain_energy_density, _ = self._calculate_strain_energy_density(strain_tensor, stress_tensor)
         density_fenics = self._calculate_density_change(strain_energy_density)
         return density_fenics
 
@@ -622,9 +642,7 @@ class DensitySimulation:
     def _update_material_properties(self) -> None:
         """Update material properties for the next time step."""
         self.elastic_modulus_function.assign(self._calculate_elasticity_modulus())
-        self.shear_modules, self.first_lame_parameter = (
-            self._calculate_lame_coefficients(self.elastic_modulus_function)
-        )
+        self.shear_modules, self.first_lame_parameter = self._calculate_lame_coefficients()
 
     def run(self) -> None:
         """Run the full simulation loop."""
