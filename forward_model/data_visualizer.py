@@ -106,7 +106,7 @@ def main() -> None:
         return
 
     old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_batch_286099_samples_10_0620_1858.json"
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json"
     )
     if old_data is None:
         logging.error("Failed to load the forward model data.")
@@ -114,7 +114,7 @@ def main() -> None:
 
     _, old_force_profiles, old_final_output_densities = old_data
 
-    if force_profiles is None or final_output_densities is None:
+    if old_force_profiles is None or old_final_output_densities is None:
         logging.error("Missing force or density data.")
         return
 
@@ -122,10 +122,10 @@ def main() -> None:
 
     _, axes = plt.subplots(2, 2, figsize=(12, 12))
     for i in range(4):
-        random_index = np.random.randint(0, len(final_output_densities))
+        random_index = np.random.randint(0, len(old_final_output_densities))
         plot_density_matrix(
-            final_output_densities[random_index],
-            force_profile=force_profiles[random_index],
+            old_final_output_densities[random_index],
+            force_profile=old_force_profiles[random_index],
             axis=axes[i // 2, i % 2],
             title=f"Data at: {random_index}"
         )

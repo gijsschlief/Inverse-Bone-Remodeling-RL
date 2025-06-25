@@ -340,7 +340,7 @@ class DensitySimulation:
         while the roller boundary condition is applied to the bottom right corner.
         """
 
-        def bottom_fixed_boundary(x, on_boundary) -> bool:
+        def bottom_fixed_boundary(x: np.ndarray, on_boundary: bool) -> bool:
             """Check if the point is on the bottom boundary and in the left corner (x=0, y=0)."""
             return near(x[0], 0, self.boundary_tolerance) and near(
                 x[1],
@@ -348,7 +348,7 @@ class DensitySimulation:
                 self.boundary_tolerance,
             )
 
-        def bottom_roller_boundary(x, on_boundary) -> bool:
+        def bottom_roller_boundary(x: np.ndarray, on_boundary: bool) -> bool:
             """Check if the point is on the bottom boundary and in the right corner (x=1, y=0)."""
             return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
 
@@ -377,7 +377,7 @@ class DensitySimulation:
                 super().__init__()
                 self.boundary_tolerance = boundary_tolerance
 
-            def inside(self, x, on_boundary) -> bool:
+            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
                 return near(x[1], 1, self.boundary_tolerance) and on_boundary
 
         class Right(SubDomain):
@@ -385,7 +385,7 @@ class DensitySimulation:
                 super().__init__()
                 self.boundary_tolerance = boundary_tolerance
 
-            def inside(self, x, on_boundary) -> bool:
+            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
                 return near(x[0], 1, self.boundary_tolerance) and on_boundary
 
         class Left(SubDomain):
@@ -393,7 +393,7 @@ class DensitySimulation:
                 super().__init__()
                 self.boundary_tolerance = boundary_tolerance
 
-            def inside(self, x, on_boundary) -> bool:
+            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
                 return near(x[0], 0, self.boundary_tolerance) and on_boundary
 
         class BoundaryID:
@@ -599,7 +599,7 @@ class DensitySimulation:
         density_fenics = self._calculate_density_change(strain_energy_density)
         return density_fenics
 
-    def _save(self, to_save_data: Any) -> None:
+    def _save(self, to_save_data: Function | MeshFunction | Expression) -> None:
         """Save data specified to the output_dir."""
         output_path = Path(self.output_dir)
         output_path.mkdir(parents=True, exist_ok=True)
