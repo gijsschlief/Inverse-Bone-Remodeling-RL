@@ -24,6 +24,8 @@ from fenics import (  # type: ignore
     Function,
     FunctionSpace,
     Identity,
+    LinearVariationalProblem,
+    LinearVariationalSolver,
     Measure,
     MeshFunction,
     SubDomain,
@@ -31,7 +33,6 @@ from fenics import (  # type: ignore
     TrialFunction,
     UnitSquareMesh,
     VectorFunctionSpace,
-    assemble_local,
     cells,
     div,
     dot,
@@ -40,7 +41,7 @@ from fenics import (  # type: ignore
     inner,
     near,
     project,
-    solve,
+    assemble_local,
 )
 
 
@@ -185,11 +186,11 @@ class DensitySimulation:
         self._setup_boundary_conditions()
         self._setup_subdomains()
         self._setup_force_expression()
-        self._initialize_reusable_objects()
-        self.elastic_modulus_function = self._calculate_elasticity_modulus()
-        self.shear_modules, self.first_lame_parameter = self._calculate_lame_coefficients()
-        self._initialize_reusable_objects()
+        self._initialize_fenics_functions()
+        self._update_material_properties()
         self._initialize_stiffness_and_load_form()
+        self._initialize_solver()
+        self._initialize_projector()
 
     def _initialize_core_parameters(
         self,
@@ -456,7 +457,7 @@ class DensitySimulation:
         full_expression = " + ".join(expression_pieces) if expression_pieces else "0.0"
         return Expression(full_expression, degree=1)
 
-    def _initialize_reusable_objects(self) -> None:
+    def _initialize_fenics_functions(self) -> None:
         """Initialize reusable objects for the simulation."""
         self.sed_function = Function(self.cell_density_space)
         self.density_function = Function(self.cell_density_space)
@@ -486,42 +487,44 @@ class DensitySimulation:
             + self.displacement_test_function[0] * self.left_force_expr * self.ds(3)
         )
 
-    def _calculate_elasticity_modulus_slow(self) -> Function:
-        """Calculate the modulus of elasticity (E) based on the current density values."""
-        elasticity_modulus_function = Function(self.cell_density_space)
-        elasticity_modulus_function.vector().zero()
-        elasticity_modulus_values = self.elastic_modulus_scale * np.power(
-            self.current_density,
-            self.modulus_exponent,
-        )
-        elasticity_modulus_function.vector().set_local(elasticity_modulus_values)
-        return elasticity_modulus_function
+    def _initialize_solver(self) -> None:
+        """Initialize the solver for the elasticity problem."""
+        problem = LinearVariationalProblem(self.stiffness_form,
+            self.load_form,
+            self.displacement,
+            self.boundary_conditions)
+        solver = LinearVariationalSolver(problem)
+        solver.parameters["linear_solver"] = "default"
+        solver.parameters["preconditioner"] = "hypre_amg"
+        solver.parameters["krylov_solver"]["relative_tolerance"] = 1e-10
+        solver.parameters["krylov_solver"]["absolute_tolerance"] = 1e-10
+        solver.parameters["krylov_solver"]["maximum_iterations"] = 1000
+        self.elasticity_solver = solver
 
-    def _calculate_elasticity_modulus(self) -> Function:
-        """Calculate the modulus of elasticity (E) based on the current density values, with recreating the function object."""
-        values = self.elastic_modulus_scale * np.power(self.current_density, self.modulus_exponent)
-        self.elasticity_modulus_function.vector().set_local(values)
-        return self.elasticity_modulus_function
+    def _initialize_projector(self) -> None:
+        """Initialize the projector for the strain energy density (SED)."""
+        trial_function_density = TrialFunction(self.cell_density_space)
+        self.test_function_density = TestFunction(self.cell_density_space)
+        strain_energy_density_form = inner(trial_function_density, self.test_function_density)*dx
+        linear_form_projection = inner(Constant(0), self.test_function_density)*dx
 
-    def _calculate_lame_coefficients_old(
-        self,
-        elastic_modulus_function: Function,
-    ) -> tuple[Function, Function]:
-        """Calculate the Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
-        shear_modulus = elastic_modulus_function / (2 * (1 + self.poisson_ratio))
-        first_lame_parameter = (elastic_modulus_function * self.poisson_ratio) / (
-            (1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio)
-        )
-        return shear_modulus, first_lame_parameter
+        self.problem_projection = LinearVariationalProblem(strain_energy_density_form, linear_form_projection, self.sed_function)
+        self.projector = LinearVariationalSolver(self.problem_projection)
 
-    def _calculate_lame_coefficients(self) -> tuple[Function, Function]:
-        """Calculate the Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
-        elastic_modulus = self.elasticity_modulus_function.vector().get_local()
+        self.projector.parameters["linear_solver"] = "cg"
+        self.projector.parameters["preconditioner"] = "hypre_amg"
+        self.projector.parameters["krylov_solver"]["relative_tolerance"] = 1e-10
+        self.projector.parameters["krylov_solver"]["absolute_tolerance"] = 1e-10
+
+    def _update_material_properties(self) -> None:
+        """Update the modulus of elasticity, Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
+        elastic_modulus = self.elastic_modulus_scale * np.power(self.current_density, self.modulus_exponent)
         shear_modulus = elastic_modulus / (2 * (1 + self.poisson_ratio))
         first_lame_parameter = (elastic_modulus * self.poisson_ratio) / ((1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio))
+
+        self.elasticity_modulus_function.vector().set_local(elastic_modulus)
         self.shear_function.vector().set_local(shear_modulus)
         self.lame_function.vector().set_local(first_lame_parameter)
-        return self.shear_function, self.lame_function
 
     def _calculate_strain_tensor(
         self,
@@ -534,33 +537,42 @@ class DensitySimulation:
     def _calculate_stress_tensor(
         self,
         displacement: Function,
-        shear_modules: Function,
-        first_lame_parameter: Function,
         strain_tensor: ufl.tensors.ListTensor,
     ) -> ufl.tensors.ListTensor:
         """Calculate the stress tensor using the strain tensor, shear_modules and first Lame coefficient (lambda)."""
         stress_tensor = (
-            first_lame_parameter * div(displacement) * Identity(self.spatial_dimension)
-            + 2 * shear_modules * strain_tensor
+            self.lame_function * div(displacement) * Identity(self.spatial_dimension)
+            + 2 * self.shear_function * strain_tensor
         )
         return stress_tensor
 
-    def _calculate_strain_energy_density(
+    def _update_strain_energy_density_old(
         self,
         strain_tensor: ufl.tensors.ListTensor,
         stress_tensor: ufl.tensors.ListTensor,
-    ) -> tuple[np.ndarray, Function]:
+    ) -> None:
         """Calculate the strain energy density (SED) from the strain and stress tensors."""
         strain_energy_density = 0.5 * inner(stress_tensor, strain_tensor)
-        strain_energy_density_plot = project(strain_energy_density, self.cell_density_space)
-        return strain_energy_density_plot.vector().get_local(), strain_energy_density_plot
+        project(strain_energy_density, self.cell_density_space, function=self.sed_function)
 
-    def _calculate_density_change(self, strain_energy_density: np.ndarray) -> tuple[Function, np.ndarray]:
+    def _update_strain_energy_density(
+        self,
+        strain_tensor: ufl.tensors.ListTensor,
+        stress_tensor: ufl.tensors.ListTensor,
+    ) -> None:
+        """Calculate the strain energy density (SED) from the strain and stress tensors."""
+        sed_expression = 0.5 * inner(stress_tensor, strain_tensor)
+        linear_sed_form = inner(sed_expression, self.test_function_density)* dx
+        self.problem_projection.set_rhs(linear_sed_form)
+        self.projector.solve()
+
+    def _update_density_change(self) -> None:
         """Calculate the change in density based on the strain energy density (SED).
 
         Cells which have converged will no longer update in the simulation.
         Convergence happens when the lower or upper density is hit or the cell has not made a noticeable change in density.
         """
+        strain_energy_density = self.sed_function.vector().get_local()
         active_cells = ~self.convergence_flags
         density = self.current_density
         stimulus = np.zeros_like(density)
@@ -585,39 +597,13 @@ class DensitySimulation:
 
         self.density_function.vector().set_local(density.copy())
         self.current_density = density
-        return self.density_function
 
-    def _solve_elasticity_problem(self) -> None:
-        """Solve the elasticity problem for current displacement."""
-        solver_parameters = {
-            "linear_solver": "default",
-            "preconditioner": "hypre_amg",
-            "krylov_solver": {
-                "absolute_tolerance": 1e-10,
-                "relative_tolerance": 1e-10,
-                "maximum_iterations": 1000,
-            },
-        }
-
-        solve(
-            self.stiffness_form == self.load_form,
-            self.displacement,
-            self.boundary_conditions,
-            solver_parameters=solver_parameters,
-        )
-
-    def _update_density(self) -> Function:
+    def _update_density(self) -> None:
         """Compute SED and update density based on it."""
         strain_tensor = self._calculate_strain_tensor(self.displacement)
-        stress_tensor = self._calculate_stress_tensor(
-            self.displacement,
-            self.shear_modules,
-            self.first_lame_parameter,
-            strain_tensor,
-        )
-        strain_energy_density, _ = self._calculate_strain_energy_density(strain_tensor, stress_tensor)
-        density_fenics = self._calculate_density_change(strain_energy_density)
-        return density_fenics
+        stress_tensor = self._calculate_stress_tensor(self.displacement, strain_tensor)
+        self._update_strain_energy_density(strain_tensor, stress_tensor)
+        self._update_density_change()
 
     def _save(self, to_save_data: Function | MeshFunction | Expression) -> None:
         """Save data specified to the output_dir."""
@@ -639,17 +625,12 @@ class DensitySimulation:
             return True
         return False
 
-    def _update_material_properties(self) -> None:
-        """Update material properties for the next time step."""
-        self.elastic_modulus_function.assign(self._calculate_elasticity_modulus())
-        self.shear_modules, self.first_lame_parameter = self._calculate_lame_coefficients()
-
     def run(self) -> None:
         """Run the full simulation loop."""
         time = 0.0
         while time <= self.total_time:
-            self._solve_elasticity_problem()
-            density_fenics = self._update_density()
+            self.elasticity_solver.solve()
+            self._update_density()
             if self._check_convergence(time):
                 break
 
@@ -657,7 +638,7 @@ class DensitySimulation:
             time += self.dt
 
         if self.save:
-            self._save(density_fenics)
+            self._save(self.density_function)
 
     def get_final_density(self) -> np.ndarray:
         """Get the final density profile after the simulation.
