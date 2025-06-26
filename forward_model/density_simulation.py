@@ -40,13 +40,12 @@ from fenics import (  # type: ignore
     grad,
     inner,
     near,
-    project,
-    assemble_local,
+    solve,
 )
 
 
 class DensitySimulation:
-    """Class for simulating bone density changes under mechanical loads.
+    """Class for simulating bone density changes under mechanical loads using FEniCS.
 
     This class implements a forward model for bone remodeling based on the finite element method.
     It simulates the mechanical behavior of bone tissue under various force profiles,
@@ -55,7 +54,7 @@ class DensitySimulation:
 
     Attributes
     ----------
-        force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, right and left and n is the exact location in that row.
+        force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left, and right, and n is the location in that row.
         initial_density_field (np.ndarray): Initial bone density matrix.
         time_steps (int): Number of time steps for the simulation.
         dt (float): Time step size.
@@ -70,15 +69,17 @@ class DensitySimulation:
         num_cells (int): Number of cells in the mesh.
         current_density (np.ndarray): Current density values for each cell in the mesh.
         convergence_flags (np.ndarray): Flags indicating whether each cell has converged.
-        elastic_modulus_function (Function): Function representing the modulus of elasticity.
-        shear_modules (Function): Function representing the shear modulus.
-        first_lame_parameter (Function): Function representing the first Lame coefficient.
+        elasticity_modulus_function (Function): Function representing the modulus of elasticity.
+        shear_function (Function): Function representing the shear modulus.
+        lame_function (Function): Function representing the first Lame coefficient.
         displacement (Function): Function representing the displacement field.
         boundaries (MeshFunction): Mesh function defining the boundaries of the mesh.
         ds (Measure): Measure for boundary integrals.
         top_force_expr (Expression): Expression for the force applied on the top boundary.
         right_force_expr (Expression): Expression for the force applied on the right boundary.
         left_force_expr (Expression): Expression for the force applied on the left boundary.
+        sed_function (Function): Function for the strain energy density.
+        density_function (Function): Function for the density field.
 
     Methods
     -------
@@ -94,29 +95,21 @@ class DensitySimulation:
             Checks if the simulation has converged based on cell convergence flags.
         _update_material_properties() -> None:
             Updates the material properties for the next time step.
-        _update_density() -> Function:
+        _update_density() -> None:
             Computes the strain energy density and updates the density based on it.
-        _solve_elasticity_problem() -> None:
-            Solves the elasticity problem for the current displacement.
-        _calculate_E() -> Function:
-            Calculates the modulus of elasticity based on the current density values.
-        _calculate_lame_coefficients(elastic_modulus_function: Function) -> tuple[Function, Function]:
-            Calculates the shear modules and first Lame coefficient from the modulus of elasticity.
         _calculate_strain_tensor(displacement: Function) -> ufl.tensors.ListTensor:
             Calculates the strain tensor from the displacement field.
         _calculate_stress_tensor(
             displacement: Function,
-            shear_modules: Function,
-            first_lame_parameter: Function,
             strain_tensor: ufl.tensors.ListTensor,
         ) -> ufl.tensors.ListTensor:
-            Calculates the stress tensor using the strain tensor, shear modules, and first Lame coefficient.
-        _calculate_sed(
+            Calculates the stress tensor using the strain tensor, shear modulus, and first Lame coefficient.
+        _update_strain_energy_density(
             strain_tensor: ufl.tensors.ListTensor,
             stress_tensor: ufl.tensors.ListTensor,
-        ) -> tuple[np.ndarray, Function]:
+        ) -> None:
             Calculates the strain energy density (SED) from the strain and stress tensors.
-        _calculate_density_change(SED: np.ndarray) -> tuple[Function, np.ndarray]:
+        _update_density_change() -> None:
             Calculates the change in density based on the strain energy density (SED) and updates the density values.
         _build_force_expression(force_row: np.ndarray, axis: str) -> Expression:
             Builds the force expression based on the force profile for a specified axis.
@@ -141,15 +134,6 @@ class DensitySimulation:
             Extracts necessary data from the parameters dictionary to set up the simulation parameters.
         _validate_parameters() -> None:
             Validates the input parameters for the simulation and raises errors for invalid inputs.
-        _convert_forward_data_to_numpy(data: list[dict[str, Any]]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-            Converts a list of dictionaries containing forward model data into NumPy arrays.
-            This function extracts serial numbers, force profiles, and final output densities
-            from the provided data. It handles potential errors in the data format and logs
-            any issues encountered during the extraction process.
-            Returns a tuple containing three NumPy arrays:
-            - serial_numbers: Array of serial numbers.
-            - force_profiles: Array of force profiles.
-            - final_output_densities: Array of final output densities.
 
     """
 
@@ -505,16 +489,15 @@ class DensitySimulation:
         """Initialize the projector for the strain energy density (SED)."""
         trial_function_density = TrialFunction(self.cell_density_space)
         self.test_function_density = TestFunction(self.cell_density_space)
-        strain_energy_density_form = inner(trial_function_density, self.test_function_density)*dx
-        linear_form_projection = inner(Constant(0), self.test_function_density)*dx
+        self.strain_energy_density_form = inner(trial_function_density, self.test_function_density)*dx
 
-        self.problem_projection = LinearVariationalProblem(strain_energy_density_form, linear_form_projection, self.sed_function)
-        self.projector = LinearVariationalSolver(self.problem_projection)
-
-        self.projector.parameters["linear_solver"] = "cg"
-        self.projector.parameters["preconditioner"] = "hypre_amg"
-        self.projector.parameters["krylov_solver"]["relative_tolerance"] = 1e-10
-        self.projector.parameters["krylov_solver"]["absolute_tolerance"] = 1e-10
+        self.projection_solver_parameters = {
+            "linear_solver": "cg",
+            "preconditioner":   "hypre_amg",
+            "krylov_solver": {
+                "absolute_tolerance": 1e-10,
+                "relative_tolerance": 1e-10,
+                "maximum_iterations": 1000}}
 
     def _update_material_properties(self) -> None:
         """Update the modulus of elasticity, Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
@@ -546,15 +529,6 @@ class DensitySimulation:
         )
         return stress_tensor
 
-    def _update_strain_energy_density_old(
-        self,
-        strain_tensor: ufl.tensors.ListTensor,
-        stress_tensor: ufl.tensors.ListTensor,
-    ) -> None:
-        """Calculate the strain energy density (SED) from the strain and stress tensors."""
-        strain_energy_density = 0.5 * inner(stress_tensor, strain_tensor)
-        project(strain_energy_density, self.cell_density_space, function=self.sed_function)
-
     def _update_strain_energy_density(
         self,
         strain_tensor: ufl.tensors.ListTensor,
@@ -563,8 +537,7 @@ class DensitySimulation:
         """Calculate the strain energy density (SED) from the strain and stress tensors."""
         sed_expression = 0.5 * inner(stress_tensor, strain_tensor)
         linear_sed_form = inner(sed_expression, self.test_function_density)* dx
-        self.problem_projection.set_rhs(linear_sed_form)
-        self.projector.solve()
+        solve(self.strain_energy_density_form == linear_sed_form, self.sed_function, solver_parameters=self.projection_solver_parameters)
 
     def _update_density_change(self) -> None:
         """Calculate the change in density based on the strain energy density (SED).
@@ -640,7 +613,7 @@ class DensitySimulation:
         if self.save:
             self._save(self.density_function)
 
-    def get_final_density(self) -> np.ndarray:
+    def _get_final_density(self) -> np.ndarray:
         """Get the final density profile after the simulation.
 
         Divided by two as Fenics works with triangular elements and the needed datatype is rectangular.
@@ -649,6 +622,22 @@ class DensitySimulation:
         return np.array(self.current_density[:half_size]).reshape(
             (self.n_rows, self.n_columns),
         )
+    def get_final_density(self) -> np.ndarray:
+        """Reconstruct an (n_rows x n_columns) density array by binning the DG0 cell values back onto a structured grid."""
+        centroids = np.array([cell.midpoint().array() for cell in cells(self.mesh)])
+        xs, ys = centroids[:,0], centroids[:,1]
+        i = np.minimum((ys * self.n_rows).astype(int), self.n_rows - 1)
+        j = np.minimum((xs * self.n_columns).astype(int), self.n_columns - 1)
+        density_grid = np.zeros((self.n_rows, self.n_columns))
+        counts       = np.zeros_like(density_grid)
+
+        for k, val in enumerate(self.current_density):
+            density_grid[i[k], j[k]] += val
+            counts[i[k], j[k]] += 1
+
+        density_grid /= counts
+        return density_grid
+
 
     def plot_density(self) -> None:
         """Plot the final density profile using pyvista."""
