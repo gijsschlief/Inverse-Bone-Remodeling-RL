@@ -172,7 +172,8 @@ class DensitySimulation:
         self._setup_force_expression()
         self._initialize_fenics_functions()
         self._update_material_properties()
-        self._initialize_stiffness_and_load_form()
+        self._initialize_stiffness_form()
+        self._initialize_load_form()
         self._initialize_solver()
         self._initialize_projector()
 
@@ -188,7 +189,6 @@ class DensitySimulation:
         self.force_profile = force_profile
         self.dt = dt
         self.time_steps = time_steps
-        self.total_time = self.time_steps * self.dt
         self.n_rows = self.initial_density_field.shape[0]
         self.n_columns = self.initial_density_field.shape[1]
 
@@ -255,10 +255,6 @@ class DensitySimulation:
         if not (self.dt > 0):
             raise ValueError(
                 "dt must be a positive number.",
-            )
-        if not (self.dt < self.total_time):
-            logging.warning(
-                "dt is larger than total_time, which may lead to unexpected behavior.",
             )
         if not (self.time_steps <= 1000):
             logging.warning(
@@ -418,18 +414,7 @@ class DensitySimulation:
 
     @staticmethod
     def _build_force_expression(force_row: np.ndarray, axis: str) -> Expression:
-        """Build the force expression based on the force profile.
-
-        Arguments:
-        ---------
-            force_row (np.ndarray): Array representing the force values along the specified axis.
-            axis (str): Axis along which the force is applied ('x' or 'y').
-
-        Returns:
-        -------
-            Expression: FEniCS Expression object representing the force profile.
-
-        """
+        """Build the force expression based on the force profile."""
         expression_pieces = []
         dx = 1.0 / len(force_row)
         for i, value in enumerate(force_row):
@@ -454,7 +439,7 @@ class DensitySimulation:
         self.lame_function = Function(self.cell_density_space)
         self.displacement = Function(self.displacement_space)
 
-    def _initialize_stiffness_and_load_form(self) -> None:
+    def _initialize_stiffness_form(self) -> None:
         self.stiffness_form = (
             2
             * self.shear_function
@@ -468,6 +453,8 @@ class DensitySimulation:
             * dx
         )
 
+    def _initialize_load_form(self) -> None:
+        """Initialize the load form for the elasticity problem."""
         self.load_form = (
             dot(self.zero_body_force, self.displacement_test_function) * dx
             + self.displacement_test_function[1] * self.top_force_expr * self.ds(1)
@@ -624,19 +611,15 @@ class DensitySimulation:
 
     def reset(self) -> None:
         """Reset the simulation state to the initial conditions."""
-        self._reset_density()
-        self._update_material_properties()
-        self.displacement.vector().set_local(np.zeros(self.displacement.vector().get_local().shape))
-        self.sed_function.vector().set_local(np.zeros(self.sed_function.vector().get_local().shape))
-        self.density_function.vector().set_local(np.zeros_like(self.density_function.vector().get_local()))
-        self.displacement.vector().apply("insert")
-        self.sed_function.vector().apply("insert")
-        self.density_function.vector().apply("insert")
-
-    def _reset_density(self) -> None:
-        """Reset the density field to a new initial density field."""
+        self.density_function.assign(Constant(0))
+        self.displacement.assign(Constant(0))
+        self.sed_function.assign(Constant(0))
+        self.elasticity_modulus_function.assign(Constant(0))
+        self.shear_function.assign(Constant(0))
+        self.lame_function.assign(Constant(0))
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.convergence_flags.fill(False)
+        self._update_material_properties()
 
     def update_force_profile(self, new_force_profile: np.ndarray) -> None:
         """Update the force profile for the simulation.
@@ -651,7 +634,22 @@ class DensitySimulation:
                 "New force profile must have the same shape as the original force profile.",
             )
         self.force_profile = new_force_profile
-        self._setup_force_expression()
+        self._update_force_expression()
+    
+    def _update_force_expression(self) -> None:
+        """Update the force expressions based on the new force profile."""
+        self.top_force_expr.__dict__["cppcode"] = self._build_force_expression(
+            self.force_profile[0],
+            axis="x",
+        )
+        self.right_force_expr.__dict__["cppcode"] = self._build_force_expression(
+            self.force_profile[1],
+            axis="y",
+        )
+        self.left_force_expr.__dict__["cppcode"] = self._build_force_expression(
+            self.force_profile[2],
+            axis="y",
+        )
 
     def get_density(self) -> np.ndarray:
         """Reconstruct an (n_rows x n_columns) density array by binning the DG0 cell values back onto a structured grid."""
