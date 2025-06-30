@@ -10,7 +10,6 @@ from surrogate_model.visualizer import plot_density_matrix
 
 logging.basicConfig(level=logging.INFO)
 
-
 def visualize_force_comparison(
     force_profiles_1: np.ndarray,
     force_profiles_2: np.ndarray,

@@ -252,9 +252,9 @@ class DensitySimulation:
             raise ValueError(
                 "initial_density field values must be between min_density and max_density.",
             )
-        if not (0 < self.dt <= self.time_steps):
+        if not (self.dt > 0):
             raise ValueError(
-                "dt must be a positive number and less than or equal to time_steps.",
+                "dt must be a positive number.",
             )
         if not (self.time_steps <= 1000):
             logging.warning(
@@ -286,7 +286,7 @@ class DensitySimulation:
         This function initializes the mesh based on the dimensions of the initial density profile,
         and creates the necessary function spaces for the simulation.
         """
-        self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
+        self.mesh = UnitSquareMesh(self.n_columns, self.n_rows, "left")
         self.displacement_space = VectorFunctionSpace(self.mesh, "P", 1)
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
@@ -311,10 +311,10 @@ class DensitySimulation:
         xs = centroids[:, 0]
         ys = centroids[:, 1]
 
-        i = np.minimum((ys * self.n_rows).astype(int), self.n_rows - 1)
-        j = np.minimum((xs * self.n_columns).astype(int), self.n_columns - 1)
+        self.mesh_i = np.minimum((ys * (self.n_rows - 1)).astype(int), self.n_rows - 1)
+        self.mesh_j = np.minimum((xs * (self.n_columns - 1)).astype(int), self.n_columns - 1)
 
-        self.current_density = self.initial_density_field[i, j]
+        self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.convergence_flags = np.zeros(self.num_cells, dtype=bool)
 
     def _setup_boundary_conditions(self) -> None:
@@ -598,46 +598,62 @@ class DensitySimulation:
             return True
         return False
 
+    def step(self) -> None:
+        """Run a single step of the simulation.
+
+        This method solves the elasticity problem, updates the density, and checks for convergence.
+        It is intended to be called repeatedly to advance the simulation in time steps.
+        """
+        self.elasticity_solver.solve()
+        self._update_density()
+        self._update_material_properties()
+
     def run(self) -> None:
         """Run the full simulation loop."""
-        time = 0.0
-        while time <= self.total_time:
-            self.elasticity_solver.solve()
-            self._update_density()
-            if self._check_convergence(time):
+        for _ in range(self.time_steps):
+            self.step()
+            if self._check_convergence():
                 break
-
-            self._update_material_properties()
-            time += self.dt
 
         if self.save:
             self._save(self.density_function)
 
-    def _get_final_density(self) -> np.ndarray:
-        """Get the final density profile after the simulation.
+    def reset(self) -> None:
+        """Reset the simulation state to the initial conditions."""
+        self._reset_density()
+        self._update_material_properties()
+        self.displacement.vector().set_local(np.zeros(self.displacement.vector().get_local().shape))
+        self.sed_function.vector().set_local(np.zeros(self.sed_function.vector().get_local().shape))
+        self.displacement.vector().apply("insert")
+        self.sed_function.vector().apply("insert")
 
-        Divided by two as Fenics works with triangular elements and the needed datatype is rectangular.
+    def _reset_density(self) -> None:
+        """Reset the density field to a new initial density field."""
+        self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
+        self.convergence_flags.fill(False)
+
+    def update_force_profile(self, new_force_profile: np.ndarray) -> None:
+        """Update the force profile for the simulation.
+
+        Args:
+        ----
+            new_force_profile (np.ndarray): New force profile matrix with shape (3, n).
+
         """
-        half_size = len(self.current_density) // 2
-        return np.array(self.current_density[:half_size]).reshape(
-            (self.n_rows, self.n_columns),
-        )
-    def get_final_density(self) -> np.ndarray:
+        if new_force_profile.shape != self.force_profile.shape:
+            raise ValueError(
+                "New force profile must have the same shape as the original force profile.",
+            )
+        self.force_profile = new_force_profile
+        self._setup_force_expression()
+
+    def get_density(self) -> np.ndarray:
         """Reconstruct an (n_rows x n_columns) density array by binning the DG0 cell values back onto a structured grid."""
-        centroids = np.array([cell.midpoint().array() for cell in cells(self.mesh)])
-        xs, ys = centroids[:,0], centroids[:,1]
-        i = np.minimum((ys * self.n_rows).astype(int), self.n_rows - 1)
-        j = np.minimum((xs * self.n_columns).astype(int), self.n_columns - 1)
-        density_grid = np.zeros((self.n_rows, self.n_columns))
-        counts       = np.zeros_like(density_grid)
-
-        for k, val in enumerate(self.current_density):
-            density_grid[i[k], j[k]] += val
-            counts[i[k], j[k]] += 1
-
-        density_grid /= counts
-        return density_grid
-
+        density_indices = self.mesh_i * self.n_columns + self.mesh_j
+        flat_grid = np.bincount(density_indices, weights=self.current_density, minlength=self.n_rows*self.n_columns)
+        flat_counts = np.bincount(density_indices, minlength=self.n_rows*self.n_columns)
+        safe_density = np.divide(flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0)
+        return safe_density.reshape(self.n_rows, self.n_columns)
 
     def plot_density(self) -> None:
         """Plot the final density profile using pyvista."""
