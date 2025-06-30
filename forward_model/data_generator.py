@@ -23,42 +23,63 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-# Global variable for per-worker simulation instance
-_worker_sim: Optional[DensitySimulation] = None
+
+_worker_sim       : DensitySimulation
+_worker_rng       : np.random.Generator
+_profile_length   : int
+_force_count_max  : int
+_force_max        : float
 
 
-def init_worker(force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int, dt: float, parameters: Dict[str, Any]) -> None:
-    """Initialize a global DensitySimulation instance for this worker process."""
-    global _worker_sim
-    logging.info("Initializing worker simulation instance...")
+def init_worker(
+    empty_profile: np.ndarray,
+    initial_density: np.ndarray,
+    time_steps: int,
+    dt: float,
+    parameters: dict,
+    batch_seed: int,
+    force_count_max: int,
+    force_max: float,
+) -> None:
+    """Initialize the per‐process simulation and RNG."""
+    global _worker_sim, _worker_rng, _profile_length
+    global _force_count_max, _force_max
+
     _worker_sim = DensitySimulation(
-        force_profile=force_profile,
+        force_profile=empty_profile,
         initial_density_field=initial_density,
         time_steps=time_steps,
         dt=dt,
         parameters=parameters,
     )
-    _worker_sim.step()
 
-def run_sample(args: Tuple[int, np.ndarray]) -> Dict:
-    """Run a single sample simulation with the given force profile.
+    # one RNG per worker, seeded once
+    _worker_rng      = np.random.default_rng(batch_seed)
+    _profile_length  = empty_profile.shape[1]
+    _force_count_max = force_count_max
+    _force_max       = force_max
 
-    Parameters
-    ----------
-    args : Tuple[int, np.ndarray]
-        Tuple containing the sample index and the force profile to apply.
+def run_sample(i: int) -> dict:
+    """Generate one random force profile, run sim, return serialized result."""
+    # 1) build random force_profile
+    profile = np.zeros((3, _profile_length))
+    count   = _worker_rng.integers(1, _force_count_max)
+    flat    = _worker_rng.choice(3*_profile_length, size=count, replace=False)
+    mags    = _worker_rng.uniform(-_force_max, _force_max, size=count)
 
-    """
-    global _worker_sim
-    i, force_profile = args
+    rows, cols = divmod(flat, _profile_length)
+    profile[rows, cols] = mags
+
+    # 2) run the simulation
     _worker_sim.reset()
-    _worker_sim.update_force_profile(force_profile)
+    _worker_sim.update_force_profile(profile)
     _worker_sim.run()
-    density = _worker_sim.get_density()
+    dens = _worker_sim.get_density()
+
     return {
-      "serial_number": i+1,
-      "force_profile": force_profile.tolist(),
-      "final_output_density": density.tolist(),
+        "serial_number": i+1,
+        "force_profile": profile.tolist(),
+        "final_output_density": dens.tolist(),
     }
 
 class TrainingDataGenerator:
@@ -111,6 +132,9 @@ class TrainingDataGenerator:
         self.parameters: Dict[str, Any] | None = self._load_parameters()
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
+        self.empty_force_profile = np.zeros((3, np.max(self.initial_density.shape)))
+        self._rng = np.random.default_rng(batch_seed)
+        self._profile_length = np.max(self.initial_density.shape)
 
     def _load_parameters(self) -> Dict:
         parameters_file = Path(__file__).resolve().parent / "parameters.json"
@@ -141,20 +165,15 @@ class TrainingDataGenerator:
         if not isinstance(self.batch_seed, int):
             raise ValueError("batch_seed must be an integer.")
 
-    def _generate_random_force_profile(self, sample_index: int) -> np.ndarray:
-        np.random.seed(self.batch_seed + sample_index)
-        force_profile = np.zeros((3, np.max(self.initial_density.shape)))
-        self.empty_force_profile = force_profile.copy()
-        num_forces = np.random.randint(1, self.force_count_max)
-        locations = np.random.choice(
-            np.prod(force_profile.shape),
-            num_forces,
-            replace=False,
-        )
-        for loc in locations:
-            row, col = divmod(loc, force_profile.shape[1])
-            force_profile[row, col] = np.random.uniform(-self.force_max, self.force_max)
-        return force_profile
+    def _generate_random_force_profiles(self, num_samples: int) -> np.ndarray:
+        """Efficiently generate the random force profiles."""
+        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
+        for i in range(num_samples):
+            count = self._rng.integers(1, self.force_count_max)
+            if count > 0:
+                idx = self._rng.choice(profiles.shape[1] * profiles.shape[2], size=count, replace=False)
+                profiles[i].flat[idx] = self._rng.uniform(-self.force_max, self.force_max, size=count)
+        return profiles
 
     def generate_parallel(self, num_samples: int) -> None:
         """Generate training data samples in parallel and save them to a JSON file.
@@ -172,9 +191,14 @@ class TrainingDataGenerator:
             self.output_dir
             / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
         )
-
-        sample_args = [(i, self._generate_random_force_profile(i)) for i in range(num_samples)]
-        init_args = (self.empty_force_profile, self.initial_density, self.time_steps, self.dt, self.parameters)
+        init_args = (self.empty_force_profile,
+        self.initial_density,
+        self.time_steps,
+        self.dt,
+        self.parameters,
+        self.batch_seed,
+        self.force_count_max,
+        self.force_max)
         results = []
 
         ctx = get_context("fork")
@@ -185,8 +209,7 @@ class TrainingDataGenerator:
             initargs=init_args
         ) as executor:
             # submit all the jobs
-            futures = [executor.submit(run_sample, args)
-                       for args in sample_args]
+            futures = [executor.submit(run_sample, i) for i in range(num_samples)]
 
             # as each finishes, collect and log progress
             for idx, fut in enumerate(as_completed(futures), 1):
@@ -210,32 +233,41 @@ class TrainingDataGenerator:
 
         """
         timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
-        filepath = (
-            self.output_dir
-            / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+        filepath = self.output_dir / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
+
+        # -- build a single simulation up front, with a dummy force_profile --
+        empty_profile = np.zeros((3, np.max(self.initial_density.shape)))
+        sim = DensitySimulation(
+            force_profile=empty_profile,
+            initial_density_field=self.initial_density,
+            time_steps=self.time_steps,
+            dt=self.dt,
+            parameters=self.parameters,
         )
 
         data = []
+        force_profiles = self._generate_random_force_profiles(num_samples)
         for i in range(num_samples):
-            force_profile = self._generate_random_force_profile(i)
-            start = datetime.datetime.now() if i == 1 else None
-            data_point = self._run_sample((i, force_profile))
-            end = datetime.datetime.now() if i == 11 else None
+            fp = force_profiles[i]
 
-            if start and end:
-                elapsed = (end - start).total_seconds() / 10
-                logging.info(
-                    f"Average time per sample (samples 2 till 11): {elapsed:.4f} seconds",
-                )
+            # reset & rerun rather than re-construct
+            sim.reset()
+            sim.update_force_profile(fp)
+            sim.run()
+            density = sim.get_density()
 
-            data.append(data_point)
+            data.append(self.serialize_data(
+                serial_number=i + 1,
+                force_profile=fp,
+                result=density,
+            ))
 
-            # Progress log
-            progress = (i + 1) / num_samples * 100
-            logging.info(
-                f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%",
-            )
+            # progress logging
+            pct = (i + 1) / num_samples * 100
+            bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
+            logging.info(f"Progress: [{bar}] {pct:.2f}%")
 
+            # occasionally flush partial JSON
             if (i + 1) % 100 == 0 or (i + 1) == num_samples:
                 with open(filepath, "w") as f:
                     json.dump(data, f, indent=4)
@@ -277,3 +309,25 @@ class TrainingDataGenerator:
         if error is not None:
             serialized_data["error"] = error
         return serialized_data
+
+if __name__ == "__main__":
+    import time
+
+    from fenics import LogLevel, set_log_level
+    set_log_level(LogLevel.ERROR)
+    initial_density = np.full((10, 10), 0.8)
+
+    generator = TrainingDataGenerator(
+        output_dir="/home/gijs/Desktop/Thesis/data/raw",
+        initial_density=initial_density,
+        force_max=10,
+        force_count_max=5,
+        batch_seed=0,
+    )
+    start_time = time.time()
+    #generator.generate_sequential(100)
+    generator.generate_parallel(100)
+    stop_time = time.time()
+    elapsed_time = stop_time - start_time
+    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+

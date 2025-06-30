@@ -97,16 +97,16 @@ def main() -> None:
     parser.add_argument(
         "--batch_seed",
         type=int,
-        default=np.random.randint(0, 1_000_000),
+        default=np.random.randint(0, 1_000),
         help="Random seed.",
     )
     parser.add_argument(
         "-m",
         "--mode",
         type=str,
-        choices=["parallel", "sequential", "edge"],
+        choices=["parallel", "sequential"],
         default="parallel",
-        help="Generation mode: 'parallel', 'sequential', or 'edge'.",
+        help="Generation mode: 'parallel' or 'sequential'",
     )
     parser.add_argument(
         "-v",
@@ -129,7 +129,7 @@ def main() -> None:
         initial_density=initial_density,
         force_max=args.force_max,
         force_count_max=args.force_count_max,
-        batch_seed=args.batch_seed,
+        batch_seed= args.batch_seed,
     )
 
     start_time = time.time()
@@ -137,8 +137,6 @@ def main() -> None:
         generator.generate_parallel(args.num_samples)
     elif args.mode == "sequential":
         generator.generate_sequential(args.num_samples)
-    elif args.mode == "edge":
-        generator.generate_edge_cases(args.num_samples)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
