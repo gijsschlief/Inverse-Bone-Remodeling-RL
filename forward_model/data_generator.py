@@ -137,9 +137,9 @@ class TrainingDataGenerator:
         force_profiles = self._generate_random_force_profiles(num_samples)
 
         num_workers = min(cpu_count(), num_samples)
-        chunk_size = (num_samples + num_workers - 1) // num_workers
-
+        chunk_size = min((num_samples + num_workers - 1) // num_workers, 500)
         all_indices = list(range(num_samples))
+
         worker_chunks = [
             [(i, force_profiles[i]) for i in all_indices[start:start + chunk_size]]
             for start in range(0, num_samples, chunk_size)
@@ -168,7 +168,8 @@ class TrainingDataGenerator:
                 batch_results = fut.result()
                 results.extend(batch_results)
                 completed += 1
-                pct = completed / num_workers * 100
+                completed_samples = completed * chunk_size
+                pct = completed_samples / num_samples * 100
                 bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
                 logging.info(f"Progress: [{bar}] {pct:5.1f}%")
 
