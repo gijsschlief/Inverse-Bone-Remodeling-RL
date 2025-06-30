@@ -11,7 +11,7 @@ import os
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count, get_context
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Union
 
 import numpy as np
 from bone_remodeling.forward_model.density_simulation import (
@@ -24,11 +24,12 @@ logging.basicConfig(
 )
 
 
-# at module scope, in addition to what you already have:
-_batch_seed      : int
-_profile_length  : int
-_force_count_max : int
-_force_max       : float
+_worker_sim       : DensitySimulation
+_worker_rng       : np.random.Generator
+_profile_length   : int
+_force_count_max  : int
+_force_max        : float
+
 
 def init_worker(
     empty_profile: np.ndarray,
@@ -40,56 +41,35 @@ def init_worker(
     force_count_max: int,
     force_max: float,
 ) -> None:
-    """Initialize the worker process with a simulation instance and parameters.
+    """Initialize the per‐process simulation and RNG."""
+    global _worker_sim, _worker_rng, _profile_length
+    global _force_count_max, _force_max
 
-    This function is called once per worker process to set up the simulation
-    environment. It initializes a DensitySimulation instance with the provided
-    parameters and sets global variables for use in the run_sample function.
-
-    Parameters
-    ----------
-    empty_profile : np.ndarray
-        An empty force profile to initialize the simulation.
-    initial_density : np.ndarray
-        The initial density field for the simulation.
-    time_steps : int
-        Number of time steps for the simulation.
-    dt : float
-        Time step size for the simulation.
-    parameters : dict
-        Simulation parameters loaded from a JSON file.
-    batch_seed : int
-        Seed for random number generation to ensure reproducibility.
-    force_count_max : int
-        Maximum number of forces to apply in each sample.
-    force_max : float
-        Maximum force magnitude to apply in the simulation.
-
-    """
-    global _worker_sim, _batch_seed, _profile_length, _force_count_max, _force_max
-
-    _worker_sim       = DensitySimulation(
+    _worker_sim = DensitySimulation(
         force_profile=empty_profile,
         initial_density_field=initial_density,
         time_steps=time_steps,
         dt=dt,
         parameters=parameters,
     )
-    _batch_seed       = batch_seed
-    _profile_length   = empty_profile.shape[1]
-    _force_count_max  = force_count_max
-    _force_max        = force_max
+
+    # one RNG per worker, seeded once
+    # Combine batch_seed with worker number to ensure unique RNG per worker
+    worker_id = os.getpid()
+    combined_seed = hash((batch_seed, worker_id)) & 0xFFFFFFFF
+    logging.info(f"Worker initialized with combined seed {combined_seed} (batch_seed={batch_seed}, worker_id={worker_id})")
+    _worker_rng = np.random.default_rng(combined_seed)
+    _profile_length  = empty_profile.shape[1]
+    _force_count_max = force_count_max
+    _force_max       = force_max
 
 def run_sample(i: int) -> dict:
-    """Generate one random force profile (seeded by sample index), run sim, return serialized result."""
-    # re-seed per-sample
-    rng = np.random.default_rng(_batch_seed + i)
-
-    # 1) build force_profile
-    profile = np.zeros((3, _profile_length), dtype=float)
-    count   = rng.integers(1, _force_count_max)
-    flat    = rng.choice(3 * _profile_length, size=count, replace=False)
-    mags    = rng.uniform(-_force_max, _force_max, size=count)
+    """Generate one random force profile, run sim, return serialized result."""
+    # 1) build random force_profile
+    profile = np.zeros((3, _profile_length))
+    count   = _worker_rng.integers(1, _force_count_max)
+    flat    = _worker_rng.choice(3*_profile_length, size=count, replace=False)
+    mags    = _worker_rng.uniform(-_force_max, _force_max, size=count)
 
     rows, cols = divmod(flat, _profile_length)
     profile[rows, cols] = mags
@@ -101,11 +81,10 @@ def run_sample(i: int) -> dict:
     dens = _worker_sim.get_density()
 
     return {
-        "serial_number":       i + 1,
-        "force_profile":       profile.tolist(),
+        "serial_number": i+1,
+        "force_profile": profile.tolist(),
         "final_output_density": dens.tolist(),
     }
-
 
 class TrainingDataGenerator:
     """Class for generating training data for bone remodeling simulations.
@@ -216,6 +195,7 @@ class TrainingDataGenerator:
             self.output_dir
             / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
         )
+
         init_args = (self.empty_force_profile,
         self.initial_density,
         self.time_steps,
