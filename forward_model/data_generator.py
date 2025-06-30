@@ -146,7 +146,6 @@ class TrainingDataGenerator:
 
         return profiles
 
-
     def generate_parallel(self, num_samples: int) -> None:
         """Generate training data in parallel."""
         timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%m%d_%H%M")
@@ -241,7 +240,7 @@ if __name__ == "__main__":
         initial_density=initial_density,
         force_max=10,
         force_count_max=5,
-        batch_seed=0,
+        batch_seed=17534,
     )
     start_time = time.time()
     generator.generate_parallel(1000)
