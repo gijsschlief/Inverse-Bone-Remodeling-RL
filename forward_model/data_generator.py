@@ -137,7 +137,7 @@ class TrainingDataGenerator:
         force_profiles = self._generate_random_force_profiles(num_samples)
 
         num_workers = min(cpu_count(), num_samples)
-        chunk_size = min((num_samples + num_workers - 1) // num_workers, 500)
+        chunk_size = min((num_samples + num_workers - 1) // num_workers, 100)
         all_indices = list(range(num_samples))
 
         worker_chunks = [
