@@ -29,6 +29,8 @@ logging.basicConfig(
 )
 
 
+#TODO: Has become obsolete, remove in future
+
 def forward_model(
     force_profile: np.ndarray,
     initial_density: np.ndarray,

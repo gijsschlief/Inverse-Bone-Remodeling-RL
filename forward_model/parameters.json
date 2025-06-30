@@ -1,3 +1,5 @@
 {
-    "time_steps": 100
+    "time_steps": 100,
+    "very_verbose": false,
+    "very_very_verbose": true
 }

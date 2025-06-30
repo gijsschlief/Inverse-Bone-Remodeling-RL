@@ -635,7 +635,7 @@ class DensitySimulation:
             )
         self.force_profile = new_force_profile
         self._update_force_expression()
-    
+
     def _update_force_expression(self) -> None:
         """Update the force expressions based on the new force profile."""
         self.top_force_expr.__dict__["cppcode"] = self._build_force_expression(

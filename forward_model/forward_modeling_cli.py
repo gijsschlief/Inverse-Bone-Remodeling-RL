@@ -34,7 +34,7 @@ Options:
     --reset                           Reset parameters to default by deleting parameters.json.
     --save                            Save the simulation results.
     -p, --plot                        Plot the density simulation.
-    -v, --verbose                     Enable verbose output.
+    -v, --verbose                     Enable verbose output (different levels available).
 
 """
 
@@ -46,20 +46,13 @@ import time
 from pathlib import Path
 
 import numpy as np
-from bone_remodeling.forward_model.forward_modeling import forward_model
+from bone_remodeling.forward_model.density_simulation import DensitySimulation
 from fenics import LogLevel, set_log_level  # type: ignore
 
-
-def setup_logging(verbose: bool) -> None:
-    """Set up logging based on verbosity."""
-    if verbose:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s - %(levelname)s - %(message)s",
-        )
-    else:
-        logging.basicConfig(level=logging.WARNING, format="%(message)s")
-
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
+)
 
 def main() -> None:
     """Run the forward bone remodeling simulation.
@@ -185,13 +178,25 @@ def main() -> None:
         help="Enable verbose output.",
     )
 
+    parser.add_argument(
+        "-vv",
+        "--very-verbose",
+        action="store_true",
+        help="Enable very verbose output.",
+    )
+
+    parser.add_argument(
+        "-vvv",
+        "--very_very_verbose",
+        action="store_true",
+        help="Enable very very verbose output.",
+    )
+
     args = parser.parse_args()
 
     # Set saving to true if plotting is enabled
     if args.plot:
         args.save = True
-
-    setup_logging(args.verbose)
 
     parameters_file = Path(__file__).resolve().parent / "parameters.json"
 
@@ -204,9 +209,19 @@ def main() -> None:
         return None
 
     # Initialize logging based on verbosity
-    if args.verbose:
+    if args.very_very_verbose:
+        set_log_level(LogLevel.TRACE)  # Set FEniCS log level to TRACE
+        args.verbose = True
         logging.info("Initializing force profile and parameters...")
-    set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
+    elif args.very_verbose:
+        set_log_level(LogLevel.INFO)  # Set FEniCS log level to INFO
+        args.verbose = True
+        logging.info("Initializing force profile and parameters...")
+    elif args.verbose:
+        logging.info("Initializing force profile and parameters...")
+        set_log_level(LogLevel.ERROR)
+    else:
+        set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
 
     initial_density = np.full((args.n_rows, args.n_columns), args.initial_density_value)
 
@@ -282,22 +297,31 @@ def main() -> None:
 
     logging.info("Running forward model simulation...")
     start_time = time.time()
-    final_density = forward_model(
-        force_profile,
-        initial_density,
-        parameters.get("time_steps", 100),
-        parameters.get("dt", 1.0),
-        parameters,
+
+    simulation = DensitySimulation(
+        force_profile=force_profile,
+        initial_density_field=initial_density,
+        time_steps=parameters.get("time_steps", 100),
+        dt=parameters.get("dt", 1.0),
+        parameters=parameters,
     )
+    simulation.run()
+
+    final_density = simulation.get_density()
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
-    # Log less information if verbose is not enabled
+
+    # Log force profile and final density
     if args.verbose:
         logging.info("Force Profile: %s", force_profile)
 
     logging.info("Final Density: %s", final_density)
+
+    # plot if enabled
+    if isinstance(parameters, dict) and parameters.get("plot", False):
+        simulation.plot_density()
     return sys.exit(0)
 
 
