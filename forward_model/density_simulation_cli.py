@@ -1,12 +1,12 @@
-"""Command line interface for running the forward model simulation.
+"""Command line interface for running the density simulation.
 
-This script allows users to run the forward model simulation with various parameters
+This script allows users to run the density simulation with various parameters
 and options for force profiles, density profiles, and output settings.
 It supports command line arguments for flexibility and ease of use.
 
 Usage:
 -----
-    python forward_modeling_cli.py [options]
+    python density_simulation_cli.py [options]
 
 Options:
     --time_steps <int>                Number of time steps for the simulation.
