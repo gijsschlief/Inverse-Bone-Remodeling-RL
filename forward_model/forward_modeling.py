@@ -79,5 +79,5 @@ def forward_model(
         simulation.plot_density()
 
     # Convert the final density function to a NumPy array
-    final_density = simulation.get_final_density()
+    final_density = simulation.get_density()
     return final_density
