@@ -116,15 +116,36 @@ class TrainingDataGenerator:
             raise ValueError("batch_seed must be an integer.")
 
     def _generate_random_force_profiles(self, num_samples: int) -> np.ndarray:
-        """Generate all random force profiles once."""
+        """Generate all random force profiles in a fully vectorized way."""
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
-        rng_count, rng_choice, rng_uniform = self._rng.spawn(3)
-        for i in range(num_samples):
-            count = rng_count.integers(1, self.force_count_max)
+        total_elements = profiles.shape[1] * profiles.shape[2]
+
+        rng = self._rng  # Use a single RNG (already seeded from batch_seed)
+
+        # How many non-zero forces per sample?
+        counts = rng.integers(1, self.force_count_max, size=num_samples)
+        total_forces = np.sum(counts)
+
+        # Flat indices for force assignment
+        all_indices = rng.choice(
+            total_elements,
+            size=total_forces,
+            replace=True  # reuse allowed across different samples
+        )
+
+        # Random force values
+        all_forces = rng.uniform(-self.force_max, self.force_max, size=total_forces)
+
+        # Assign values back to profiles
+        flat_profiles = profiles.reshape(num_samples, -1)
+        pointer = 0
+        for i, count in enumerate(counts):
             if count > 0:
-                idx = rng_choice.choice(profiles.shape[1] * profiles.shape[2], size=count, replace=False)
-                profiles[i].flat[idx] = rng_uniform.uniform(-self.force_max, self.force_max, size=count)
+                flat_profiles[i, all_indices[pointer:pointer+count]] = all_forces[pointer:pointer+count]
+                pointer += count
+
         return profiles
+
 
     def generate_parallel(self, num_samples: int) -> None:
         """Generate training data in parallel."""
