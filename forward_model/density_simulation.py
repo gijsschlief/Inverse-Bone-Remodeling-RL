@@ -611,13 +611,13 @@ class DensitySimulation:
 
     def reset(self) -> None:
         """Reset the simulation state to the initial conditions."""
-        self.density_function.vector().zero()
         self.displacement.vector().zero()
         self.sed_function.vector().zero()
         self.elasticity_modulus_function.vector().zero()
         self.shear_function.vector().zero()
         self.lame_function.vector().zero()
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
+        self.density_function.vector().set_local(self.current_density.copy())
         self.convergence_flags.fill(False)
         self._update_material_properties()
 
@@ -635,18 +635,20 @@ class DensitySimulation:
             )
         self.force_profile = new_force_profile
         self._update_force_expression()
+        self._initialize_load_form()
+        self._initialize_solver()
 
     def _update_force_expression(self) -> None:
         """Update the force expressions based on the new force profile."""
-        self.top_force_expr.__dict__["cppcode"] = self._build_force_expression(
+        self.top_force_expr = self._build_force_expression(
             self.force_profile[0],
             axis="x",
         )
-        self.right_force_expr.__dict__["cppcode"] = self._build_force_expression(
+        self.right_force_expr = self._build_force_expression(
             self.force_profile[1],
             axis="y",
         )
-        self.left_force_expr.__dict__["cppcode"] = self._build_force_expression(
+        self.left_force_expr = self._build_force_expression(
             self.force_profile[2],
             axis="y",
         )

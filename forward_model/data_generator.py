@@ -8,7 +8,8 @@ import datetime
 import json
 import logging
 import os
-from multiprocessing import Pool, cpu_count
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from multiprocessing import cpu_count, get_context
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, Union
 
@@ -29,6 +30,7 @@ _worker_sim: Optional[DensitySimulation] = None
 def init_worker(force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int, dt: float, parameters: Dict[str, Any]) -> None:
     """Initialize a global DensitySimulation instance for this worker process."""
     global _worker_sim
+    logging.info("Initializing worker simulation instance...")
     _worker_sim = DensitySimulation(
         force_profile=force_profile,
         initial_density_field=initial_density,
@@ -36,7 +38,28 @@ def init_worker(force_profile: np.ndarray, initial_density: np.ndarray, time_ste
         dt=dt,
         parameters=parameters,
     )
+    _worker_sim.step()
+
+def run_sample(args: Tuple[int, np.ndarray]) -> Dict:
+    """Run a single sample simulation with the given force profile.
+
+    Parameters
+    ----------
+    args : Tuple[int, np.ndarray]
+        Tuple containing the sample index and the force profile to apply.
+
+    """
+    global _worker_sim
+    i, force_profile = args
+    _worker_sim.reset()
+    _worker_sim.update_force_profile(force_profile)
     _worker_sim.run()
+    density = _worker_sim.get_density()
+    return {
+      "serial_number": i+1,
+      "force_profile": force_profile.tolist(),
+      "final_output_density": density.tolist(),
+    }
 
 class TrainingDataGenerator:
     """Class for generating training data for bone remodeling simulations.
@@ -133,32 +156,6 @@ class TrainingDataGenerator:
             force_profile[row, col] = np.random.uniform(-self.force_max, self.force_max)
         return force_profile
 
-
-    def _run_sample(self, args: Tuple[int, np.ndarray]) -> Dict:
-        i, force_profile = args
-        error: Optional[str] = None
-        try:
-            global _worker_sim
-            if _worker_sim is None:
-                raise RuntimeError("Worker simulation instance is not initialized.")
-            _worker_sim.reset()
-            _worker_sim.update_force_profile(force_profile)
-            _worker_sim.run()
-            output = _worker_sim.get_density()
-        except Exception as ex:
-            error = str(ex)
-            logging.exception(
-                f"Error in sample {i}: {error} | Force profile: {force_profile}"
-            )
-            output = np.full_like(self.initial_density, np.nan)  # Default output on error
-
-        return self.serialize_data(
-            serial_number=i + 1,
-            force_profile=force_profile,
-            result=output,
-            error=error,
-        )
-
     def generate_parallel(self, num_samples: int) -> None:
         """Generate training data samples in parallel and save them to a JSON file.
 
@@ -176,22 +173,28 @@ class TrainingDataGenerator:
             / f"training_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
         )
 
-        args = [(i, self._generate_random_force_profile(i)) for i in range(num_samples)]
+        sample_args = [(i, self._generate_random_force_profile(i)) for i in range(num_samples)]
         init_args = (self.empty_force_profile, self.initial_density, self.time_steps, self.dt, self.parameters)
+        results = []
 
-        with Pool(processes=cpu_count(),
-                  initializer=init_worker,
-                  initargs=init_args,) as pool:
-            results = []
-            for idx, result in enumerate(
-                pool.imap_unordered(self._run_sample, args),
-                1,
-            ):
-                results.append(result)
-                progress = (idx / num_samples) * 100
-                logging.info(
-                    f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%",
-                )
+        ctx = get_context("fork")
+        with ProcessPoolExecutor(
+            mp_context=ctx,
+            max_workers=cpu_count(),
+            initializer=init_worker,
+            initargs=init_args
+        ) as executor:
+            # submit all the jobs
+            futures = [executor.submit(run_sample, args)
+                       for args in sample_args]
+
+            # as each finishes, collect and log progress
+            for idx, fut in enumerate(as_completed(futures), 1):
+                res = fut.result()
+                results.append(res)
+                pct = idx / num_samples * 100
+                bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
+                logging.info(f"Progress: [{bar}] {pct:5.1f}%")
 
         with Path.open(filepath, "w") as f:
             json.dump(results, f, indent=4)
