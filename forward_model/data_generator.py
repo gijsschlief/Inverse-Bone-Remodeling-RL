@@ -210,7 +210,7 @@ if __name__ == "__main__":
         batch_seed=0,
     )
     start_time = time.time()
-    generator.generate_parallel(100)
+    generator.generate_parallel(1000)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")

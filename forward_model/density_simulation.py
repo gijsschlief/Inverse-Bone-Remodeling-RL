@@ -26,6 +26,7 @@ from fenics import (  # type: ignore
     Identity,
     LinearVariationalProblem,
     LinearVariationalSolver,
+    LogLevel,
     Measure,
     MeshFunction,
     SubDomain,
@@ -40,6 +41,7 @@ from fenics import (  # type: ignore
     grad,
     inner,
     near,
+    set_log_level,
     solve,
 )
 
@@ -155,6 +157,7 @@ class DensitySimulation:
             parameters (dict[str, Any], optional): Dictionary containing simulation parameters.
 
         """
+        set_log_level(LogLevel.ERROR)
         self._initialize_core_parameters(
             force_profile,
             initial_density_field,
