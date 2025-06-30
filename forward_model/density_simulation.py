@@ -85,10 +85,10 @@ class DensitySimulation:
     -------
         run() -> None:
             Runs the full simulation loop, solving the elasticity problem and updating the density.
-        get_final_density() -> np.ndarray:
-            Returns the final density profile after the simulation.
+        get_density() -> np.ndarray:
+            Returns the density profile as a numpy array.
         plot_density() -> None:
-            Plots the final density profile using pyvista.
+            Plots the density profile using pyvista. Only works if pyvista is installed and data is saved.
         _save(to_save_data: Any) -> None:
             Saves specified data to the output directory.
         _check_convergence(time: Optional[float] = None) -> bool:
@@ -256,6 +256,10 @@ class DensitySimulation:
             raise ValueError(
                 "dt must be a positive number.",
             )
+        if not (self.dt < self.total_time):
+            logging.warning(
+                "dt is larger than total_time, which may lead to unexpected behavior.",
+            )
         if not (self.time_steps <= 1000):
             logging.warning(
                 "time_steps is set to a high value, which may lead to long computation times.",
@@ -286,7 +290,7 @@ class DensitySimulation:
         This function initializes the mesh based on the dimensions of the initial density profile,
         and creates the necessary function spaces for the simulation.
         """
-        self.mesh = UnitSquareMesh(self.n_columns, self.n_rows, "left")
+        self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
         self.displacement_space = VectorFunctionSpace(self.mesh, "P", 1)
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
@@ -311,8 +315,8 @@ class DensitySimulation:
         xs = centroids[:, 0]
         ys = centroids[:, 1]
 
-        self.mesh_i = np.minimum((ys * (self.n_rows - 1)).astype(int), self.n_rows - 1)
-        self.mesh_j = np.minimum((xs * (self.n_columns - 1)).astype(int), self.n_columns - 1)
+        self.mesh_i = np.minimum((ys * self.n_rows).astype(int), self.n_rows-1)
+        self.mesh_j = np.minimum((xs * self.n_columns).astype(int), self.n_columns-1)
 
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.convergence_flags = np.zeros(self.num_cells, dtype=bool)
@@ -624,8 +628,10 @@ class DensitySimulation:
         self._update_material_properties()
         self.displacement.vector().set_local(np.zeros(self.displacement.vector().get_local().shape))
         self.sed_function.vector().set_local(np.zeros(self.sed_function.vector().get_local().shape))
+        self.density_function.vector().set_local(np.zeros_like(self.density_function.vector().get_local()))
         self.displacement.vector().apply("insert")
         self.sed_function.vector().apply("insert")
+        self.density_function.vector().apply("insert")
 
     def _reset_density(self) -> None:
         """Reset the density field to a new initial density field."""
