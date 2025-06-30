@@ -43,11 +43,10 @@ def init_worker(
 
     _profile_length = empty_profile.shape[1]
 
-
-def run_batch(batch_args: list[tuple[int, np.ndarray]]) -> list[dict]:
-    """Run a batch of simulations."""
+def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> list[dict]:
+    """Run a batch of simulations in a worker process."""
     results = []
-    for i, profile in batch_args:
+    for i, profile in worker_args:
         _worker_sim.reset()
         _worker_sim.update_force_profile(profile)
         _worker_sim.run()
@@ -127,8 +126,8 @@ class TrainingDataGenerator:
                 profiles[i].flat[idx] = rng_uniform.uniform(-self.force_max, self.force_max, size=count)
         return profiles
 
-    def generate_parallel(self, num_samples: int, batch_size: int = 10) -> None:
-        """Generate samples in parallel using pre-generated force profiles."""
+    def generate_parallel(self, num_samples: int) -> None:
+        """Generate training data in parallel."""
         timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime("%m%d_%H%M")
         filepath = (
             self.output_dir
@@ -137,11 +136,13 @@ class TrainingDataGenerator:
 
         force_profiles = self._generate_random_force_profiles(num_samples)
 
-        # Prepare batches
+        num_workers = min(cpu_count(), num_samples)
+        chunk_size = (num_samples + num_workers - 1) // num_workers
+
         all_indices = list(range(num_samples))
-        batches = [
-            [(i, force_profiles[i]) for i in all_indices[start:start + batch_size]]
-            for start in range(0, num_samples, batch_size)
+        worker_chunks = [
+            [(i, force_profiles[i]) for i in all_indices[start:start + chunk_size]]
+            for start in range(0, num_samples, chunk_size)
         ]
 
         init_args = (
@@ -153,22 +154,21 @@ class TrainingDataGenerator:
         )
         results = []
 
-        ctx = get_context("fork")
+        ctx = get_context("spawn")  # safer for FEniCS + native libs
         with ProcessPoolExecutor(
             mp_context=ctx,
-            max_workers=cpu_count(),
+            max_workers=num_workers,
             initializer=init_worker,
             initargs=init_args,
         ) as executor:
-            futures = [executor.submit(run_batch, batch) for batch in batches]
+            futures = [executor.submit(run_worker_batches, chunk) for chunk in worker_chunks]
 
             completed = 0
-            total_batches = len(batches)
             for fut in as_completed(futures):
                 batch_results = fut.result()
                 results.extend(batch_results)
                 completed += 1
-                pct = completed / total_batches * 100
+                pct = completed / num_workers * 100
                 bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
                 logging.info(f"Progress: [{bar}] {pct:5.1f}%")
 
