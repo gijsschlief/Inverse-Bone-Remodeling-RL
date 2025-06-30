@@ -10,17 +10,33 @@ import logging
 import os
 from multiprocessing import Pool, cpu_count
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, Optional, Tuple, Union
 
 import numpy as np
-
-from forward_model.forward_modeling import forward_model  # type: ignore
+from bone_remodeling.forward_model.density_simulation import (
+    DensitySimulation,  # type: ignore
+)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+# Global variable for per-worker simulation instance
+_worker_sim: Optional[DensitySimulation] = None
+
+
+def init_worker(force_profile: np.ndarray, initial_density: np.ndarray, time_steps: int, dt: float, parameters: Dict[str, Any]) -> None:
+    """Initialize a global DensitySimulation instance for this worker process."""
+    global _worker_sim
+    _worker_sim = DensitySimulation(
+        force_profile=force_profile,
+        initial_density_field=initial_density,
+        time_steps=time_steps,
+        dt=dt,
+        parameters=parameters,
+    )
+    _worker_sim.run()
 
 class TrainingDataGenerator:
     """Class for generating training data for bone remodeling simulations.
@@ -66,10 +82,9 @@ class TrainingDataGenerator:
         self.batch_seed: int = batch_seed
         self.time_steps: int = 100
         self.dt: float = 1.0
-        if initial_density is None:
-            self.initial_density: np.ndarray = np.full((10, 10), 0.8)
-        else:
-            self.initial_density: np.ndarray = initial_density
+        self.initial_density: np.ndarray = (
+            np.full((10, 10), 0.8) if initial_density is None else initial_density
+        )
         self.parameters: Dict[str, Any] | None = self._load_parameters()
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
@@ -106,6 +121,7 @@ class TrainingDataGenerator:
     def _generate_random_force_profile(self, sample_index: int) -> np.ndarray:
         np.random.seed(self.batch_seed + sample_index)
         force_profile = np.zeros((3, np.max(self.initial_density.shape)))
+        self.empty_force_profile = force_profile.copy()
         num_forces = np.random.randint(1, self.force_count_max)
         locations = np.random.choice(
             np.prod(force_profile.shape),
@@ -117,29 +133,30 @@ class TrainingDataGenerator:
             force_profile[row, col] = np.random.uniform(-self.force_max, self.force_max)
         return force_profile
 
+
     def _run_sample(self, args: Tuple[int, np.ndarray]) -> Dict:
         i, force_profile = args
-        e = None
+        error: Optional[str] = None
         try:
-            output = forward_model(
-                force_profile,
-                self.initial_density,
-                self.time_steps,
-                self.dt,
-                self.parameters,
-            )
+            global _worker_sim
+            if _worker_sim is None:
+                raise RuntimeError("Worker simulation instance is not initialized.")
+            _worker_sim.reset()
+            _worker_sim.update_force_profile(force_profile)
+            _worker_sim.run()
+            output = _worker_sim.get_density()
         except Exception as ex:
-            e = ex
+            error = str(ex)
             logging.exception(
-                f"Error in sample {i}: {e} | Force profile: {force_profile}"
+                f"Error in sample {i}: {error} | Force profile: {force_profile}"
             )
-            output = np.full(self.initial_density.shape, np.nan)
+            output = np.full_like(self.initial_density, np.nan)  # Default output on error
 
         return self.serialize_data(
             serial_number=i + 1,
             force_profile=force_profile,
             result=output,
-            error=str(e) if e else None,
+            error=error,
         )
 
     def generate_parallel(self, num_samples: int) -> None:
@@ -160,8 +177,11 @@ class TrainingDataGenerator:
         )
 
         args = [(i, self._generate_random_force_profile(i)) for i in range(num_samples)]
+        init_args = (self.empty_force_profile, self.initial_density, self.time_steps, self.dt, self.parameters)
 
-        with Pool(processes=cpu_count()) as pool:
+        with Pool(processes=cpu_count(),
+                  initializer=init_worker,
+                  initargs=init_args,) as pool:
             results = []
             for idx, result in enumerate(
                 pool.imap_unordered(self._run_sample, args),
@@ -218,71 +238,6 @@ class TrainingDataGenerator:
                     json.dump(data, f, indent=4)
 
         logging.info(f"Training data saved to {filepath}")
-
-    def _generate_edge_case_profiles(self, num_cases: int) -> List[np.ndarray]:
-        edge_cases = []
-        rng = np.random.default_rng(self.batch_seed)
-        shape = (3, np.max(self.initial_density.shape))
-
-        for i in range(num_cases):
-            if i % 5 == 0:
-                edge_cases.append(np.zeros(shape))
-            elif i % 5 == 1:
-                profile = np.zeros(shape)
-                r, c = rng.integers(0, 3), rng.integers(0, shape[1])
-                profile[r, c] = self.force_max
-                edge_cases.append(profile)
-            elif i % 5 == 2:
-                edge_cases.append(rng.uniform(-self.force_max, self.force_max, shape))
-            elif i % 5 == 3:
-                profile = np.array(
-                    [
-                        [(-1) ** (r + c) * self.force_max for c in range(shape[1])]
-                        for r in range(3)
-                    ],
-                )
-                edge_cases.append(profile)
-            elif i % 5 == 4:
-                profile = np.zeros(shape)
-                for _ in range(rng.integers(1, 5)):
-                    r, c = rng.integers(0, 3), rng.integers(0, shape[1])
-                    profile[r, c] = self.force_max
-                edge_cases.append(profile)
-        return edge_cases
-
-    def generate_edge_cases(self, num_samples: int) -> None:
-        """Generate edge case training data samples and save them to a JSON file.
-
-        Parameters
-        ----------
-        num_samples : int
-            The number of edge case training data samples to generate.
-
-        """
-        timestamp = datetime.datetime.now().strftime("%m%d_%H%M")
-        filepath = (
-            self.output_dir
-            / f"edge_case_batch_{self.batch_seed}_samples_{num_samples}_{timestamp}.json"
-        )
-
-        force_profiles = self._generate_edge_case_profiles(num_samples)
-        args = [(i, force_profiles[i]) for i in range(num_samples)]
-
-        with Pool(processes=cpu_count()) as pool:
-            results = []
-            for idx, result in enumerate(
-                pool.imap_unordered(self._run_sample, args),
-                1,
-            ):
-                results.append(result)
-                progress = (idx / num_samples) * 100
-                logging.info(
-                    f"Progress: [{'#' * int(progress // 2)}{'.' * (50 - int(progress // 2))}] {progress:.2f}%",
-                )
-
-        with open(filepath, "w") as f:
-            json.dump(results, f, indent=4)
-        logging.info(f"Edge case data saved to {filepath}")
 
     @staticmethod
     def serialize_data(

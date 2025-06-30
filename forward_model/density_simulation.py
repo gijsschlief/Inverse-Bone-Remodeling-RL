@@ -601,9 +601,9 @@ class DensitySimulation:
 
     def run(self) -> None:
         """Run the full simulation loop."""
-        for _ in range(self.time_steps):
+        for time in range(self.time_steps):
             self.step()
-            if self._check_convergence():
+            if self._check_convergence(time):
                 break
 
         if self.save:
@@ -611,12 +611,12 @@ class DensitySimulation:
 
     def reset(self) -> None:
         """Reset the simulation state to the initial conditions."""
-        self.density_function.assign(Constant(0))
-        self.displacement.assign(Constant(0))
-        self.sed_function.assign(Constant(0))
-        self.elasticity_modulus_function.assign(Constant(0))
-        self.shear_function.assign(Constant(0))
-        self.lame_function.assign(Constant(0))
+        self.density_function.vector().zero()
+        self.displacement.vector().zero()
+        self.sed_function.vector().zero()
+        self.elasticity_modulus_function.vector().zero()
+        self.shear_function.vector().zero()
+        self.lame_function.vector().zero()
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.convergence_flags.fill(False)
         self._update_material_properties()
