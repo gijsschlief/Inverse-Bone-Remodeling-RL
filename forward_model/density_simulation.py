@@ -587,10 +587,7 @@ class DensitySimulation:
 
     def _check_convergence(self, time: Optional[float] = None) -> bool:
         """Return True if simulation converged by checking the cells."""
-        if np.all(self.convergence_flags):
-            logging.info("Simulation converged early at time step %s", time)
-            return True
-        return False
+        return bool(np.all(self.convergence_flags))
 
     def step(self) -> None:
         """Run a single step of the simulation.

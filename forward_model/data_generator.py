@@ -137,9 +137,22 @@ class TrainingDataGenerator:
         force_profiles = self._generate_random_force_profiles(num_samples)
 
         num_workers = min(cpu_count(), num_samples)
-        chunk_size = min((num_samples + num_workers - 1) // num_workers, 100)
+        max_chunk_size = 10
         all_indices = list(range(num_samples))
 
+        # Always respect max_chunk_size
+        chunk_size = min(
+            (num_samples + num_workers - 1) // num_workers,
+            max_chunk_size
+        )
+
+        if chunk_size == max_chunk_size:
+            logging.warning(
+                f"Chunk size capped at max_chunk_size={max_chunk_size}. "
+                f"This may result in more tasks than workers."
+            )
+
+        # Create the chunks with max_chunk_size
         worker_chunks = [
             [(i, force_profiles[i]) for i in all_indices[start:start + chunk_size]]
             for start in range(0, num_samples, chunk_size)
@@ -154,7 +167,7 @@ class TrainingDataGenerator:
         )
         results = []
 
-        ctx = get_context("spawn")  # safer for FEniCS + native libs
+        ctx = get_context("spawn")  # safer with FEniCS
         with ProcessPoolExecutor(
             mp_context=ctx,
             max_workers=num_workers,
@@ -163,12 +176,11 @@ class TrainingDataGenerator:
         ) as executor:
             futures = [executor.submit(run_worker_batches, chunk) for chunk in worker_chunks]
 
-            completed = 0
+            completed_samples = 0
             for fut in as_completed(futures):
                 batch_results = fut.result()
                 results.extend(batch_results)
-                completed += 1
-                completed_samples = completed * chunk_size
+                completed_samples += len(batch_results)
                 pct = completed_samples / num_samples * 100
                 bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
                 logging.info(f"Progress: [{bar}] {pct:5.1f}%")
