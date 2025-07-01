@@ -164,7 +164,7 @@ class TrainingDataGenerator:
         force_profiles = self._generate_random_force_profiles(num_samples)
 
         num_workers = min(cpu_count(), num_samples)
-        max_chunk_size = 40
+        max_chunk_size = 10
         all_indices = list(range(num_samples))
 
         # Always respect max_chunk_size
@@ -194,9 +194,9 @@ class TrainingDataGenerator:
         )
         results = []
 
-        #ctx = get_context("fork")  # safer with FEniCS
-        #mp_context = get_context("spawn")  # safer with FEniCS
+        ctx = get_context("fork")
         with ProcessPoolExecutor(
+            mp_context=ctx,
             max_workers=num_workers,
             initializer=init_worker,
             initargs=init_args,
