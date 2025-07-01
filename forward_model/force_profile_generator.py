@@ -22,7 +22,9 @@ class ForceProfileGenerator:
         self._profile_length = profile_length
         self._rng = np.random.default_rng(batch_seed)
 
-    def random(self, num_samples: int, force_count_max: int = 5, force_max: float = 10.0) -> np.ndarray:
+    def random(
+        self, num_samples: int, force_count_max: int = 5, force_max: float = 10.0
+    ) -> np.ndarray:
         """Generate all random force profiles in a fully vectorized way."""
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
         total_elements = profiles.shape[1] * profiles.shape[2]
@@ -39,9 +41,7 @@ class ForceProfileGenerator:
         )
 
         # Random force values
-        all_forces = self._rng.uniform(
-            -force_max, self.force_max, size=total_forces
-        )
+        all_forces = self._rng.uniform(-force_max, self.force_max, size=total_forces)
 
         # Assign values back to profiles
         flat_profiles = profiles.reshape(num_samples, -1)

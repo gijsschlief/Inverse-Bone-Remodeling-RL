@@ -181,7 +181,10 @@ class TrainingDataGenerator:
 
         # Create the chunks with max_chunk_size
         worker_chunks = [
-            [(i, self.force_profiles[i]) for i in all_indices[start : start + chunk_size]]
+            [
+                (i, self.force_profiles[i])
+                for i in all_indices[start : start + chunk_size]
+            ]
             for start in range(0, self.num_samples, chunk_size)
         ]
 
@@ -242,6 +245,8 @@ if __name__ == "__main__":
 
     initial_density = np.full((10, 10), 0.8)
 
+    logging.info("Generating force profiles...")
+
     force_profile_generator = ForceProfileGenerator(
         profile_length=10, batch_seed=np.random.randint(0, 1_000_000)
     )
@@ -250,6 +255,8 @@ if __name__ == "__main__":
         force_max=10,
         force_count_max=5,
     )
+
+    logging.info("Running forward model simulations...")
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
