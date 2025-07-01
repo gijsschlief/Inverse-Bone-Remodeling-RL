@@ -55,13 +55,14 @@ class ForceProfileGenerator:
 
         return profiles
 
-    def triangular(self, num_samples: int) -> np.ndarray:
+    # TODO: FIX TRIANGULAR AND SQUARE PROFILES AND RUN FOR 100.000 samples
+    def triangular(self, num_samples: int, force_max: float = 10.0) -> np.ndarray:
         """Generate triangular force profiles."""
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
         for i in range(num_samples):
             # Randomly choose a peak position and height
             peak_position = self._rng.integers(0, self._profile_length)
-            peak_height = self._rng.uniform(0, self.force_max)
+            peak_height = self._rng.uniform(0, force_max)
             side = self._rng.choice([0, 1, 2])
 
             # Create a triangular profile
@@ -76,13 +77,13 @@ class ForceProfileGenerator:
                     profiles[i, side, j] = peak_height
         return profiles
 
-    def square(self, num_samples: int) -> np.ndarray:
+    def square(self, num_samples: int, force_max: float = 10.0) -> np.ndarray:
         """Generate square force profiles."""
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
         for i in range(num_samples):
             start_position = self._rng.integers(0, self._profile_length - 1)
             end_position = self._rng.integers(start_position + 1, self._profile_length)
-            height = self._rng.uniform(0, self.force_max)
+            height = self._rng.uniform(0, force_max)
             side = self._rng.choice([0, 1, 2])
 
             profiles[i, side, start_position:end_position] = height

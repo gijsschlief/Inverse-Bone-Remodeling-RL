@@ -225,12 +225,12 @@ class TrainingDataGenerator:
         """Generate training data serially."""
         results = []
         simulation = DensitySimulation(
-                    force_profile=self.empty_force_profile,
-                    initial_density_field=self.initial_density,
-                    time_steps=self.time_steps,
-                    dt=self.dt,
-                    parameters=self.parameters,
-                )
+            force_profile=self.empty_force_profile,
+            initial_density_field=self.initial_density,
+            time_steps=self.time_steps,
+            dt=self.dt,
+            parameters=self.parameters,
+        )
         for i, profile in enumerate(self.force_profiles):
             try:
                 simulation.reset()
@@ -304,7 +304,7 @@ if __name__ == "__main__":
         dt=1.0,
     )
     start_time = time.time()
-    #_ = data_generator.generate_parallel(max_chunk_size=10, force_profile_name="test")
+    # _ = data_generator.generate_parallel(max_chunk_size=10, force_profile_name="test")
     _ = data_generator.generate_serial()
     stop_time = time.time()
 
