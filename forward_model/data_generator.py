@@ -67,7 +67,7 @@ class TrainingDataGenerator:
         initial_density: Union[np.ndarray, None] = None,
         force_max: int = 2,
         force_count_max: int = 7,
-        batch_seed: int = 0,
+        batch_seed: int | None = None,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         os.environ["OMP_NUM_THREADS"]   = "1"
@@ -80,7 +80,7 @@ class TrainingDataGenerator:
         self.output_dir: Path = Path(output_dir)
         self.force_max: int = force_max
         self.force_count_max: int = force_count_max
-        self.batch_seed: int = batch_seed
+        self.batch_seed: int | None = batch_seed
         self.time_steps: int = 100
         self.dt: float = 1.0
         self.initial_density: np.ndarray = (
@@ -90,7 +90,7 @@ class TrainingDataGenerator:
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
         self.empty_force_profile = np.zeros((3, np.max(self.initial_density.shape)))
-        self._rng = np.random.default_rng(batch_seed)
+        self._rng = np.random.default_rng()
         self._profile_length = np.max(self.initial_density.shape)
 
     def _load_parameters(self) -> Dict:
@@ -119,8 +119,6 @@ class TrainingDataGenerator:
             raise ValueError("initial_density must be a numpy ndarray.")
         if not isinstance(self.force_count_max, int) or self.force_count_max <= 0:
             raise ValueError("force_count_max must be a positive integer.")
-        if not isinstance(self.batch_seed, int):
-            raise ValueError("batch_seed must be an integer.")
 
     def _generate_random_force_profiles(self, num_samples: int) -> np.ndarray:
         """Generate all random force profiles in a fully vectorized way."""
@@ -243,7 +241,7 @@ if __name__ == "__main__":
         initial_density=initial_density,
         force_max=10,
         force_count_max=5,
-        batch_seed=np.random.randint(0, 1_000)
+        batch_seed=0,
     )
     start_time = time.time()
     generator.generate_parallel(1000)
