@@ -41,7 +41,7 @@ class ForceProfileGenerator:
         )
 
         # Random force values
-        all_forces = self._rng.uniform(-force_max, self.force_max, size=total_forces)
+        all_forces = self._rng.uniform(-force_max, force_max, size=total_forces)
 
         # Assign values back to profiles
         flat_profiles = profiles.reshape(num_samples, -1)

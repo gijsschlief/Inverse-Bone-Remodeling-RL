@@ -251,9 +251,9 @@ if __name__ == "__main__":
         profile_length=10, batch_seed=np.random.randint(0, 1_000_000)
     )
     force_profiles = force_profile_generator.random(
-        profile_count=100,
-        force_max=10,
+        num_samples=100,
         force_count_max=5,
+        force_max=10.0,
     )
 
     logging.info("Running forward model simulations...")
