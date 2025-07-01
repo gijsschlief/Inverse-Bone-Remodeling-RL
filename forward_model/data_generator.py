@@ -4,6 +4,12 @@ import datetime
 import json
 import logging
 import os
+
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
+
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count, get_context
 from pathlib import Path
@@ -16,6 +22,9 @@ from bone_remodeling.forward_model.density_simulation import (
 from bone_remodeling.forward_model.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
+from fenics import LogLevel, set_log_level
+
+set_log_level(LogLevel.ERROR)
 
 logging.basicConfig(
     level=logging.INFO,
@@ -88,14 +97,6 @@ class TrainingDataGenerator:
         dt: float = 1.0,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
-        os.environ["OMP_NUM_THREADS"] = "1"
-        os.environ["MKL_NUM_THREADS"] = "1"
-        os.environ["OPENBLAS_NUM_THREADS"] = "1"
-
-        from fenics import LogLevel, set_log_level
-
-        set_log_level(LogLevel.ERROR)
-
         self.force_profiles: np.ndarray = force_profiles
         self.output_dir: Path = Path(output_dir)
         self.time_steps = time_steps
@@ -220,6 +221,45 @@ class TrainingDataGenerator:
         logging.info(f"Training data saved to {filepath}")
         return results
 
+    def generate_serial(self) -> list[dict]:
+        """Generate training data serially."""
+        results = []
+        simulation = DensitySimulation(
+                    force_profile=self.empty_force_profile,
+                    initial_density_field=self.initial_density,
+                    time_steps=self.time_steps,
+                    dt=self.dt,
+                    parameters=self.parameters,
+                )
+        for i, profile in enumerate(self.force_profiles):
+            try:
+                simulation.reset()
+                simulation.update_force_profile(profile)
+                simulation.run()
+                density = simulation.get_density()
+                results.append(
+                    {
+                        "serial_number": i + 1,
+                        "force_profile": profile.tolist(),
+                        "final_output_density": density.tolist(),
+                    }
+                )
+            except Exception as e:
+                logging.error(f"Error processing sample {i + 1}: {e}")
+                results.append(
+                    {
+                        "serial_number": i + 1,
+                        "force_profile": profile.tolist(),
+                        "final_output_density": None,
+                        "error": str(e),
+                    }
+                )
+            # Progress bar
+            pct = (i + 1) / self.num_samples * 100
+            bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
+            logging.info(f"Progress: [{bar}] {pct:5.1f}%")
+        return results
+
     @staticmethod
     def serialize_data(
         serial_number: int,
@@ -264,7 +304,9 @@ if __name__ == "__main__":
         dt=1.0,
     )
     start_time = time.time()
-    _ = data_generator.generate_parallel(max_chunk_size=10, force_profile_name="test")
+    #_ = data_generator.generate_parallel(max_chunk_size=10, force_profile_name="test")
+    _ = data_generator.generate_serial()
     stop_time = time.time()
+
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
