@@ -31,14 +31,6 @@ def init_worker(
     parameters: dict,
 ) -> None:
     """Initialize the per-process simulation (no RNG here)."""
-    os.environ["OMP_NUM_THREADS"]   = "1"
-    os.environ["MKL_NUM_THREADS"]   = "1"
-    os.environ["OPENBLAS_NUM_THREADS"] = "1"
-
-
-    from fenics import LogLevel, set_log_level
-    set_log_level(LogLevel.ERROR)
-
     global _worker_sim, _profile_length
 
     _worker_sim = DensitySimulation(
@@ -78,6 +70,13 @@ class TrainingDataGenerator:
         batch_seed: int = 0,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
+        os.environ["OMP_NUM_THREADS"]   = "1"
+        os.environ["MKL_NUM_THREADS"]   = "1"
+        os.environ["OPENBLAS_NUM_THREADS"] = "1"
+
+        from fenics import LogLevel, set_log_level
+        set_log_level(LogLevel.ERROR)
+
         self.output_dir: Path = Path(output_dir)
         self.force_max: int = force_max
         self.force_count_max: int = force_count_max

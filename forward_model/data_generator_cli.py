@@ -20,11 +20,6 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-os.environ["OMP_NUM_THREADS"]   = "1"
-os.environ["MKL_NUM_THREADS"]   = "1"
-os.environ["OPENBLAS_NUM_THREADS"] = "1"
-
-
 def main() -> None:
     """Parse command line arguments and generate training data.
 
