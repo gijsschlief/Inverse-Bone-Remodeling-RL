@@ -164,7 +164,7 @@ class TrainingDataGenerator:
         force_profiles = self._generate_random_force_profiles(num_samples)
 
         num_workers = min(cpu_count(), num_samples)
-        max_chunk_size = 10
+        max_chunk_size = 40
         all_indices = list(range(num_samples))
 
         # Always respect max_chunk_size
@@ -194,8 +194,8 @@ class TrainingDataGenerator:
         )
         results = []
 
-        #ctx = get_context("spawn")  # safer with FEniCS
-        #            mp_context=ctx,
+        #ctx = get_context("fork")  # safer with FEniCS
+        #mp_context = get_context("spawn")  # safer with FEniCS
         with ProcessPoolExecutor(
             max_workers=num_workers,
             initializer=init_worker,
@@ -243,7 +243,7 @@ if __name__ == "__main__":
         initial_density=initial_density,
         force_max=10,
         force_count_max=5,
-        batch_seed=np.random.randint(0, 1_000_000)
+        batch_seed=np.random.randint(0, 1_000)
     )
     start_time = time.time()
     generator.generate_parallel(1000)

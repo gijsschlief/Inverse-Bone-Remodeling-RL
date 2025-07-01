@@ -6,7 +6,6 @@ and generates data in the specified mode (parallel, sequential, or edge cases).
 
 import argparse
 import logging
-import os
 import time
 from pathlib import Path
 
