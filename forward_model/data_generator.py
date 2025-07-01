@@ -244,7 +244,7 @@ if __name__ == "__main__":
         initial_density=initial_density,
         force_max=10,
         force_count_max=5,
-        batch_seed=17534,
+        batch_seed=np.random.randint(0, 1_000_000)
     )
     start_time = time.time()
     generator.generate_parallel(1000)
