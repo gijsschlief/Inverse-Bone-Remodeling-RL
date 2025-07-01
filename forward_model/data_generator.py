@@ -1,4 +1,4 @@
-""" "Data generator for bone remodeling simulations."""
+"""Data generator for bone remodeling simulations."""
 
 import datetime
 import json
@@ -155,7 +155,7 @@ class TrainingDataGenerator:
 
     def generate_parallel(
         self, max_chunk_size: int = 100, force_profile_name: str = "Undefined"
-    ) -> None:
+    ) -> list[dict]:
         """Generate training data in parallel."""
         timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime(
             "%m%d_%H%M"
@@ -181,7 +181,7 @@ class TrainingDataGenerator:
 
         # Create the chunks with max_chunk_size
         worker_chunks = [
-            [(i, force_profiles[i]) for i in all_indices[start : start + chunk_size]]
+            [(i, self.force_profiles[i]) for i in all_indices[start : start + chunk_size]]
             for start in range(0, self.num_samples, chunk_size)
         ]
 
@@ -217,6 +217,7 @@ class TrainingDataGenerator:
         with open(filepath, "w") as f:
             json.dump(results, f, indent=4)
         logging.info(f"Training data saved to {filepath}")
+        return results
 
     @staticmethod
     def serialize_data(
@@ -258,7 +259,7 @@ if __name__ == "__main__":
         dt=1.0,
     )
     start_time = time.time()
-    data_generator.generate_parallel()
+    _ = data_generator.generate_parallel(max_chunk_size=10, force_profile_name="test")
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
