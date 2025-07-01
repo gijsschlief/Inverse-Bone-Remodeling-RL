@@ -6,11 +6,11 @@ and generates data in the specified mode (parallel, sequential, or edge cases).
 
 import argparse
 import logging
+import os
 import time
 from pathlib import Path
 
 import numpy as np
-from fenics import LogLevel, set_log_level  # type: ignore
 
 from forward_model.data_generator import TrainingDataGenerator  # type: ignore
 
@@ -19,7 +19,10 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger(__name__)
+
+os.environ["OMP_NUM_THREADS"]   = "1"
+os.environ["MKL_NUM_THREADS"]   = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
 
 def main() -> None:
@@ -117,11 +120,6 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.verbose:
-        set_log_level(LogLevel.INFO)
-    else:
-        set_log_level(LogLevel.ERROR)
-
     initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
 
     generator = TrainingDataGenerator(
@@ -139,7 +137,7 @@ def main() -> None:
         generator.generate_sequential(args.num_samples)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
-    logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 
 if __name__ == "__main__":
