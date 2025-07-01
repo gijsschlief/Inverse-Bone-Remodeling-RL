@@ -288,9 +288,8 @@ if __name__ == "__main__":
     force_profile_generator = ForceProfileGenerator(
         profile_length=10, batch_seed=np.random.randint(0, 1_000_000)
     )
-    force_profiles = force_profile_generator.random(
-        num_samples=100,
-        force_count_max=5,
+    force_profiles = force_profile_generator.triangular(
+        num_samples=1000,
         force_max=10.0,
     )
 
@@ -304,8 +303,8 @@ if __name__ == "__main__":
         dt=1.0,
     )
     start_time = time.time()
-    # _ = data_generator.generate_parallel(max_chunk_size=10, force_profile_name="test")
-    _ = data_generator.generate_serial()
+    _ = data_generator.generate_parallel(max_chunk_size=40, force_profile_name="triangular")
+    #_ = data_generator.generate_serial()
     stop_time = time.time()
 
     elapsed_time = stop_time - start_time
