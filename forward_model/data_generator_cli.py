@@ -19,6 +19,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+
 def main() -> None:
     """Parse command line arguments and generate training data.
 
@@ -121,7 +122,7 @@ def main() -> None:
         initial_density=initial_density,
         force_max=args.force_max,
         force_count_max=args.force_count_max,
-        batch_seed= args.batch_seed,
+        batch_seed=args.batch_seed,
     )
 
     start_time = time.time()

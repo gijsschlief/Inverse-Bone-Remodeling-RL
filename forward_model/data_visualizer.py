@@ -10,6 +10,7 @@ from surrogate_model.visualizer import plot_density_matrix
 
 logging.basicConfig(level=logging.INFO)
 
+
 def visualize_force_comparison(
     force_profiles_1: np.ndarray,
     force_profiles_2: np.ndarray,
@@ -105,7 +106,7 @@ def main() -> None:
         return
 
     old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_batch_0_samples_1000_0701_0102.json"
+        file_path="/home/gijs/Desktop/Thesis/data/raw/square_long.json"
     )
     if old_data is None:
         logging.error("Failed to load the forward model data.")
@@ -126,9 +127,10 @@ def main() -> None:
             old_final_output_densities[random_index],
             force_profile=old_force_profiles[random_index],
             axis=axes[i // 2, i % 2],
-            title=f"Data at: {random_index}"
+            title=f"Data at: {random_index}",
         )
     plt.show()
+
 
 if __name__ == "__main__":
     main()

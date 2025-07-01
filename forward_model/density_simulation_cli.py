@@ -54,6 +54,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
+
 def main() -> None:
     """Run the forward bone remodeling simulation.
 
@@ -256,7 +257,7 @@ def main() -> None:
         for i in range(max(args.n_rows, args.n_columns)):
             # Default force profile: 15 at the top
             if i < args.n_rows:
-                force_profile[0, i] = 0.4*i
+                force_profile[0, i] = 0.4 * i
 
     # Load existing parameters from JSON file if it exists
     if parameters_file.exists():
@@ -311,7 +312,6 @@ def main() -> None:
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
-
 
     # Log force profile and final density
     if args.verbose:

@@ -314,8 +314,8 @@ class DensitySimulation:
         xs = centroids[:, 0]
         ys = centroids[:, 1]
 
-        self.mesh_i = np.minimum((ys * self.n_rows).astype(int), self.n_rows-1)
-        self.mesh_j = np.minimum((xs * self.n_columns).astype(int), self.n_columns-1)
+        self.mesh_i = np.minimum((ys * self.n_rows).astype(int), self.n_rows - 1)
+        self.mesh_j = np.minimum((xs * self.n_columns).astype(int), self.n_columns - 1)
 
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.convergence_flags = np.zeros(self.num_cells, dtype=bool)
@@ -467,10 +467,12 @@ class DensitySimulation:
 
     def _initialize_solver(self) -> None:
         """Initialize the solver for the elasticity problem."""
-        problem = LinearVariationalProblem(self.stiffness_form,
+        problem = LinearVariationalProblem(
+            self.stiffness_form,
             self.load_form,
             self.displacement,
-            self.boundary_conditions)
+            self.boundary_conditions,
+        )
         solver = LinearVariationalSolver(problem)
         solver.parameters["linear_solver"] = "default"
         solver.parameters["preconditioner"] = "hypre_amg"
@@ -483,21 +485,29 @@ class DensitySimulation:
         """Initialize the projector for the strain energy density (SED)."""
         trial_function_density = TrialFunction(self.cell_density_space)
         self.test_function_density = TestFunction(self.cell_density_space)
-        self.strain_energy_density_form = inner(trial_function_density, self.test_function_density)*dx
+        self.strain_energy_density_form = (
+            inner(trial_function_density, self.test_function_density) * dx
+        )
 
         self.projection_solver_parameters = {
             "linear_solver": "cg",
-            "preconditioner":   "hypre_amg",
+            "preconditioner": "hypre_amg",
             "krylov_solver": {
                 "absolute_tolerance": 1e-10,
                 "relative_tolerance": 1e-10,
-                "maximum_iterations": 1000}}
+                "maximum_iterations": 1000,
+            },
+        }
 
     def _update_material_properties(self) -> None:
         """Update the modulus of elasticity, Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
-        elastic_modulus = self.elastic_modulus_scale * np.power(self.current_density, self.modulus_exponent)
+        elastic_modulus = self.elastic_modulus_scale * np.power(
+            self.current_density, self.modulus_exponent
+        )
         shear_modulus = elastic_modulus / (2 * (1 + self.poisson_ratio))
-        first_lame_parameter = (elastic_modulus * self.poisson_ratio) / ((1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio))
+        first_lame_parameter = (elastic_modulus * self.poisson_ratio) / (
+            (1 + self.poisson_ratio) * (1 - 2 * self.poisson_ratio)
+        )
 
         self.elasticity_modulus_function.vector().set_local(elastic_modulus)
         self.shear_function.vector().set_local(shear_modulus)
@@ -530,8 +540,12 @@ class DensitySimulation:
     ) -> None:
         """Calculate the strain energy density (SED) from the strain and stress tensors."""
         sed_expression = 0.5 * inner(stress_tensor, strain_tensor)
-        linear_sed_form = inner(sed_expression, self.test_function_density)* dx
-        solve(self.strain_energy_density_form == linear_sed_form, self.sed_function, solver_parameters=self.projection_solver_parameters)
+        linear_sed_form = inner(sed_expression, self.test_function_density) * dx
+        solve(
+            self.strain_energy_density_form == linear_sed_form,
+            self.sed_function,
+            solver_parameters=self.projection_solver_parameters,
+        )
 
     def _update_density_change(self) -> None:
         """Calculate the change in density based on the strain energy density (SED).
@@ -545,7 +559,9 @@ class DensitySimulation:
         stimulus = np.zeros_like(density)
 
         # Compute the stimulus and density change for active cells
-        stimulus[active_cells] = strain_energy_density[active_cells] / density[active_cells]
+        stimulus[active_cells] = (
+            strain_energy_density[active_cells] / density[active_cells]
+        )
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
         density[active_cells] = density[active_cells] + self.dt * delta[active_cells]
 
@@ -656,9 +672,17 @@ class DensitySimulation:
     def get_density(self) -> np.ndarray:
         """Reconstruct an (n_rows x n_columns) density array by binning the DG0 cell values back onto a structured grid."""
         density_indices = self.mesh_i * self.n_columns + self.mesh_j
-        flat_grid = np.bincount(density_indices, weights=self.current_density, minlength=self.n_rows*self.n_columns)
-        flat_counts = np.bincount(density_indices, minlength=self.n_rows*self.n_columns)
-        safe_density = np.divide(flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0)
+        flat_grid = np.bincount(
+            density_indices,
+            weights=self.current_density,
+            minlength=self.n_rows * self.n_columns,
+        )
+        flat_counts = np.bincount(
+            density_indices, minlength=self.n_rows * self.n_columns
+        )
+        safe_density = np.divide(
+            flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0
+        )
         return safe_density.reshape(self.n_rows, self.n_columns)
 
     def plot_density(self) -> None:
