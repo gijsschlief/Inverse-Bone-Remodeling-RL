@@ -168,7 +168,6 @@ class TrainingDataGenerator:
         num_workers = min(cpu_count(), self.num_samples)
         all_indices = list(range(self.num_samples))
 
-        # Always respect max_chunk_size
         chunk_size = min(
             (self.num_samples + num_workers - 1) // num_workers, max_chunk_size
         )
@@ -179,7 +178,6 @@ class TrainingDataGenerator:
                 f"This may result in more tasks than workers."
             )
 
-        # Create the chunks with max_chunk_size
         worker_chunks = [
             [
                 (i, self.force_profiles[i])
