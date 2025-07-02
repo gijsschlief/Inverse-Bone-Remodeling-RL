@@ -215,7 +215,6 @@ class DensitySimulation:
         self.output_basename = parameters.get("output_basename", "density_simulation")
         self.file_extension = parameters.get("file_extension", ".pvd")
         self.save = parameters.get("save", False)
-        self.plot = parameters.get("plot", False)
         self.convergence_tolerance = parameters.get("convergence_tolerance", 1e-6)
 
     def _validate_parameters(self) -> None:
@@ -265,8 +264,6 @@ class DensitySimulation:
             )
         if not isinstance(self.save, bool):
             raise TypeError("save must be a boolean value.")
-        if not isinstance(self.plot, bool):
-            raise TypeError("plot must be a boolean value.")
         if (
             not isinstance(self.convergence_tolerance, (int, float))
             or self.convergence_tolerance <= 0
@@ -614,6 +611,8 @@ class DensitySimulation:
         self.elasticity_solver.solve()
         self._update_density()
         self._update_material_properties()
+        if self.save:
+            self._save(self.density_function)
 
     def run(self) -> None:
         """Run the full simulation loop."""
@@ -683,7 +682,7 @@ class DensitySimulation:
         safe_density = np.divide(
             flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0
         )
-        return safe_density.reshape(self.n_rows, self.n_columns)
+        return np.flipud(safe_density.reshape(self.n_rows, self.n_columns))
 
     def plot_density(self) -> None:
         """Plot the final density profile using pyvista."""
@@ -716,3 +715,24 @@ class DensitySimulation:
         except Exception as e:
             logging.exception(f"Failed to plot the result: {e}")
             return
+
+if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+    from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
+    gradient_force_profile = np.arange(30).reshape(3,10) / 100
+    gradient_density = np.arange(100).reshape(10,10) / 100.0 + 0.01
+    parameters: dict = {"save": True, "output_dir": "/home/gijs/Desktop/Thesis/data/fenics", "plot": True}
+
+    simulation = DensitySimulation(
+        force_profile=gradient_force_profile,
+        initial_density_field=gradient_density,
+        time_steps=100,
+        dt=1.0,
+        parameters=parameters,
+    )
+    simulation.step()
+    final_density = simulation.get_density()
+    plot_density_matrix(matrix=final_density, force_profile=gradient_force_profile, title="Test", axis=plt.gca())
+    plt.show()
+    simulation.plot_density()
+
