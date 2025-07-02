@@ -289,7 +289,7 @@ if __name__ == "__main__":
         profile_length=10, batch_seed=np.random.randint(0, 1_000_000)
     )
     force_profiles = force_profile_generator.merger(
-        num_samples=1000,
+        num_samples=20_000,
         force_max=15.0,
     )
 
