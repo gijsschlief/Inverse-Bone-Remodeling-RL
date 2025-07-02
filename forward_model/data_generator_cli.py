@@ -12,6 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from forward_model.data_generator import TrainingDataGenerator  # type: ignore
+from forward_model.force_profile_generator import ForceProfileGenerator # type: ignore
 
 # Configure logging
 logging.basicConfig(
@@ -83,7 +84,7 @@ def main() -> None:
     parser.add_argument(
         "--force_max",
         type=int,
-        default=2,
+        default=15,
         help="Maximum force magnitude.",
     )
     parser.add_argument(
@@ -117,19 +118,25 @@ def main() -> None:
 
     initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
 
-    generator = TrainingDataGenerator(
+    force_profile_generator = ForceProfileGenerator(profile_length=max(args.x_shape, args.y_shape), batch_seed=args.batch_seed)
+    force_profile = force_profile_generator.merger(
+        num_samples=args.num_samples,
+        force_max=args.force_max,
+    )
+
+    data_generator = TrainingDataGenerator(
+        force_profiles=force_profile,
         output_dir=args.output_dir,
         initial_density=initial_density,
-        force_max=args.force_max,
-        force_count_max=args.force_count_max,
-        batch_seed=args.batch_seed,
+        time_steps = 250,
+        dt = 1.0
     )
 
     start_time = time.time()
     if args.mode == "parallel":
-        generator.generate_parallel(args.num_samples)
+        data_generator.generate_parallel(args.num_samples, force_profile_name= "combined")
     elif args.mode == "sequential":
-        generator.generate_sequential(args.num_samples)
+        data_generator.generate_serial(args.num_samples)
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
