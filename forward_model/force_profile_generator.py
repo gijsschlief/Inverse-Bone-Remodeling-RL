@@ -51,11 +51,10 @@ class ForceProfileGenerator:
                 flat_profiles[i, all_indices[pointer : pointer + count]] = all_forces[
                     pointer : pointer + count
                 ]
-                pointer += count
+                pointer += int(count)
 
         return profiles
 
-    # TODO: FIX TRIANGULAR AND SQUARE PROFILES AND RUN FOR 100.000 samples
     def triangular(self, num_samples: int, force_max: float = 10.0) -> np.ndarray:
         """Generate triangular force profiles."""
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
@@ -87,4 +86,20 @@ class ForceProfileGenerator:
             side = self._rng.choice([0, 1, 2])
 
             profiles[i, side, start_position:end_position] = height
+        return profiles
+
+    def gaussian(self, num_samples: int, force_max: float = 10.0) -> np.ndarray:
+        """Generate Gaussian force profiles."""
+        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
+        for i in range(num_samples):
+            mean_position = self._rng.integers(0, self._profile_length)
+            std_dev = self._rng.uniform(1, self._profile_length / 10)
+            height = self._rng.uniform(0, force_max)
+            side = self._rng.choice([0, 1, 2])
+
+            x = np.arange(self._profile_length)
+            gaussian_profile = height * np.exp(
+                -((x - mean_position) ** 2) / (2 * std_dev**2)
+            )
+            profiles[i, side, :] = gaussian_profile
         return profiles

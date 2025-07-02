@@ -303,8 +303,10 @@ if __name__ == "__main__":
         dt=1.0,
     )
     start_time = time.time()
-    _ = data_generator.generate_parallel(max_chunk_size=40, force_profile_name="triangular")
-    #_ = data_generator.generate_serial()
+    _ = data_generator.generate_parallel(
+        max_chunk_size=40, force_profile_name="triangular"
+    )
+    # _ = data_generator.generate_serial()
     stop_time = time.time()
 
     elapsed_time = stop_time - start_time

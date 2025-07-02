@@ -716,12 +716,18 @@ class DensitySimulation:
             logging.exception(f"Failed to plot the result: {e}")
             return
 
+
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
-    gradient_force_profile = np.arange(30).reshape(3,10) / 100
-    gradient_density = np.arange(100).reshape(10,10) / 100.0 + 0.01
-    parameters: dict = {"save": True, "output_dir": "/home/gijs/Desktop/Thesis/data/fenics", "plot": True}
+
+    gradient_force_profile = np.arange(30).reshape(3, 10) / 100
+    gradient_density = np.arange(100).reshape(10, 10) / 100.0 + 0.01
+    parameters: dict = {
+        "save": True,
+        "output_dir": "/home/gijs/Desktop/Thesis/data/fenics",
+        "plot": True,
+    }
 
     simulation = DensitySimulation(
         force_profile=gradient_force_profile,
@@ -732,7 +738,11 @@ if __name__ == "__main__":
     )
     simulation.step()
     final_density = simulation.get_density()
-    plot_density_matrix(matrix=final_density, force_profile=gradient_force_profile, title="Test", axis=plt.gca())
+    plot_density_matrix(
+        matrix=final_density,
+        force_profile=gradient_force_profile,
+        title="Test",
+        axis=plt.gca(),
+    )
     plt.show()
     simulation.plot_density()
-

@@ -325,9 +325,17 @@ def main() -> None:
     )
 
     # TEST IF THE RIGHT WAY IS UP
-    gradient_example = np.arange(100).reshape(10,10)
-    plot_density_matrix(gradient_example / 100, None, "Test Matrix", plt.gca(), color_scale_min=0, color_scale_max=1)
+    gradient_example = np.arange(100).reshape(10, 10)
+    plot_density_matrix(
+        gradient_example / 100,
+        None,
+        "Test Matrix",
+        plt.gca(),
+        color_scale_min=0,
+        color_scale_max=1,
+    )
     plt.show()
+
 
 if __name__ == "__main__":
     main()
