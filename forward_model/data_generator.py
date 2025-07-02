@@ -22,7 +22,7 @@ from bone_remodeling.forward_model.density_simulation import (
 from bone_remodeling.forward_model.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
-from fenics import LogLevel, set_log_level
+from fenics import LogLevel, set_log_level  # type: ignore
 
 set_log_level(LogLevel.ERROR)
 
@@ -288,9 +288,9 @@ if __name__ == "__main__":
     force_profile_generator = ForceProfileGenerator(
         profile_length=10, batch_seed=np.random.randint(0, 1_000_000)
     )
-    force_profiles = force_profile_generator.triangular(
-        num_samples=30_000,
-        force_max=10.0,
+    force_profiles = force_profile_generator.merger(
+        num_samples=1000,
+        force_max=15.0,
     )
 
     logging.info("Running forward model simulations...")
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     )
     start_time = time.time()
     _ = data_generator.generate_parallel(
-        max_chunk_size=40, force_profile_name="triangular"
+        max_chunk_size=40, force_profile_name="combined"
     )
     # _ = data_generator.generate_serial()
     stop_time = time.time()

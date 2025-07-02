@@ -322,7 +322,7 @@ class DensitySimulation:
 
         This function defines the fixed and roller boundary conditions for the mesh.
         The fixed boundary condition is applied to the bottom left corner,
-        while the roller boundary condition is applied to the bottom right corner.
+        while the roller boundary condition is applied to the entire bottom edge.
         """
 
         def bottom_fixed_boundary(x: np.ndarray, on_boundary: bool) -> bool:
@@ -334,7 +334,7 @@ class DensitySimulation:
             )
 
         def bottom_roller_boundary(x: np.ndarray, on_boundary: bool) -> bool:
-            """Check if the point is on the bottom boundary and in the right corner (x=1, y=0)."""
+            """Check if the point is on the bottom boundary and apply roller."""
             return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
 
         boundary_condition_fixed = DirichletBC(
