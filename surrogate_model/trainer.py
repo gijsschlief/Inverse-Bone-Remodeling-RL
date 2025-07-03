@@ -29,10 +29,10 @@ logging.basicConfig(
 )
 
 # Constants
-EPOCHS = 1000
+EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 30
+PATIENCE = 20
 MIN_DELTA = 1e-3
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"

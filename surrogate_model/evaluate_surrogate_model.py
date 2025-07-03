@@ -21,7 +21,7 @@ from surrogate_model.visualizer import plot_surrogate_model
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model_and_normalization_params = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_15.pth",
+        "/home/gijs/Desktop/Thesis/data/models/trained_model.pth",
         ReversedSurrogateModel,
     )
     if model_and_normalization_params is None:

@@ -12,7 +12,7 @@ from pathlib import Path
 import numpy as np
 
 from forward_model.data_generator import TrainingDataGenerator  # type: ignore
-from forward_model.force_profile_generator import ForceProfileGenerator # type: ignore
+from forward_model.force_profile_generator import ForceProfileGenerator  # type: ignore
 
 # Configure logging
 logging.basicConfig(
