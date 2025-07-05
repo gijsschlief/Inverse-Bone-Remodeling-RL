@@ -2,6 +2,7 @@
 
 import logging
 
+import numpy as np
 from bone_remodeling.forward_model.data_reader import forward_data_reader
 from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
@@ -21,7 +22,7 @@ from surrogate_model.visualizer import plot_surrogate_model
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model_and_normalization_params = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model.pth",
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
         ReversedSurrogateModel,
     )
     if model_and_normalization_params is None:
@@ -79,6 +80,24 @@ def main() -> None:
         predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
         true_matrices = unnormalize_data(true_matrices, y_mean, y_std)
 
+    # Find the samples with the largest differences
+    offset = predicted_matrices - true_matrices
+    largest_differences = np.abs(offset).mean(axis=(1, 2)).argsort()[::-1]
+
+    logging.info(f"Largest differences in predicted matrices: {largest_differences}")
+    # Select the top 3 samples with the largest differences
+    bad_plots = 3
+    bad_prediction = predicted_matrices[largest_differences[:bad_plots]]
+    bad_originals = true_matrices[largest_differences[:bad_plots]]
+    bad_forces = x_val_unnormalized[largest_differences[:bad_plots]]
+    plot_surrogate_model(
+        predicted_matrices=bad_prediction,
+        true_matrices=bad_originals,
+        force_profiles=bad_forces,
+        sample_count=bad_plots,
+        show_plot=True,
+    )
+
     average_similarity = average_similarity_score(
         predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"
     )
@@ -89,7 +108,7 @@ def main() -> None:
         predicted_matrices=predicted_matrices,
         true_matrices=true_matrices,
         force_profiles=x_val_unnormalized,
-        sample_count=3,
+        sample_count=6,
         show_plot=True,
     )
     return

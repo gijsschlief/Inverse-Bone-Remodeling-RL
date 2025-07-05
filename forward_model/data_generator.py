@@ -289,7 +289,7 @@ if __name__ == "__main__":
         profile_length=10, batch_seed=np.random.randint(0, 1_000_000)
     )
     force_profiles = force_profile_generator.merger(
-        num_samples=20_000,
+        num_samples=30_000,
         force_max=15.0,
     )
 
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     )
     start_time = time.time()
     _ = data_generator.generate_parallel(
-        max_chunk_size=40, force_profile_name="combined"
+        max_chunk_size=500, force_profile_name="combined"
     )
     # _ = data_generator.generate_serial()
     stop_time = time.time()
