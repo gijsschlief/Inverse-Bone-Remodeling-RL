@@ -86,7 +86,7 @@ def main() -> None:
 
     logging.info(f"Largest differences in predicted matrices: {largest_differences}")
     # Select the top 3 samples with the largest differences
-    bad_plots = 3
+    bad_plots = 1
     bad_prediction = predicted_matrices[largest_differences[:bad_plots]]
     bad_originals = true_matrices[largest_differences[:bad_plots]]
     bad_forces = x_val_unnormalized[largest_differences[:bad_plots]]
@@ -108,7 +108,7 @@ def main() -> None:
         predicted_matrices=predicted_matrices,
         true_matrices=true_matrices,
         force_profiles=x_val_unnormalized,
-        sample_count=6,
+        sample_count=20,
         show_plot=True,
     )
     return

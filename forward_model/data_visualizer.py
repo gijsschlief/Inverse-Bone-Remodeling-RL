@@ -118,7 +118,7 @@ def main() -> None:
         logging.error("Missing force or density data.")
         return
 
-    #visualize_force_comparison(force_profiles, old_force_profiles)
+    visualize_force_comparison(force_profiles, old_force_profiles)
 
     _, axes = plt.subplots(2, 2, figsize=(12, 12))
     for i in range(4):

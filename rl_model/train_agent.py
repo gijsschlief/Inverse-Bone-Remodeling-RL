@@ -1,4 +1,4 @@
-"""Train a reinforcement learning agent using Stable-Baselines3 with a custom reward function."""
+"""Train a reinforcement learning agent using StableBaselines3 with a custom reward function."""
 
 import gym
 from stable_baselines3 import PPO
