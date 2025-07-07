@@ -18,7 +18,6 @@ from bone_remodeling.surrogate_model.normalizor import (
 from gymnasium import Env, spaces
 from stable_baselines3.common.callbacks import BaseCallback
 
-# TODO: Pretrain using supervised learning on the surrogate model
 # TODO: Learn on all samples in the dataset
 # TODO: Load previous models
 
