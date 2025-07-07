@@ -25,7 +25,7 @@ def main() -> None:
 
     remodeling_environment = BoneRemodellingEnvironment(
         model_path="/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
-        target_density=target_densities[0],  # Use the first target density for demonstration
+        target_density=target_densities[0],
         target_forces=target_forces[0],
         max_steps=100,
     )

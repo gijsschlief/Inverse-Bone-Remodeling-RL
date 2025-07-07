@@ -4,6 +4,7 @@ import logging
 
 import numpy as np
 import torch
+from stable_baselines3 import PPO
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -11,7 +12,7 @@ logging.basicConfig(
 
 
 def validate_pretrained_agent(
-    agent,
+    agent: PPO,
     density_profiles: np.ndarray,
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
 ) -> np.ndarray:
