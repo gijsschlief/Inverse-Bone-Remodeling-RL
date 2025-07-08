@@ -148,6 +148,7 @@ class BoneRemodellingEnvironment(Env):
             actual_matrix=self.target_density,
             title="Observation (Target - Current)",
             axis=ax_obs,
+            color_bar=False
         )
 
         self._render_fig.tight_layout()
@@ -315,10 +316,10 @@ def main() -> None:
         logging.warning(f"Could not load pretrained policy: {e}")
     """
 
-    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=10_000))
+    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=1))
     logging.info("Training complete.")
 
-    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
+    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_1.zip")
 
 if __name__ == "__main__":
     main()

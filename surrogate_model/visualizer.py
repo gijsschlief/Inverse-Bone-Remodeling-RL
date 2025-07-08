@@ -269,6 +269,7 @@ def plot_difference_matrix(
     axis: plt.Axes,
     color_scale_min: float = -1.0,
     color_scale_max: float = 1.0,
+    color_bar: bool = True,
 ) -> None:
     """Plot the difference between predicted and actual matrices with a diverging colormap.
 
@@ -280,6 +281,7 @@ def plot_difference_matrix(
         axis: Matplotlib axis to plot on.
         color_scale_min (float): Minimum value for color scaling. Default is -1.0
         color_scale_max (float): Maximum value for color scaling. Default is 1.0
+        color_bar (bool): Whether to include a color bar. Default is True.
 
     """
     difference_matrix = predicted_matrix - actual_matrix
@@ -310,7 +312,8 @@ def plot_difference_matrix(
                 ),
                 fontsize=8,
             )
-    plt.colorbar(difference_image, ax=axis, fraction=0.046, pad=0.04)
+    if color_bar:
+        plt.colorbar(difference_image, ax=axis, fraction=0.046, pad=0.04)
 
 
 def main() -> None:
