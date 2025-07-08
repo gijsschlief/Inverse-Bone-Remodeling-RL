@@ -15,7 +15,9 @@ from bone_remodeling.surrogate_model.normalizor import (
     normalize_data,
     unnormalize_data,
 )
+from bone_remodeling.surrogate_model.visualizer import plot_difference_matrix
 from gymnasium import Env, spaces
+from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 
 # TODO: Learn on all samples in the dataset
@@ -100,6 +102,7 @@ class BoneRemodellingEnvironment(Env):
     def render(self, mode: str = "human") -> None:
         """Visualize target, current prediction, and the observation fed to the agent."""
         import matplotlib.pyplot as plt
+
         from surrogate_model.visualizer import plot_density_matrix
 
         if mode != "human":
@@ -118,7 +121,7 @@ class BoneRemodellingEnvironment(Env):
 
         ax_current, ax_target, ax_obs = self._render_axes
 
-        # If we’ve switched to a new sample, redraw the target
+        # Redraw target density if the sample index has changed
         if self._last_sample_idx != self.current_sample_index:
             ax_target.clear()
             plot_density_matrix(
@@ -139,11 +142,10 @@ class BoneRemodellingEnvironment(Env):
         )
 
         # 2) Observation (what the policy actually sees)
-        observation = self.target_density.astype(np.float32) - self.last_predicted_density
         ax_obs.clear()
-        plot_density_matrix(
-            observation,
-            force_profile=None,
+        plot_difference_matrix(
+            predicted_matrix=self.last_predicted_density,
+            actual_matrix=self.target_density,
             title="Observation (Target - Current)",
             axis=ax_obs,
         )
@@ -192,7 +194,7 @@ class BoneRemodellingEnvironment(Env):
         self.current_step += 1
 
         # check success: is the error (observation) small everywhere?
-        success = np.allclose(observation, 0.0, atol=1e-2)
+        success = np.allclose(observation, 0.0, atol=0.05)
 
         # base termination: either out of steps or success
         terminated = success or (self.current_step >= self.max_steps)
@@ -200,7 +202,8 @@ class BoneRemodellingEnvironment(Env):
 
         # if success, give a big bonus on top of the normal reward
         if success:
-            reward += 10.0
+            remaining_steps = self.max_steps - self.current_step
+            reward += remaining_steps * 1.0
             logging.info(f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}")
 
         info = {
@@ -282,8 +285,6 @@ class RenderCallback(BaseCallback):
 
 def main() -> None:
     """Demonstrates the environment and reward calculation."""
-    import stable_baselines3 as sb3
-
     directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json")
     result = forward_data_reader(directory_path)
     if result is not None:
@@ -298,7 +299,11 @@ def main() -> None:
         max_steps=100,
     )
 
-    model = sb3.PPO("MlpPolicy", remodeling_environment, verbose=1)
+    if Path("data/agents/trained_agent.zip").exists():
+        model = PPO.load("data/agents/trained_agent.zip", env=remodeling_environment)
+        model.set_env(remodeling_environment)
+    else:
+        model = PPO("MlpPolicy", remodeling_environment, verbose=1)
 
     """PRETRAINED WONT WOKRK WITH NEW ENVIRONMENT
     pretrained_path = "/home/gijs/Desktop/Thesis/data/pretrained_agents/trained_agent_weights.pth"
@@ -310,7 +315,7 @@ def main() -> None:
         logging.warning(f"Could not load pretrained policy: {e}")
     """
 
-    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=999))
+    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=10_000))
     logging.info("Training complete.")
 
     model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
