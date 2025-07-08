@@ -75,7 +75,7 @@ class ForceProfileGenerator:
                     profiles[i, side, j] = (peak_height / peak_position) * j
                 elif j > peak_position:
                     profiles[i, side, j] = (
-                        peak_height / (self._profile_length - peak_position)
+                        peak_height / (self._profile_length - 1 - peak_position)
                     ) * (self._profile_length - 1 - j)
                 else:
                     profiles[i, side, j] = peak_height
