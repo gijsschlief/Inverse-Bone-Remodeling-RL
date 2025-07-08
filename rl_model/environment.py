@@ -26,7 +26,7 @@ class BoneRemodellingEnvironment(Env):
 
     metadata = {"render.modes": ["human"]}  # noqa: RUF012
 
-    def __init__(self, model_path: str, target_density: np.ndarray, target_forces: np.ndarray, max_steps: int = 50, force_boundary: float = 30, density_constraint: float = 1.73, render_mode: str = "human") -> None:
+    def __init__(self, model_path: str, target_densities: list[np.ndarray], target_forces: list[np.ndarray], max_steps: int = 50, force_boundary: float = 30, density_constraint: float = 1.73, render_mode: str = "human") -> None:
         """Initialize the environment with a surrogate model."""
         super().__init__()
 
@@ -38,13 +38,15 @@ class BoneRemodellingEnvironment(Env):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.surrogate_model.to(self.device).eval()
 
-        self.target_density = target_density
-        self.return_shape = target_density.shape
+        self.target_densities = target_densities
+        self.return_shape = target_densities[0].shape
         self._profile_length = np.max(self.return_shape)
         self.max_steps = max_steps
         self.force_profile = np.zeros((3, self._profile_length), dtype=np.float32)  # Default force profile
         self.render_mode = render_mode
         self.target_forces = target_forces
+        self.num_samples = len(target_densities)
+        self.current_sample_index = 0
 
         # Define the action and observation spaces
         self.action_space = spaces.Box(
@@ -55,7 +57,7 @@ class BoneRemodellingEnvironment(Env):
 
         # Observation space of the agent
         self.observation_space = spaces.Box(
-            low=0.0,
+            low=-density_constraint,
             high=density_constraint,
             shape=self.return_shape,
             dtype=np.float32,
@@ -63,7 +65,7 @@ class BoneRemodellingEnvironment(Env):
 
         # Episode variables
         self.current_step = 0
-        self.last_density = np.zeros(self.return_shape, dtype=np.float32)
+        self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
 
     def reset(self, *, seed: int | None = None, options: dict | None = None) -> tuple[np.ndarray, dict]:
         """Start a new episode.
@@ -82,47 +84,68 @@ class BoneRemodellingEnvironment(Env):
         """
         super().reset(seed=seed)
         self.current_step = 0
-        episode_observation = self.last_density
+
+        # Pick a new random sample
+        self.current_sample_index = np.random.randint(self.num_samples)
+
+        # Update target for this episode
+        self.target_density = self.target_densities[self.current_sample_index]
+        self.target_force = self.target_forces[self.current_sample_index]
+        self.return_shape = self.target_density.shape
+        self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
+        episode_observation = self.target_density.astype(np.float32) - self.last_predicted_density
         info: dict = {}
         return episode_observation, info
 
-    def render(self, mode: str ="human") -> None:
-        """Visualize the current density as a heatmap."""
+    def render(self, mode: str = "human") -> None:
+        """Visualize target, current prediction, and the observation fed to the agent."""
         import matplotlib.pyplot as plt
-
         from surrogate_model.visualizer import plot_density_matrix
+
         if mode != "human":
             raise NotImplementedError(f"Render mode '{mode}' is not supported.")
-        if self.last_density is None or self.last_density.size == 0:
+        if self.last_predicted_density is None or self.last_predicted_density.size == 0:
             logging.warning("No density data to render.")
             return
 
-    # Initialize figure and axes only once
+        # On first call, create 3 grid
         if not hasattr(self, "_render_initialized"):
-            self._render_fig, self._render_axes = plt.subplots(1, 2, figsize=(14, 7))
+            self._render_fig, self._render_axes = plt.subplots(1, 3, figsize=(18, 6))
             self._render_fig.suptitle("Bone Remodeling Environment", fontsize=16)
             plt.ion()
             self._render_initialized = True
+            self._last_sample_idx = None
 
-            # Plot target density ONCE (doesn't change)
-            ax_current, ax_target = self._render_axes
+        ax_current, ax_target, ax_obs = self._render_axes
+
+        # If we’ve switched to a new sample, redraw the target
+        if self._last_sample_idx != self.current_sample_index:
             ax_target.clear()
-            target_force_profile = getattr(self, "target_forces", None)
             plot_density_matrix(
                 self.target_density,
-                force_profile=target_force_profile,
+                force_profile=self.target_force,
                 title="Target Density",
                 axis=ax_target,
             )
+            self._last_sample_idx = self.current_sample_index
 
-        # Always update current density
-        ax_current, _ = self._render_axes
+        # 1) Current / predicted density
         ax_current.clear()
         plot_density_matrix(
-            self.last_density,
+            self.last_predicted_density,
             force_profile=self.force_profile,
             title="Current Density",
             axis=ax_current,
+        )
+
+        # 2) Observation (what the policy actually sees)
+        observation = self.target_density.astype(np.float32) - self.last_predicted_density
+        ax_obs.clear()
+        plot_density_matrix(
+            observation,
+            force_profile=None,
+            title="Observation (Target - Current)",
+            axis=ax_obs,
         )
 
         self._render_fig.tight_layout()
@@ -143,9 +166,9 @@ class BoneRemodellingEnvironment(Env):
 
         """
         peak_position, side_index, peak_height = action
-        side_index = int(np.clip(round(side_index), 0, 2))
-        peak_position = int(np.clip(round(peak_position), 0, self._profile_length - 1))
-        peak_height = float(np.clip(peak_height, -self.action_space.high[2], self.action_space.high[2]))
+        peak_position = int(np.clip(round(peak_position), self.action_space.low[0], self.action_space.high[0]))
+        side_index = int(np.clip(round(side_index), self.action_space.low[1], self.action_space.high[1]))
+        peak_height = float(np.clip(peak_height, self.action_space.low[2], self.action_space.high[2]))
 
         # Generate force profile
         self.force_profile = self._generate_triangular_profile(
@@ -161,20 +184,32 @@ class BoneRemodellingEnvironment(Env):
             method="ssim",
             baseline=0.1,
             threshold=0.5
-            )
+        )
 
-        observation = self.target_density.astype(np.float32)
-        self.last_density = predicted_density.astype(np.float32)
+        self.last_predicted_density = predicted_density.astype(np.float32)
+        observation = self.target_density.astype(np.float32) - self.last_predicted_density
 
         self.current_step += 1
-        terminated = self.current_step >= self.max_steps
+
+        # check success: is the error (observation) small everywhere?
+        success = np.allclose(observation, 0.0, atol=1e-2)
+
+        # base termination: either out of steps or success
+        terminated = success or (self.current_step >= self.max_steps)
         truncated = False
+
+        # if success, give a big bonus on top of the normal reward
+        if success:
+            reward += 10.0
+            logging.info(f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}")
 
         info = {
             "force_profile": self.force_profile,
             "predicted_density": predicted_density,
             "reward": reward,
-            "current_step": self.current_step
+            "success": success,
+            "current_step": self.current_step,
+            "sample_index": self.current_sample_index
         }
         return observation, reward, terminated, truncated, info
 
@@ -254,10 +289,12 @@ def main() -> None:
     if result is not None:
         _, target_forces, target_densities = result
 
+    # TODO: Split the dataset into training and testing sets
+
     remodeling_environment = BoneRemodellingEnvironment(
         model_path="/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
-        target_density=target_densities[0],  # Use the first target density for demonstration
-        target_forces=target_forces[0],
+        target_densities=target_densities,
+        target_forces=target_forces,
         max_steps=100,
     )
 
@@ -273,7 +310,7 @@ def main() -> None:
         logging.warning(f"Could not load pretrained policy: {e}")
     """
 
-    model.learn(total_timesteps=50_000, callback=RenderCallback(render_freq=1000))
+    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=999))
     logging.info("Training complete.")
 
     model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
