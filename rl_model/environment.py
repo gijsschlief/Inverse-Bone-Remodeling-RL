@@ -148,7 +148,7 @@ class BoneRemodellingEnvironment(Env):
         reward = calculate_similarity(
             reference_matrix=self.target_density,
             comparison_matrix=predicted_density,
-            method="mse",
+            method="ssim",
             baseline=0.1,
             threshold=0.5
             )

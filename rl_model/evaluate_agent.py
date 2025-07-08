@@ -51,7 +51,7 @@ def evaluate_agent(model: PPO, environment: Env, num_episodes: int = 10, render:
         mse = calculate_similarity(
             reference_matrix=environment.target_density,
             comparison_matrix=info["predicted_density"],
-            method="mse"
+            method="ssim"
         )
         mse_errors.append(mse)
         all_force_profiles.append(info["force_profile"])
@@ -92,7 +92,7 @@ def main() -> None:
     avg_rewards = sum(res["rewards"][0] for res in all_results) / len(all_results)
     avg_mse = sum(res["mse_errors"][0] for res in all_results) / len(all_results)
 
-    logging.info(f"Average Reward: {avg_rewards:.4f}, Average MSE: {avg_mse:.6f}")
+    logging.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_mse:.6f}")
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

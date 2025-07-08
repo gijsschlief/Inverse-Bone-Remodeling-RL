@@ -65,8 +65,8 @@ class ForceProfileGenerator:
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
         for i in range(num_samples):
             # Randomly choose a peak position and height
-            peak_position = self._rng.integers(0, self._profile_length)
-            peak_height = self._rng.uniform(0, force_max)
+            peak_position = self._rng.integers(0, self._profile_length - 1)
+            peak_height = self._rng.uniform(-force_max, force_max)
             side = self._rng.choice([0, 1, 2])
 
             # Create a triangular profile
@@ -76,7 +76,7 @@ class ForceProfileGenerator:
                 elif j > peak_position:
                     profiles[i, side, j] = (
                         peak_height / (self._profile_length - peak_position)
-                    ) * (self._profile_length - j)
+                    ) * (self._profile_length - 1 - j)
                 else:
                     profiles[i, side, j] = peak_height
         return profiles
