@@ -40,17 +40,17 @@ class BoneRemodellingEnvironment(Env):
 
         self.target_density = target_density
         self.return_shape = target_density.shape
+        self._profile_length = np.max(self.return_shape)
         self.max_steps = max_steps
-        self.force_profile = np.zeros((3, np.max(self.return_shape)), dtype=np.float32)  # Default force profile
+        self.force_profile = np.zeros((3, self._profile_length), dtype=np.float32)  # Default force profile
         self.render_mode = render_mode
         self.target_forces = target_forces
 
         # Define the action and observation spaces
         self.action_space = spaces.Box(
-            low=-force_boundary,
-            high=force_boundary,
-            shape=(3, 10),
-            dtype=np.float32,
+            low=np.array([0, 0, -force_boundary], dtype=np.float32),
+            high=np.array([self._profile_length - 1, 2, force_boundary], dtype=np.float32),
+            dtype=np.float32
         )
 
         # Observation space of the agent
@@ -142,7 +142,17 @@ class BoneRemodellingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        self.force_profile = np.clip(action, self.action_space.low, self.action_space.high)
+        peak_position, side_index, peak_height = action
+        side_index = int(np.clip(round(side_index), 0, 2))
+        peak_position = int(np.clip(round(peak_position), 0, self._profile_length - 1))
+        peak_height = float(np.clip(peak_height, -self.action_space.high[2], self.action_space.high[2]))
+
+        # Generate force profile
+        self.force_profile = self._generate_triangular_profile(
+            peak_position=peak_position,
+            side=side_index,
+            peak_height=peak_height
+        )
 
         predicted_density = self._surrogate_model_forward()
         reward = calculate_similarity(
@@ -167,6 +177,23 @@ class BoneRemodellingEnvironment(Env):
             "current_step": self.current_step
         }
         return observation, reward, terminated, truncated, info
+
+    def _generate_triangular_profile(self, peak_position: int, side: int, peak_height: float) -> np.ndarray:
+        """Generate a 3xN force profile with one triangular peak on the selected side."""
+        profile = np.zeros((3, self._profile_length), dtype=np.float32)
+        peak_position = int(np.clip(peak_position, 0, self._profile_length - 1))
+
+        for j in range(self._profile_length):
+            if j < peak_position:
+                profile[side, j] = (peak_height / peak_position) * j
+            elif j > peak_position:
+                denom = self._profile_length - 1 - peak_position
+                denom = max(denom, 1e-6)  # Prevent divide-by-zero
+                profile[side, j] = (peak_height / denom) * (self._profile_length - 1 - j)
+            else:
+                profile[side, j] = peak_height
+
+        return profile
 
     def _surrogate_model_forward(self) -> np.ndarray:
         """Forward pass through the surrogate model.
@@ -197,6 +224,7 @@ class BoneRemodellingEnvironment(Env):
             surrogate_density = unnormalize_data(surrogate_density, self.y_mean, self.y_std)
         return surrogate_density.reshape(self.return_shape)
 
+
 class RenderCallback(BaseCallback):
     """Callback to render the environment at specified intervals."""
 
@@ -221,7 +249,7 @@ def main() -> None:
     """Demonstrates the environment and reward calculation."""
     import stable_baselines3 as sb3
 
-    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
+    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json")
     result = forward_data_reader(directory_path)
     if result is not None:
         _, target_forces, target_densities = result
@@ -235,6 +263,7 @@ def main() -> None:
 
     model = sb3.PPO("MlpPolicy", remodeling_environment, verbose=1)
 
+    """PRETRAINED WONT WOKRK WITH NEW ENVIRONMENT
     pretrained_path = "/home/gijs/Desktop/Thesis/data/pretrained_agents/trained_agent_weights.pth"
     try:
         pretrained_dict = torch.load(pretrained_path, map_location=torch.device("cpu"))
@@ -242,6 +271,7 @@ def main() -> None:
         logging.info("Loaded pretrained weights into PPO agent.")
     except Exception as e:
         logging.warning(f"Could not load pretrained policy: {e}")
+    """
 
     model.learn(total_timesteps=50_000, callback=RenderCallback(render_freq=1000))
     logging.info("Training complete.")

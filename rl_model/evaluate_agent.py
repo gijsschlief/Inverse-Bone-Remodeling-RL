@@ -68,7 +68,7 @@ def evaluate_agent(model: PPO, environment: Env, num_episodes: int = 10, render:
 
 def main() -> None:
     """Evaluate the RL agent."""
-    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
+    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json")
     result = forward_data_reader(directory_path)
     if result is not None:
         _, target_forces, target_densities = result
