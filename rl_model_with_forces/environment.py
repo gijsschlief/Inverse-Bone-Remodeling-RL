@@ -58,10 +58,19 @@ class BoneRemodellingEnvironment(Env):
         )
 
         # Observation space of the agent
+        self.grid_size = int(np.prod(self.return_shape))
+        observation_space_lower_bounds  = np.concatenate([
+            np.full(self.grid_size, -density_constraint, dtype=np.float32),
+            np.array([self.action_space.low[0], self.action_space.low[1], self.action_space.low[2]], dtype=np.float32),
+        ])
+        observation_space_upper_bounds = np.concatenate([
+            np.full(self.grid_size, +density_constraint, dtype=np.float32),
+            np.array([self.action_space.high[0], self.action_space.high[1], self.action_space.high[2]], dtype=np.float32),
+        ])
+
         self.observation_space = spaces.Box(
-            low=-density_constraint,
-            high=density_constraint,
-            shape=self.return_shape,
+            low=observation_space_lower_bounds,
+            high=observation_space_upper_bounds,
             dtype=np.float32,
         )
 
@@ -95,7 +104,8 @@ class BoneRemodellingEnvironment(Env):
         self.target_force = self.target_forces[self.current_sample_index]
         self.return_shape = self.target_density.shape
         self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
-        episode_observation = self.target_density.astype(np.float32) - self.last_predicted_density
+        difference = (self.target_density.astype(np.float32) - self.last_predicted_density).ravel()
+        episode_observation = np.concatenate([difference, np.zeros(3, dtype=np.float32)], axis=0)
         info: dict = {}
         return episode_observation, info
 
@@ -215,6 +225,8 @@ class BoneRemodellingEnvironment(Env):
             "current_step": self.current_step,
             "sample_index": self.current_sample_index
         }
+
+        observation = np.concatenate(([observation.ravel(), action]), axis=0)  # Append action to observation
         return observation, reward, terminated, truncated, info
 
     def _generate_triangular_profile(self, peak_position: int, side: int, peak_height: float) -> np.ndarray:
@@ -300,8 +312,8 @@ def main() -> None:
         max_steps=100,
     )
 
-    if Path("data/agents/trained_agent_2.zip").exists():
-        model = PPO.load("data/agents/trained_agent_2.zip", env=remodeling_environment)
+    if Path("data/agents/trained_agent_action.zip").exists():
+        model = PPO.load("data/agents/trained_agent_action.zip", env=remodeling_environment)
         model.set_env(remodeling_environment)
     else:
         model = PPO("MlpPolicy", remodeling_environment, verbose=1)
@@ -316,10 +328,10 @@ def main() -> None:
         logging.warning(f"Could not load pretrained policy: {e}")
     """
 
-    model.learn(total_timesteps=100, callback=RenderCallback(render_freq=1))
+    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=9999))
     logging.info("Training complete.")
 
-    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_3.zip")
+    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_action.zip")
 
 if __name__ == "__main__":
     main()
