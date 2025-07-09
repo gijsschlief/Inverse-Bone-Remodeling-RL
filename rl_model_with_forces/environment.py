@@ -312,8 +312,8 @@ def main() -> None:
         max_steps=100,
     )
 
-    if Path("data/agents/trained_agent_action.zip").exists():
-        model = PPO.load("data/agents/trained_agent_action.zip", env=remodeling_environment)
+    if Path("data/agents/trained_agent_action_1.zip").exists():
+        model = PPO.load("data/agents/trained_agent_action_1.zip", env=remodeling_environment)
         model.set_env(remodeling_environment)
     else:
         model = PPO("MlpPolicy", remodeling_environment, verbose=1)
@@ -328,10 +328,10 @@ def main() -> None:
         logging.warning(f"Could not load pretrained policy: {e}")
     """
 
-    model.learn(total_timesteps=1_000_000, callback=RenderCallback(render_freq=9999))
+    model.learn(total_timesteps=3_000_000, callback=RenderCallback(render_freq=9999))
     logging.info("Training complete.")
 
-    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_action.zip")
+    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_action_2.zip")
 
 if __name__ == "__main__":
     main()
