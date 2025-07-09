@@ -322,6 +322,10 @@ class RewardSavingCallback(BaseCallback):
         """Plot and save the figure."""
         plt.figure(figsize=(8, 4))
         plt.plot(self.episode_rewards)
+        # Ignore high outliers for the plot
+        rewards_array = np.array(self.episode_rewards)
+        y_max = np.percentile(rewards_array, 99)
+        plt.ylim(-1, y_max)
         plt.xlabel("Timestep")
         plt.ylabel("Reward")
         plt.title("Episode Reward over Training")
