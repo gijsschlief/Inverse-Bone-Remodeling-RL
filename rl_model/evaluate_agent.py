@@ -11,7 +11,9 @@ from gymnasium import Env
 from stable_baselines3 import PPO
 
 
-def evaluate_agent(model: PPO, environment: Env, num_episodes: int = 10, render: bool = False) -> dict:
+def evaluate_agent(
+    model: PPO, environment: Env, num_episodes: int = 10, render: bool = False
+) -> dict:
     """Evaluate the trained RL agent.
 
     Args:
@@ -51,13 +53,15 @@ def evaluate_agent(model: PPO, environment: Env, num_episodes: int = 10, render:
         mse = calculate_similarity(
             reference_matrix=environment.target_density,
             comparison_matrix=info["predicted_density"],
-            method="ssim"
+            method="ssim",
         )
         mse_errors.append(mse)
         all_force_profiles.append(info["force_profile"])
         all_predicted_densities.append(info["predicted_density"])
 
-        logging.info(f"Episode {ep+1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}")
+        logging.info(
+            f"Episode {ep+1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}"
+        )
 
     return {
         "rewards": episode_rewards,
@@ -66,14 +70,19 @@ def evaluate_agent(model: PPO, environment: Env, num_episodes: int = 10, render:
         "predicted_densities": all_predicted_densities,
     }
 
+
 def main() -> None:
     """Evaluate the RL agent."""
-    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json")
+    directory_path = Path(
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json"
+    )
     result = forward_data_reader(directory_path)
     if result is not None:
         _, target_forces, target_densities = result
 
-    _, _, test_density_profiles, _, _, test_forces = splitting(target_densities, target_forces, random_state=0)
+    _, _, test_density_profiles, _, _, test_forces = splitting(
+        target_densities, target_forces, random_state=0
+    )
 
     model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
 
@@ -85,7 +94,9 @@ def main() -> None:
             target_forces=test_forces[i],
             max_steps=1,
         )
-        evaluation_result = evaluate_agent(model, agent_evaluation_environment, num_episodes=1, render=True)
+        evaluation_result = evaluate_agent(
+            model, agent_evaluation_environment, num_episodes=1, render=True
+        )
         all_results.append(evaluation_result)
 
     # Calculate average metrics
@@ -93,6 +104,7 @@ def main() -> None:
     avg_mse = sum(res["mse_errors"][0] for res in all_results) / len(all_results)
 
     logging.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_mse:.6f}")
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

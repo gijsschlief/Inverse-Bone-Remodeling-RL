@@ -94,7 +94,9 @@ def visualize_force_comparison(
 
 def main() -> None:
     """Load and visualize forward model data."""
-    data = forward_data_reader(file_path="/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1427.json")
+    data = forward_data_reader(
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1427.json"
+    )
     if data is None:
         logging.error("Failed to load the forward model data.")
         return

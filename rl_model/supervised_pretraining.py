@@ -50,7 +50,9 @@ def main() -> None:
         logging.error("Data splitting failed. Exiting.")
         return
 
-    train_densities, validation_densities, _, train_forces, validation_forces, _ = split_data_result
+    train_densities, validation_densities, _, train_forces, validation_forces, _ = (
+        split_data_result
+    )
 
     # Flatten densities per sample, for example if densities are 10x10:
     density_flat = train_densities.reshape(train_densities.shape[0], -1)
@@ -78,7 +80,10 @@ def main() -> None:
         logging.info(f"Epoch {epoch+1} - Loss: {total_loss / len(loader):.6f}")
 
     # Save model
-    torch.save(model.policy.state_dict(), "/home/gijs/Desktop/Thesis/data/pretrained_agents/trained_agent_weights.pth")
+    torch.save(
+        model.policy.state_dict(),
+        "/home/gijs/Desktop/Thesis/data/pretrained_agents/trained_agent_weights.pth",
+    )
 
     validation_estimated_force_profiles = validate_pretrained_agent(
         agent=model,
@@ -93,15 +98,18 @@ def main() -> None:
             matrix=validation_densities[random_index],
             force_profile=validation_estimated_force_profiles[random_index],
             title="Estimated Force Profile",
-            axis=axes[0])
+            axis=axes[0],
+        )
 
         plot_density_matrix(
             matrix=validation_densities[random_index],
             force_profile=validation_forces[random_index],
             title="Target Force Profile",
-            axis=axes[1])
+            axis=axes[1],
+        )
         plt.tight_layout()
         plt.show()
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

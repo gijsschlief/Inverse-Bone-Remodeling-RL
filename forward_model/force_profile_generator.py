@@ -34,7 +34,7 @@ class ForceProfileGenerator:
         counts = self._rng.choice(
             np.arange(1, force_count_max + 1),
             size=num_samples,
-            p=force_selection_probabilities
+            p=force_selection_probabilities,
         )
         total_forces = np.sum(counts)
 
@@ -131,11 +131,16 @@ class ForceProfileGenerator:
 
     def merger(self, num_samples: int, force_max: float = 10.0) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
-        profile_count = self._rng.choice([1, 2, 3, 4, 5], size=num_samples, p=[0.8, 0.13, 0.05, 0.01, 0.01])
+        profile_count = self._rng.choice(
+            [1, 2, 3, 4, 5], size=num_samples, p=[0.8, 0.13, 0.05, 0.01, 0.01]
+        )
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
         for i in range(num_samples):
             for _ in range(profile_count[i]):
-                shape_type = self._rng.choice(["triangular", "square", "gaussian","impulse","ramp"], p=[0.2, 0.2, 0.2, 0.2, 0.2])
+                shape_type = self._rng.choice(
+                    ["triangular", "square", "gaussian", "impulse", "ramp"],
+                    p=[0.2, 0.2, 0.2, 0.2, 0.2],
+                )
                 if shape_type == "triangular":
                     profiles[i] += self.triangular(1, force_max)[0]
                 elif shape_type == "square":
@@ -148,7 +153,9 @@ class ForceProfileGenerator:
                     profiles[i] += self.ramp(1, force_max)[0]
 
             # Compute energy (L2 norm squared) and apply random scaling
-            target_energy = self._rng.normal(loc=force_max**2 / 2, scale=force_max**2 / 4)
+            target_energy = self._rng.normal(
+                loc=force_max**2 / 2, scale=force_max**2 / 4
+            )
             target_energy = max(target_energy, 1e-6)
             actual_energy = np.sum(profiles[i] ** 2)
             eps = 1e-6

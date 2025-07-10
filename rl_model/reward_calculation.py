@@ -30,7 +30,9 @@ def calculate_similarity(
     """
     if reference_matrix is None or comparison_matrix is None:
         raise ValueError("Matrices A and B cannot be None.")
-    elif not isinstance(reference_matrix, np.ndarray) or not isinstance(comparison_matrix, np.ndarray):
+    elif not isinstance(reference_matrix, np.ndarray) or not isinstance(
+        comparison_matrix, np.ndarray
+    ):
         raise TypeError("Both A and B must be numpy arrays.")
     elif reference_matrix.shape != comparison_matrix.shape:
         raise ValueError("Matrices A and B must have the same shape.")
@@ -85,14 +87,23 @@ def calculate_similarity(
         a_thresholded_array = (reference_matrix > threshold).astype(int)
         b_thresholded_array = (comparison_matrix > threshold).astype(int)
         intersection = np.logical_and(a_thresholded_array, b_thresholded_array).sum()
-        metric = 2 * intersection / (a_thresholded_array.sum() + b_thresholded_array.sum() + 1e-8)
+        metric = (
+            2
+            * intersection
+            / (a_thresholded_array.sum() + b_thresholded_array.sum() + 1e-8)
+        )
         return 2 * metric - 1  # Normalize to [-1, 1]
 
     elif method == "ssim":
         # Structural Similarity Index (SSIM) [-1, 1]
         from skimage.metrics import structural_similarity as ssim
 
-        score, _ = ssim(reference_matrix, comparison_matrix, full=True, data_range=reference_matrix.max() - reference_matrix.min())
+        score, _ = ssim(
+            reference_matrix,
+            comparison_matrix,
+            full=True,
+            data_range=reference_matrix.max() - reference_matrix.min(),
+        )
         return score
 
     elif method == "wasserstein":
@@ -101,7 +112,9 @@ def calculate_similarity(
 
         metric = 0
         for i in range(reference_matrix.shape[0]):
-            metric += wasserstein_distance(reference_matrix[i, :], comparison_matrix[i, :])
+            metric += wasserstein_distance(
+                reference_matrix[i, :], comparison_matrix[i, :]
+            )
         metric /= reference_matrix.shape[0]  # Average over rows
         return 2 * (1 - metric / (metric + baseline)) - 1  # Normalize to [-1, 1]
 

@@ -118,7 +118,9 @@ def main() -> None:
 
     initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
 
-    force_profile_generator = ForceProfileGenerator(profile_length=max(args.x_shape, args.y_shape), batch_seed=args.batch_seed)
+    force_profile_generator = ForceProfileGenerator(
+        profile_length=max(args.x_shape, args.y_shape), batch_seed=args.batch_seed
+    )
     force_profile = force_profile_generator.merger(
         num_samples=args.num_samples,
         force_max=args.force_max,
@@ -128,13 +130,15 @@ def main() -> None:
         force_profiles=force_profile,
         output_dir=args.output_dir,
         initial_density=initial_density,
-        time_steps = 250,
-        dt = 1.0
+        time_steps=250,
+        dt=1.0,
     )
 
     start_time = time.time()
     if args.mode == "parallel":
-        data_generator.generate_parallel(args.num_samples, force_profile_name= "combined")
+        data_generator.generate_parallel(
+            args.num_samples, force_profile_name="combined"
+        )
     elif args.mode == "sequential":
         data_generator.generate_serial(args.num_samples)
     stop_time = time.time()

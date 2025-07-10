@@ -23,20 +23,37 @@ from stable_baselines3.common.callbacks import BaseCallback
 # TODO: Learn on all samples in the dataset
 # TODO: Load previous models
 
+
 class BoneRemodellingEnvironment(Env):
     """Gym Environment for reinforcement learning in bone remodeling simulation."""
 
     metadata = {"render.modes": ["human"]}  # noqa: RUF012
 
-    def __init__(self, model_path: str, target_densities: list[np.ndarray], target_forces: list[np.ndarray], max_steps: int = 50, force_boundary: float = 30, density_constraint: float = 1.73, render_mode: str = "human") -> None:
+    def __init__(
+        self,
+        model_path: str,
+        target_densities: list[np.ndarray],
+        target_forces: list[np.ndarray],
+        max_steps: int = 50,
+        force_boundary: float = 30,
+        density_constraint: float = 1.73,
+        render_mode: str = "human",
+    ) -> None:
         """Initialize the environment with a surrogate model."""
         super().__init__()
 
         # Load the surrogate model and normalization parameters
-        surrogate_model_and_normalization_params = load_surrogate_model(model_path, ReversedSurrogateModel)
+        surrogate_model_and_normalization_params = load_surrogate_model(
+            model_path, ReversedSurrogateModel
+        )
         if surrogate_model_and_normalization_params is None:
             raise ValueError("Failed to load the surrogate model.")
-        self.surrogate_model, self.x_mean, self.x_std, self.y_mean, self.y_std = surrogate_model_and_normalization_params
+        self.surrogate_model, self.x_mean, self.x_std, self.y_mean, self.y_std = (
+            surrogate_model_and_normalization_params
+        )
+        assert (
+            self.surrogate_model is not None
+        ), "Surrogate model is None after loading."
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.surrogate_model.to(self.device).eval()
 
@@ -44,7 +61,9 @@ class BoneRemodellingEnvironment(Env):
         self.return_shape = target_densities[0].shape
         self._profile_length = np.max(self.return_shape)
         self.max_steps = max_steps
-        self.force_profile = np.zeros((3, self._profile_length), dtype=np.float32)  # Default force profile
+        self.force_profile = np.zeros(
+            (3, self._profile_length), dtype=np.float32
+        )  # Default force profile
         self.render_mode = render_mode
         self.target_forces = target_forces
         self.num_samples = len(target_densities)
@@ -53,8 +72,10 @@ class BoneRemodellingEnvironment(Env):
         # Define the action and observation spaces
         self.action_space = spaces.Box(
             low=np.array([0, 0, -force_boundary], dtype=np.float32),
-            high=np.array([self._profile_length - 1, 2, force_boundary], dtype=np.float32),
-            dtype=np.float32
+            high=np.array(
+                [self._profile_length - 1, 2, force_boundary], dtype=np.float32
+            ),
+            dtype=np.float32,
         )
 
         # Observation space of the agent
@@ -69,7 +90,9 @@ class BoneRemodellingEnvironment(Env):
         self.current_step = 0
         self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
 
-    def reset(self, *, seed: int | None = None, options: dict | None = None) -> tuple[np.ndarray, dict]:
+    def reset(
+        self, *, seed: int | None = None, options: dict | None = None
+    ) -> tuple[np.ndarray, dict]:
         """Start a new episode.
 
         Conforms to Gymnasium API: accepts seed/options, returns (obs, info).
@@ -95,7 +118,9 @@ class BoneRemodellingEnvironment(Env):
         self.target_force = self.target_forces[self.current_sample_index]
         self.return_shape = self.target_density.shape
         self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
-        episode_observation = self.target_density.astype(np.float32) - self.last_predicted_density
+        episode_observation = (
+            self.target_density.astype(np.float32) - self.last_predicted_density
+        )
         info: dict = {}
         return episode_observation, info
 
@@ -148,7 +173,7 @@ class BoneRemodellingEnvironment(Env):
             actual_matrix=self.target_density,
             title="Observation (Target - Current)",
             axis=ax_obs,
-            color_bar=False
+            color_bar=False,
         )
 
         self._render_fig.tight_layout()
@@ -169,15 +194,25 @@ class BoneRemodellingEnvironment(Env):
 
         """
         peak_position, side_index, peak_height = action
-        peak_position = int(np.clip(round(peak_position), self.action_space.low[0], self.action_space.high[0]))
-        side_index = int(np.clip(round(side_index), self.action_space.low[1], self.action_space.high[1]))
-        peak_height = float(np.clip(peak_height, self.action_space.low[2], self.action_space.high[2]))
+        peak_position = int(
+            np.clip(
+                round(peak_position),
+                self.action_space.low[0],
+                self.action_space.high[0],
+            )
+        )
+        side_index = int(
+            np.clip(
+                round(side_index), self.action_space.low[1], self.action_space.high[1]
+            )
+        )
+        peak_height = float(
+            np.clip(peak_height, self.action_space.low[2], self.action_space.high[2])
+        )
 
         # Generate force profile
         self.force_profile = self._generate_triangular_profile(
-            peak_position=peak_position,
-            side=side_index,
-            peak_height=peak_height
+            peak_position=peak_position, side=side_index, peak_height=peak_height
         )
 
         predicted_density = self._surrogate_model_forward()
@@ -186,11 +221,13 @@ class BoneRemodellingEnvironment(Env):
             comparison_matrix=predicted_density,
             method="ssim",
             baseline=0.1,
-            threshold=0.5
+            threshold=0.5,
         )
 
         self.last_predicted_density = predicted_density.astype(np.float32)
-        observation = self.target_density.astype(np.float32) - self.last_predicted_density
+        observation = (
+            self.target_density.astype(np.float32) - self.last_predicted_density
+        )
 
         self.current_step += 1
 
@@ -205,7 +242,9 @@ class BoneRemodellingEnvironment(Env):
         if success:
             remaining_steps = self.max_steps - self.current_step
             reward += remaining_steps * 1.0
-            logging.info(f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}")
+            logging.info(
+                f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}"
+            )
 
         info = {
             "force_profile": self.force_profile,
@@ -213,11 +252,13 @@ class BoneRemodellingEnvironment(Env):
             "reward": reward,
             "success": success,
             "current_step": self.current_step,
-            "sample_index": self.current_sample_index
+            "sample_index": self.current_sample_index,
         }
         return observation, reward, terminated, truncated, info
 
-    def _generate_triangular_profile(self, peak_position: int, side: int, peak_height: float) -> np.ndarray:
+    def _generate_triangular_profile(
+        self, peak_position: int, side: int, peak_height: float
+    ) -> np.ndarray:
         """Generate a 3xN force profile with one triangular peak on the selected side."""
         profile = np.zeros((3, self._profile_length), dtype=np.float32)
         peak_position = int(np.clip(peak_position, 0, self._profile_length - 1))
@@ -228,7 +269,9 @@ class BoneRemodellingEnvironment(Env):
             elif j > peak_position:
                 denom = self._profile_length - 1 - peak_position
                 denom = max(denom, 1e-6)  # Prevent divide-by-zero
-                profile[side, j] = (peak_height / denom) * (self._profile_length - 1 - j)
+                profile[side, j] = (peak_height / denom) * (
+                    self._profile_length - 1 - j
+                )
             else:
                 profile[side, j] = peak_height
 
@@ -249,18 +292,24 @@ class BoneRemodellingEnvironment(Env):
         """
         # normalize
         if self.x_mean is not None:
-            force_profile, _, _, _, _ = normalize_data(self.force_profile, None, None, self.x_mean, self.x_std)
+            force_profile, _, _, _, _ = normalize_data(
+                self.force_profile, None, None, self.x_mean, self.x_std
+            )
 
         # forward pass through the surrogate model
         with torch.no_grad():
-            force_profile_tensor = torch.from_numpy(force_profile.reshape(1, -1).astype(np.float32)).to(self.device)
+            force_profile_tensor = torch.from_numpy(
+                force_profile.reshape(1, -1).astype(np.float32)
+            ).to(self.device)
 
         density_tensor: torch.Tensor = self.surrogate_model(force_profile_tensor)
         surrogate_density = density_tensor.detach().cpu().numpy()
 
         # unnormalize
         if self.y_mean is not None:
-            surrogate_density = unnormalize_data(surrogate_density, self.y_mean, self.y_std)
+            surrogate_density = unnormalize_data(
+                surrogate_density, self.y_mean, self.y_std
+            )
         return surrogate_density.reshape(self.return_shape)
 
 
@@ -284,9 +333,12 @@ class RenderCallback(BaseCallback):
             self.training_env.envs[0].render()
         return True
 
+
 def main() -> None:
     """Demonstrates the environment and reward calculation."""
-    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_10000_samples_0708_1959.json")
+    directory_path = Path(
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_10000_samples_0708_1959.json"
+    )
     result = forward_data_reader(directory_path)
     if result is not None:
         _, target_forces, target_densities = result
@@ -320,6 +372,7 @@ def main() -> None:
     logging.info("Training complete.")
 
     model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_3.zip")
+
 
 if __name__ == "__main__":
     main()
