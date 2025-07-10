@@ -367,10 +367,10 @@ def main() -> None:
         logging.warning(f"Could not load pretrained policy: {e}")
     """
 
-    model.learn(total_timesteps=100_000, callback=[RenderCallback(render_freq=999), RewardSavingCallback(out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png")])
+    model.learn(total_timesteps=100, callback=[RenderCallback(render_freq=1), RewardSavingCallback(out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png")])
     logging.info("Training complete.")
 
-    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_special.zip")
+    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_special_1.zip")
 
 if __name__ == "__main__":
     main()
