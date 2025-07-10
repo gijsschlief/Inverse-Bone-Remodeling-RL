@@ -440,14 +440,14 @@ def save_model_safely(model: PPO, path: Path) -> Path:
     model.save(path)
     return Path(path)
 
-def find_latest_agent(path: Path) -> Path | None:
+def find_latest_agent(path: Path) -> Path:
     """Find the latest agent file in the specified directory."""
     if os.path.exists(path):
         base_path, ext = os.path.splitext(path)
         counter = 1
     while os.path.exists(f"{base_path}_{counter}{ext}"):
         counter += 1
-    return Path(f"{base_path}_{counter}{ext}")
+    return Path(f"{base_path}_{counter-1}{ext}")
 
 def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
     """Designs and trains a reinforcement learning agent for bone remodeling.
@@ -484,14 +484,15 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
     if agent_path is None:
         model = PPO("MlpPolicy", remodeling_environment, verbose=1)
     else:
-        agent_path = find_latest_agent(agent_path)
-        if agent_path is None:
+        latest_agent_path = find_latest_agent(agent_path)
+        if latest_agent_path is None:
             model = PPO("MlpPolicy", remodeling_environment, verbose=1)
         else:
-            model = PPO.load(agent_path, env=remodeling_environment)
+            model = PPO.load(latest_agent_path, env=remodeling_environment)
             model.set_env(remodeling_environment)
 
-    logging.info(f"Starting training with agent at {agent_path if agent_path else 'new model'}.")
+
+    logging.info(f"Starting training with agent at {latest_agent_path if latest_agent_path else 'new model'}.")
 
     model.learn(
         total_timesteps=1000,
