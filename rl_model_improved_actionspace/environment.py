@@ -135,7 +135,7 @@ class BoneRemodellingEnvironment(Env):
             plot_density_matrix(
                 self.target_density,
                 force_profile=self.target_force,
-                title="Target Density",
+                title=f"Target Density (Sample {self.current_sample_index})",
                 axis=ax_target,
             )
             self._last_sample_idx = self.current_sample_index
@@ -145,7 +145,7 @@ class BoneRemodellingEnvironment(Env):
         plot_density_matrix(
             self.last_predicted_density,
             force_profile=self.force_profile,
-            title="Current Density",
+            title=f"Current Density: Step {self.current_step} / {self.max_steps}",
             axis=ax_current,
         )
 
@@ -154,7 +154,7 @@ class BoneRemodellingEnvironment(Env):
         plot_difference_matrix(
             predicted_matrix=self.last_predicted_density,
             actual_matrix=self.target_density,
-            title="Observation (Target - Current)",
+            title=f"Observation (Target - Current), Reward: {self.reward:.4f}",
             axis=ax_obs,
             color_bar=False
         )
@@ -204,6 +204,7 @@ class BoneRemodellingEnvironment(Env):
         observation = self.target_density.astype(np.float32) - self.last_predicted_density
 
         self.current_step += 1
+        self.reward = reward
 
         # check success: is the error (observation) small everywhere?
         success = np.allclose(observation, 0.0, atol=0.05)
@@ -322,10 +323,7 @@ class RewardSavingCallback(BaseCallback):
         """Plot and save the figure."""
         plt.figure(figsize=(8, 4))
         plt.plot(self.episode_rewards)
-        # Ignore high outliers for the plot
-        rewards_array = np.array(self.episode_rewards)
-        y_max = np.percentile(rewards_array, 99)
-        plt.ylim(-1, y_max)
+        plt.ylim(-1, 10)
         plt.xlabel("Timestep")
         plt.ylabel("Reward")
         plt.title("Episode Reward over Training")
@@ -348,7 +346,7 @@ def main() -> None:
         model_path="/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
         target_densities=target_densities,
         target_forces=target_forces,
-        max_steps=100,
+        max_steps=10,
     )
 
     if Path("data/agents/trained_agent_special.zip").exists():
