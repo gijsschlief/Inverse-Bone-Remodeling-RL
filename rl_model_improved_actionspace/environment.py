@@ -366,9 +366,7 @@ class BoneRemodellingEnvironment(Env):
 
         # unnormalize
         if self.y_mean is not None and self.y_std is not None:
-            density_tensor = unnormalize_data(
-                density_tensor, self.y_mean, self.y_std
-            )
+            density_tensor = unnormalize_data(density_tensor, self.y_mean, self.y_std)
         if density_tensor is Tensor:
             surrogate_density: np.ndarray = density_tensor.detach().cpu().numpy()
 
