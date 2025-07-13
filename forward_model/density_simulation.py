@@ -290,7 +290,7 @@ class DensitySimulation:
         and creates the necessary function spaces for the simulation.
         """
         self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
-        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 1)
+        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 3)
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.zero_body_force = Constant((0, 0))

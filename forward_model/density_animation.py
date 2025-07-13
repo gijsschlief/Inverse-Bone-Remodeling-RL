@@ -12,8 +12,8 @@ from bone_remodeling.forward_model.force_profile_generator import ForceProfileGe
 from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
 from matplotlib.animation import FuncAnimation
 
-SAVE_GIF = "/home/gijs/Desktop/Thesis/data/animations/density_animation.gif"
-SAVE_GIF_PYVISTA = "/home/gijs/Desktop/Thesis/data/animations/density_animation_pyvista.gif"
+SAVE_GIF = "/home/gijs/Desktop/Thesis/data/animations/9_density_animation.gif"
+SAVE_GIF_PYVISTA = "/home/gijs/Desktop/Thesis/data/animations/9_density_animation_pyvista.gif"
 FILE_PATTERN = "/home/gijs/Desktop/Thesis/data/animations/density_animation"
 TIME_STEPS = 100
 
