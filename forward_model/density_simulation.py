@@ -214,8 +214,9 @@ class DensitySimulation:
         self.modulus_exponent = parameters.get("modulus_exponent", 2.0)
         self.output_basename = parameters.get("output_basename", "density_simulation")
         self.file_extension = parameters.get("file_extension", ".pvd")
-        self.save = parameters.get("save", False)
+        self.save_data = parameters.get("save", False)
         self.convergence_tolerance = parameters.get("convergence_tolerance", 1e-6)
+        self.convergence_after_steps = parameters.get("convergence_after_steps", 1)
 
     def _validate_parameters(self) -> None:
         """Validate the input parameters for the simulation."""
@@ -262,7 +263,7 @@ class DensitySimulation:
             logging.warning(
                 "time_steps is set to a high value, which may lead to long computation times.",
             )
-        if not isinstance(self.save, bool):
+        if not isinstance(self.save_data, bool):
             raise TypeError("save must be a boolean value.")
         if (
             not isinstance(self.convergence_tolerance, (int, float))
@@ -279,6 +280,8 @@ class DensitySimulation:
             raise ValueError("file_extension must start with a dot (e.g., '.pvd').")
         if self.n_rows <= 1 or self.n_columns <= 1:
             raise ValueError("n_rows and n_columns must be greater than 1.")
+        if not isinstance(self.convergence_after_steps, int) or self.convergence_after_steps <= 0:
+            raise ValueError("convergence_after_steps must be a positive integer.")
 
     def _setup_mesh_and_spaces(self) -> None:
         """Set up the mesh and function spaces for the simulation.
@@ -316,6 +319,7 @@ class DensitySimulation:
 
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.convergence_flags = np.zeros(self.num_cells, dtype=bool)
+        self.convergence_counter = np.zeros(self.num_cells, dtype=int)
 
     def _setup_boundary_conditions(self) -> None:
         """Set up boundary conditions for the simulation.
@@ -567,12 +571,17 @@ class DensitySimulation:
         cells_converged_above_max = density >= self.max_density
         density = np.clip(density, self.min_density, self.max_density)
 
+        # Count cells that have not changed significantly
         cells_converged_small_change = np.abs(delta) < self.convergence_tolerance
+        self.convergence_counter[active_cells & cells_converged_small_change] += 1
+        self.convergence_counter[active_cells & ~cells_converged_small_change] = 0
+
+        cells_converged_small_change = self.convergence_counter >= self.convergence_after_steps
         self.convergence_flags = (
             self.convergence_flags
+            | cells_converged_small_change
             | cells_converged_below_min
             | cells_converged_above_max
-            | cells_converged_small_change
         )
 
         self.density_function.vector().set_local(density.copy())
@@ -585,11 +594,27 @@ class DensitySimulation:
         self._update_strain_energy_density(strain_tensor, stress_tensor)
         self._update_density_change()
 
-    def _save(self, to_save_data: Function | MeshFunction | Expression) -> None:
-        """Save data specified to the output_dir."""
-        output_path = Path(self.output_dir)
-        output_path.mkdir(parents=True, exist_ok=True)
-        self.full_file_path = output_path / (self.output_basename + self.file_extension)
+    def save(self, to_save_data: Function | MeshFunction | Expression, output_path: Path | None = None) -> None:
+        """Save data specified to the output_dir.
+
+        Args:
+        ----
+            to_save_data (Function | MeshFunction | Expression): Data to save, can be a Function, MeshFunction, or Expression.
+            output_path (Path | None): Optional path to save the data. If None, uses the default output directory.
+
+        Raises:
+        ------
+            RuntimeError: If saving fails.
+
+        """
+        if output_path is None:
+            output_path = Path(self.output_dir)
+            output_path.mkdir(parents=True, exist_ok=True)
+            self.full_file_path = output_path / (self.output_basename + self.file_extension)
+        else:
+            output_path = Path(output_path)
+            output_path.mkdir(parents=True, exist_ok=True)
+            self.full_file_path = output_path + self.file_extension
         try:
             File(str(self.full_file_path)) << to_save_data
         except Exception as e:
@@ -611,8 +636,8 @@ class DensitySimulation:
         self.elasticity_solver.solve()
         self._update_density()
         self._update_material_properties()
-        if self.save:
-            self._save(self.density_function)
+        if self.save_data:
+            self.save(self.density_function)
 
     def run(self) -> None:
         """Run the full simulation loop."""
@@ -620,9 +645,6 @@ class DensitySimulation:
             self.step()
             if self._check_convergence(time):
                 break
-
-        if self.save:
-            self._save(self.density_function)
 
     def reset(self) -> None:
         """Reset the simulation state to the initial conditions."""
@@ -634,6 +656,7 @@ class DensitySimulation:
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.density_function.vector().set_local(self.current_density.copy())
         self.convergence_flags.fill(False)
+        self.convergence_counter.fill(0)
         self._update_material_properties()
 
     def update_force_profile(self, new_force_profile: np.ndarray) -> None:
@@ -686,7 +709,7 @@ class DensitySimulation:
 
     def plot_density(self) -> None:
         """Plot the final density profile using pyvista."""
-        if self.save is False:
+        if self.save_data is False:
             logging.warning(
                 "Plotting is disabled. Set 'save' parameter to True to enable plotting.",
             )
@@ -720,29 +743,49 @@ class DensitySimulation:
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
     from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
+    from matplotlib.animation import FuncAnimation
 
-    gradient_force_profile = np.arange(30).reshape(3, 10) / 100
+    SAVE_PATH = "/home/gijs/Desktop/Thesis/data/fenics"
+    TIME_STEPS = 100
+
+    gradient_force_profile = np.arange(30).reshape(3, 10) / 50
     gradient_density = np.arange(100).reshape(10, 10) / 100.0 + 0.01
     parameters: dict = {
         "save": True,
         "output_dir": "/home/gijs/Desktop/Thesis/data/fenics",
         "plot": True,
     }
+    density_start = np.ones((10, 10)) * 0.8
 
     simulation = DensitySimulation(
         force_profile=gradient_force_profile,
-        initial_density_field=gradient_density,
-        time_steps=100,
+        initial_density_field=density_start,
+        time_steps=TIME_STEPS,
         dt=1.0,
         parameters=parameters,
     )
-    simulation.step()
-    final_density = simulation.get_density()
-    plot_density_matrix(
-        matrix=final_density,
-        force_profile=gradient_force_profile,
-        title="Test",
-        axis=plt.gca(),
-    )
+
+
+    density_film: np.ndarray = np.zeros((TIME_STEPS, simulation.n_rows, simulation.n_columns))
+
+    for i in range(TIME_STEPS):
+        simulation.step()
+        density_film[i] = simulation.get_density()
+
+    fig, ax = plt.subplots()
+
+    def update(frame: int) -> list[plt.Axes]:
+        """Update the plot for the current frame."""
+        ax.clear()
+        plot_density_matrix(
+            matrix=density_film[frame, :, :],
+            force_profile=gradient_force_profile,
+            title=f"Step {frame+1}",
+            axis=ax,
+        )
+        # Return a list of artists for FuncAnimation
+        return [ax]
+
+    animation = FuncAnimation(fig, update, frames=TIME_STEPS, interval=100, repeat=True)
+    plt.tight_layout()
     plt.show()
-    simulation.plot_density()

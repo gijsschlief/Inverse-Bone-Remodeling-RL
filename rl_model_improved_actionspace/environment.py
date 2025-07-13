@@ -497,7 +497,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
     model.learn(
         total_timesteps=1000,
         callback=[
-            RenderCallback(render_freq=100),
+            RenderCallback(render_freq=1),
             RewardSavingCallback(
                 out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png"
             ),
