@@ -580,8 +580,8 @@ class DensitySimulation:
         self.convergence_flags = (
             self.convergence_flags
             | cells_converged_small_change
-            | cells_converged_below_min
-            | cells_converged_above_max
+            #| cells_converged_below_min
+            #| cells_converged_above_max
         )
 
         self.density_function.vector().set_local(density.copy())

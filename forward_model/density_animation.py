@@ -16,8 +16,8 @@ force_profile_generator = ForceProfileGenerator(
 )
 force_profile = force_profile_generator.impulse(
     num_samples=1,
-    force_count_max=100,
-    force_max=10.0,
+    force_count_max=30,
+    force_max=30.0,
 )[0]
 
 density_start = np.ones((10, 10)) * 0.8
@@ -25,6 +25,7 @@ parameters: dict = {
     "save": True,
     "output_dir": "/home/gijs/Desktop/Thesis/data/fenics",
     "plot": True,
+    "convergence_after_steps": 10,
 }
 
 simulation = DensitySimulation(
