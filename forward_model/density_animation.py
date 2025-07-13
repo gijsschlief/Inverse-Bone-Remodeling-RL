@@ -1,5 +1,7 @@
 """Create a film of density changes over time using a forward model simulation."""
 
+import logging
+
 import matplotlib.pyplot as plt
 import numpy as np
 from bone_remodeling.forward_model.density_simulation import DensitySimulation
@@ -7,7 +9,7 @@ from bone_remodeling.forward_model.force_profile_generator import ForceProfileGe
 from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
 from matplotlib.animation import FuncAnimation
 
-SAVE_PATH = "/home/gijs/Desktop/Thesis/data/fenics"
+SAVE_PATH = "/home/gijs/Desktop/Thesis/data/animations/density_animation.gif"
 TIME_STEPS = 100
 
 force_profile_generator = ForceProfileGenerator(
@@ -56,3 +58,7 @@ def update(frame: int) -> list[plt.Axes]:
 animation = FuncAnimation(fig, update, frames=TIME_STEPS, interval=100, repeat=True)
 plt.tight_layout()
 plt.show()
+try:
+    animation.save(SAVE_PATH)
+except ImportError:
+    logging.info("Could not save animation.")
