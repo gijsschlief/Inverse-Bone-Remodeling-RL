@@ -14,11 +14,7 @@ force_profile_generator = ForceProfileGenerator(
     profile_length=10,
     batch_seed=np.random.randint(0, 10000),
 )
-force_profile = force_profile_generator.impulse(
-    num_samples=1,
-    force_count_max=30,
-    force_max=30.0,
-)[0]
+force_profile = force_profile_generator.merger(num_samples=1, force_max=20).squeeze()
 
 density_start = np.ones((10, 10)) * 0.8
 parameters: dict = {
