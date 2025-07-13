@@ -567,8 +567,6 @@ class DensitySimulation:
         density[active_cells] = density[active_cells] + self.dt * delta[active_cells]
 
         # Clip the new density values to the min and max bounds
-        cells_converged_below_min = density <= self.min_density
-        cells_converged_above_max = density >= self.max_density
         density = np.clip(density, self.min_density, self.max_density)
 
         # Count cells that have not changed significantly
@@ -580,8 +578,6 @@ class DensitySimulation:
         self.convergence_flags = (
             self.convergence_flags
             | cells_converged_small_change
-            #| cells_converged_below_min
-            #| cells_converged_above_max
         )
 
         self.density_function.vector().set_local(density.copy())
@@ -614,7 +610,7 @@ class DensitySimulation:
         else:
             output_path = Path(output_path)
             output_path.mkdir(parents=True, exist_ok=True)
-            self.full_file_path = output_path + self.file_extension
+            self.full_file_path = str(output_path) + self.file_extension
         try:
             File(str(self.full_file_path)) << to_save_data
         except Exception as e:

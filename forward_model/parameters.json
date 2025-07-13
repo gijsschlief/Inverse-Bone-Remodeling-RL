@@ -1,5 +1,6 @@
 {
     "time_steps": 100,
     "very_verbose": false,
-    "very_very_verbose": false
+    "very_very_verbose": false,
+    "file_extension": ".vtu"
 }
