@@ -8,10 +8,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
 from bone_remodeling.forward_model.density_simulation import DensitySimulation
+from bone_remodeling.forward_model.density_visualizer import (
+    plot_density_matrix,
+    render_density_pyvista_frame,
+)
 from bone_remodeling.forward_model.force_profile_generator import (
     ForceProfileGenerator,
 )
-from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
 from matplotlib.animation import FuncAnimation
 
 
@@ -112,26 +115,21 @@ def animate_density_pyvista(
 
     for step, filename in enumerate(file_list):
         grid = pv.read(filename)
+        if not isinstance(grid, pv.UnstructuredGrid):
+            logging.warning(f"File {filename} is not an UnstructuredGrid; skipping.")
+            continue
         if not grid.array_names:
             logging.warning(f"No scalar arrays in {filename}; skipping.")
             continue
 
-        plotter.clear()
-
-        cmap = "viridis"
-        clim = [grid.get_data_range()[0], grid.get_data_range()[1]]
-        plotter.add_mesh(
-            grid,
-            scalars=grid.array_names[0],
-            show_edges=True,
-            clim=clim,
-            cmap=cmap,
-            show_scalar_bar=True,
+        render_density_pyvista_frame(
+            plotter=plotter,
+            grid=grid,
+            scalar_field_name=grid.array_names[0],
+            step_title=f"Step {step+1}",
+            clim=(simulation.min_density, simulation.max_density),
         )
-        plotter.view_xy()
-        plotter.add_text(f"Step {step+1}", position="upper_left", font_size=14)
         plotter.write_frame()
-
     plotter.close()
     logging.info(f"PyVista animation saved to {output_directory}")
 

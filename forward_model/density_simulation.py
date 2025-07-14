@@ -595,7 +595,7 @@ class DensitySimulation:
     def save(
         self,
         to_save_data: Function | MeshFunction | Expression,
-        output_path: Path | None = None,
+        output_path: Path | str | None = None,
     ) -> None:
         """Save data specified to the output_dir.
 
@@ -710,87 +710,3 @@ class DensitySimulation:
             flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0
         )
         return np.flipud(safe_density.reshape(self.n_rows, self.n_columns))
-
-    def plot_density(self) -> None:
-        """Plot the final density profile using pyvista."""
-        if self.save_data is False:
-            logging.warning(
-                "Plotting is disabled. Set 'save' parameter to True to enable plotting.",
-            )
-            return
-        import pyvista as pv
-
-        try:
-            reader = pv.get_reader(self.full_file_path)
-            reader.set_active_time_point(0)
-        except Exception as e:
-            logging.exception(f"Failed to retrieve the file for plotting: {e}")
-            return
-        try:
-            grid = reader.read()[0]
-            scalar_field_name = grid.array_names[
-                0
-            ]  # Automatically get the first scalar field name
-            grid.plot(
-                scalars=scalar_field_name,
-                show_edges=True,
-                show_scalar_bar=True,
-                clim=[self.min_density, self.max_density],
-                cpos="xy",
-                show_grid=True,
-            )
-        except Exception as e:
-            logging.exception(f"Failed to plot the result: {e}")
-            return
-
-
-if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-    from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
-    from matplotlib.animation import FuncAnimation
-
-    SAVE_PATH = "/home/gijs/Desktop/Thesis/data/fenics"
-    TIME_STEPS = 100
-
-    gradient_force_profile = np.arange(30).reshape(3, 10) / 50
-    gradient_density = np.arange(100).reshape(10, 10) / 100.0 + 0.01
-    parameters: dict = {
-        "save": True,
-        "output_dir": "/home/gijs/Desktop/Thesis/data/fenics",
-        "plot": True,
-    }
-    density_start = np.ones((10, 10)) * 0.8
-
-    simulation = DensitySimulation(
-        force_profile=gradient_force_profile,
-        initial_density_field=density_start,
-        time_steps=TIME_STEPS,
-        dt=1.0,
-        parameters=parameters,
-    )
-
-    density_film: np.ndarray = np.zeros(
-        (TIME_STEPS, simulation.n_rows, simulation.n_columns)
-    )
-
-    for i in range(TIME_STEPS):
-        simulation.step()
-        density_film[i] = simulation.get_density()
-
-    fig, ax = plt.subplots()
-
-    def update(frame: int) -> list[plt.Axes]:
-        """Update the plot for the current frame."""
-        ax.clear()
-        plot_density_matrix(
-            matrix=density_film[frame, :, :],
-            force_profile=gradient_force_profile,
-            title=f"Step {frame+1}",
-            axis=ax,
-        )
-        # Return a list of artists for FuncAnimation
-        return [ax]
-
-    animation = FuncAnimation(fig, update, frames=TIME_STEPS, interval=100, repeat=True)
-    plt.tight_layout()
-    plt.show()

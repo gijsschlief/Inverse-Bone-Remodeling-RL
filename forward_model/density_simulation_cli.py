@@ -41,12 +41,12 @@ Options:
 import argparse
 import json
 import logging
-import sys
 import time
 from pathlib import Path
 
 import numpy as np
 from bone_remodeling.forward_model.density_simulation import DensitySimulation
+from bone_remodeling.forward_model.density_visualizer import plot_density_pyvista
 from fenics import LogLevel, set_log_level  # type: ignore
 
 logging.basicConfig(
@@ -321,9 +321,7 @@ def main() -> None:
 
     # plot if enabled
     if isinstance(parameters, dict) and parameters.get("plot", False):
-        simulation.plot_density()
-    return sys.exit(0)
-
+        plot_density_pyvista(simulation)
 
 if __name__ == "__main__":
     main()
