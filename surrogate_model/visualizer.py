@@ -124,12 +124,14 @@ def plot_density_matrix(
     """
     # Call the new_plot_density_matrix function with the same parameters
     logging.warning("Old location of plot_density_matrix, please update your imports.")
-    new_plot_density_matrix(matrix=matrix,
-                            force_profile=force_profile,
-                            title=title,
-                            axis=axis,
-                            color_scale_min=color_scale_min,
-                            color_scale_max=color_scale_max)
+    new_plot_density_matrix(
+        matrix=matrix,
+        force_profile=force_profile,
+        title=title,
+        axis=axis,
+        color_scale_min=color_scale_min,
+        color_scale_max=color_scale_max,
+    )
     # The function returns the axis, but we don't need to capture it here.
     # It is used for plotting directly on the provided axis.
 

@@ -7,6 +7,7 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
+from bone_remodeling.forward_model.density_parameters import SimulationParameters
 from bone_remodeling.forward_model.density_simulation import DensitySimulation
 from bone_remodeling.forward_model.density_visualizer import (
     plot_density_matrix,
@@ -146,19 +147,13 @@ def main() -> None:
     force_profile = force_profile_generator.merger(
         num_samples=1, force_max=20
     ).squeeze()
-    density_start = np.ones((10, 10)) * 0.8
-    parameters: dict = {
-        "save": True,
-        "output_dir": "/home/gijs/Desktop/Thesis/data/fenics",
-        "plot": True,
-        "convergence_after_steps": 10,
-    }
-    simulation = DensitySimulation(
+
+    parameters = SimulationParameters(
         force_profile=force_profile,
-        initial_density_field=density_start,
-        time_steps=100,
-        parameters=parameters,
-    )
+        initial_density_field=np.ones((10, 10)) * 0.8,
+        save_data=True)
+
+    simulation = DensitySimulation(parameters)
 
     animate_density_matplotlib(
         simulation=simulation,

@@ -6,6 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv  # type: ignore
+from bone_remodeling.forward_model.density_parameters import SimulationParameters
 from bone_remodeling.forward_model.density_simulation import DensitySimulation
 
 logging.basicConfig(
@@ -153,6 +154,7 @@ def plot_density_matrix(
                         ec=force_color,
                     )
 
+
 def _get_force_color(
     force_val: float, min_force: float = 0.1, max_force: float = 10.0
 ) -> str:
@@ -175,7 +177,13 @@ def _get_force_color(
     hex_color = f"#{red:02x}{green:02x}{blue:02x}"
     return hex_color
 
-def plot_density_pyvista(simulation: DensitySimulation, directory: Path = Path("/home/gijs/Desktop/Thesis/data/fenics/density_simulation.pvd")) -> None:
+
+def plot_density_pyvista(
+    simulation_parameters: SimulationParameters,
+    directory: Path = Path(
+        "/home/gijs/Desktop/Thesis/data/fenics/density_simulation.pvd"
+    ),
+) -> None:
     """Plot the density simulation using PyVista.
 
     Args:
@@ -189,13 +197,16 @@ def plot_density_pyvista(simulation: DensitySimulation, directory: Path = Path("
         reader.set_active_time_point(0)
         grid = reader.read()[0]
         scalar_field_name = grid.array_names[0]
-        clim = (simulation.min_density, simulation.max_density)
+        clim = (simulation_parameters.min_density, simulation_parameters.max_density)
 
         plotter = pv.Plotter()
-        render_density_pyvista_frame(plotter, grid, scalar_field_name, "Final Step", clim)
+        render_density_pyvista_frame(
+            plotter, grid, scalar_field_name, "Final Step", clim
+        )
         plotter.show()
     except Exception as e:
         logging.exception(f"Failed to plot result with PyVista: {e}")
+
 
 def render_density_pyvista_frame(
     plotter: pv.Plotter,
@@ -214,8 +225,9 @@ def render_density_pyvista_frame(
         clim=clim,
         cmap="viridis",
     )
-    plotter.camera_position = 'xy'
+    plotter.camera_position = "xy"
     plotter.add_text(step_title, position="upper_left", font_size=14)
+
 
 def main() -> None:
     """Run the density visualizer to create plots."""
@@ -224,14 +236,15 @@ def main() -> None:
 
     force_profile = np.random.rand(3, 10) * 10 - 5
 
-    simulation = DensitySimulation(
+    simulation_parameters = SimulationParameters(
         force_profile=force_profile,
         initial_density_field=np.ones((10, 10)) * 0.8,
         time_steps=100,
-        parameters={"save": False, "plot": True},
+        save_data=False,
     )
 
-    plot_density_pyvista(simulation=simulation)
+    plot_density_pyvista(simulation_parameters=simulation_parameters)
+
 
 if __name__ == "__main__":
     main()

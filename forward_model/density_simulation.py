@@ -11,11 +11,13 @@ and plotting the final density profile using pyvista.
 """
 
 import logging
+from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Optional
+from typing import Optional
 
 import numpy as np
 import ufl  # type: ignore
+from bone_remodeling.forward_model.density_parameters import SimulationParameters
 from fenics import (  # type: ignore
     Constant,
     DirichletBC,
@@ -54,99 +56,34 @@ class DensitySimulation:
     calculates the strain energy density, and updates the bone density based on the remodeling rate coefficient
     and stimulus threshold.
 
-    Attributes
-    ----------
-        force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left, and right, and n is the location in that row.
-        initial_density_field (np.ndarray): Initial bone density matrix.
-        time_steps (int): Number of time steps for the simulation.
-        dt (float): Time step size.
-        parameters (dict[str, Any]): Dictionary containing simulation parameters.
-        mesh (UnitSquareMesh): Mesh for the simulation domain.
-        displacement_space (VectorFunctionSpace): Function space for displacement.
-        cell_density_space (FunctionSpace): Function space for cell density.
-        spatial_dimension (int): Spatial dimension of the problem.
-        zero_body_force (Constant): Zero body force constant.
-        displacement_test_function (TestFunction): Test function for displacement.
-        displacement_trial (TrialFunction): Trial function for displacement.
-        num_cells (int): Number of cells in the mesh.
-        current_density (np.ndarray): Current density values for each cell in the mesh.
-        convergence_flags (np.ndarray): Flags indicating whether each cell has converged.
-        elasticity_modulus_function (Function): Function representing the modulus of elasticity.
-        shear_function (Function): Function representing the shear modulus.
-        lame_function (Function): Function representing the first Lame coefficient.
-        displacement (Function): Function representing the displacement field.
-        boundaries (MeshFunction): Mesh function defining the boundaries of the mesh.
-        ds (Measure): Measure for boundary integrals.
-        top_force_expr (Expression): Expression for the force applied on the top boundary.
-        right_force_expr (Expression): Expression for the force applied on the right boundary.
-        left_force_expr (Expression): Expression for the force applied on the left boundary.
-        sed_function (Function): Function for the strain energy density.
-        density_function (Function): Function for the density field.
-
-    Methods
-    -------
-        run() -> None:
-            Runs the full simulation loop, solving the elasticity problem and updating the density.
-        get_density() -> np.ndarray:
-            Returns the density profile as a numpy array.
-        plot_density() -> None:
-            Plots the density profile using pyvista. Only works if pyvista is installed and data is saved.
-        _save(to_save_data: Any) -> None:
-            Saves specified data to the output directory.
-        _check_convergence(time: Optional[float] = None) -> bool:
-            Checks if the simulation has converged based on cell convergence flags.
-        _update_material_properties() -> None:
-            Updates the material properties for the next time step.
-        _update_density() -> None:
-            Computes the strain energy density and updates the density based on it.
-        _calculate_strain_tensor(displacement: Function) -> ufl.tensors.ListTensor:
-            Calculates the strain tensor from the displacement field.
-        _calculate_stress_tensor(
-            displacement: Function,
-            strain_tensor: ufl.tensors.ListTensor,
-        ) -> ufl.tensors.ListTensor:
-            Calculates the stress tensor using the strain tensor, shear modulus, and first Lame coefficient.
-        _update_strain_energy_density(
-            strain_tensor: ufl.tensors.ListTensor,
-            stress_tensor: ufl.tensors.ListTensor,
-        ) -> None:
-            Calculates the strain energy density (SED) from the strain and stress tensors.
-        _update_density_change() -> None:
-            Calculates the change in density based on the strain energy density (SED) and updates the density values.
-        _build_force_expression(force_row: np.ndarray, axis: str) -> Expression:
-            Builds the force expression based on the force profile for a specified axis.
-        _setup_mesh_and_spaces() -> None:
-            Sets up the mesh and function spaces for the simulation.
-        _setup_density_field() -> None:
-            Sets up the density values for the simulation based on the initial density field.
-        _setup_boundary_conditions() -> None:
-            Sets up boundary conditions for the simulation.
-        _setup_subdomains() -> None:
-            Sets up subdomains for the boundaries of the mesh.
-        _setup_force_expression() -> None:
-            Sets up the force expressions based on the force profile.
-        _initialize_core_parameters(
-            force_profile: np.ndarray,
-            initial_density_field: np.ndarray,
-            time_steps: int,
-            dt: float,
-        ) -> None:
-            Initializes the core simulation parameters by adding them to the class instance.
-        _extract_data_from_parameters(parameters: dict[str, Any]) -> None:
-            Extracts necessary data from the parameters dictionary to set up the simulation parameters.
-        _validate_parameters() -> None:
-            Validates the input parameters for the simulation and raises errors for invalid inputs.
-
     """
 
-    def __init__(
-        self,
-        force_profile: np.ndarray,
-        initial_density_field: np.ndarray,
-        time_steps: int = 100,
-        dt: float = 1,
-        parameters: dict[str, Any] | None = None,
-    ) -> None:
+    force_profile: np.ndarray
+    initial_density_field: np.ndarray
+    time_steps: int
+    dt: float
+
+    n_rows: int
+    n_columns: int
+
+    min_density: float
+    max_density: float
+    poisson_ratio: float
+    elastic_modulus_scale: float
+    modulus_exponent: float
+    stimulus_threshold: float
+    convergence_tolerance: float
+    convergence_after_steps: int
+    boundary_tolerance: float
+    remodeling_rate_coefficient: float
+
+    output_dir: str
+    full_file_path: str | Path
+    output_basename: str
+    output_extension: str
+    save_data: bool
+
+    def __init__(self, parameters: SimulationParameters) -> None:
         """Initialize the density simulation with parameters and setup.
 
         Args:
@@ -158,15 +95,12 @@ class DensitySimulation:
 
         """
         set_log_level(LogLevel.ERROR)
-        self._initialize_core_parameters(
-            force_profile,
-            initial_density_field,
-            time_steps,
-            dt,
-        )
-        self._extract_data_from_parameters(parameters or {})
 
-        self._validate_parameters()
+        for name, value in asdict(parameters).items():
+            setattr(self, name, value)
+
+        self.n_rows = self.initial_density_field.shape[0]
+        self.n_columns = self.initial_density_field.shape[1]
 
         self._setup_mesh_and_spaces()
         self._setup_density_field()
@@ -179,112 +113,6 @@ class DensitySimulation:
         self._initialize_load_form()
         self._initialize_solver()
         self._initialize_projector()
-
-    def _initialize_core_parameters(
-        self,
-        force_profile: np.ndarray,
-        initial_density_field: np.ndarray,
-        time_steps: int,
-        dt: float,
-    ) -> None:
-        """Initialize the core simulation parameters by adding them to the class instance."""
-        self.initial_density_field = initial_density_field
-        self.force_profile = force_profile
-        self.dt = dt
-        self.time_steps = time_steps
-        self.n_rows = self.initial_density_field.shape[0]
-        self.n_columns = self.initial_density_field.shape[1]
-
-    def _extract_data_from_parameters(self, parameters: dict[str, Any]) -> None:
-        """Extract necessary data from the parameters dictionary.
-
-        This function is used to set up the simulation parameters.
-        """
-        self.output_dir = parameters.get("output_dir", "data/fenics")
-        self.min_density = parameters.get("min_density", 0.01)
-        self.max_density = parameters.get("max_density", 1.74)
-        self.boundary_tolerance = parameters.get("boundary_tolerance", 1e-14)
-        self.remodeling_rate_coefficient = parameters.get(
-            "remodeling_rate_coefficient",
-            1,
-        )
-        self.stimulus_threshold = parameters.get("stimulus_threshold", 0.25)
-        self.poisson_ratio = parameters.get("poisson_ratio", 0.3)
-        self.elastic_modulus_scale = parameters.get("elastic_modulus_scale", 100)
-        self.modulus_exponent = parameters.get("modulus_exponent", 2.0)
-        self.output_basename = parameters.get("output_basename", "density_simulation")
-        self.file_extension = parameters.get("file_extension", ".pvd")
-        self.save_data = parameters.get("save", False)
-        self.convergence_tolerance = parameters.get("convergence_tolerance", 1e-6)
-        self.convergence_after_steps = parameters.get("convergence_after_steps", 1)
-
-    def _validate_parameters(self) -> None:
-        """Validate the input parameters for the simulation."""
-        if not isinstance(self.force_profile, np.ndarray):
-            raise TypeError("force_profile must be a numpy array.")
-        if not isinstance(self.initial_density_field, np.ndarray):
-            raise TypeError("initial_density field must be a numpy array.")
-        if not isinstance(self.time_steps, int) or self.time_steps <= 0:
-            raise ValueError("time_steps must be a positive integer.")
-        if not isinstance(self.dt, (int, float)) or self.dt <= 0:
-            raise ValueError("dt must be a positive number.")
-        if not isinstance(self.output_dir, str):
-            raise TypeError("Output directory must be a string.")
-        if not isinstance(self.min_density, (int, float)):
-            raise TypeError("min_density must be a number.")
-        if not isinstance(self.max_density, (int, float)):
-            raise TypeError("max_density must be a number.")
-        if self.min_density < 0 or self.max_density <= self.min_density:
-            raise ValueError(
-                "r_min must be non-negative and max_density must be greater than min_density.",
-            )
-        if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != np.max(
-            self.initial_density_field.shape,
-        ):
-            raise ValueError(
-                "force_profile must have 3 rows and columns equal to the maximum of initial_density field dimensions.",
-            )
-        if np.isnan(self.force_profile).any():
-            raise ValueError("force_profile contains NaN values.")
-        if np.isnan(self.initial_density_field).any():
-            raise ValueError("initial_density field contains NaN values.")
-        if (
-            not (self.min_density <= self.initial_density_field).all()
-            or not (self.initial_density_field <= self.max_density).all()
-        ):
-            raise ValueError(
-                "initial_density field values must be between min_density and max_density.",
-            )
-        if not (self.dt > 0):
-            raise ValueError(
-                "dt must be a positive number.",
-            )
-        if not (self.time_steps <= 1000):
-            logging.warning(
-                "time_steps is set to a high value, which may lead to long computation times.",
-            )
-        if not isinstance(self.save_data, bool):
-            raise TypeError("save must be a boolean value.")
-        if (
-            not isinstance(self.convergence_tolerance, (int, float))
-            or self.convergence_tolerance <= 0
-        ):
-            raise ValueError("convergence_tolerance must be a positive number.")
-        if self.convergence_tolerance > 0.1:
-            logging.warning("convergence tolerance is very large")
-        if not isinstance(self.output_basename, str):
-            raise TypeError("output_basename must be a string.")
-        if not isinstance(self.file_extension, str):
-            raise TypeError("file_extension must be a string.")
-        if not self.file_extension.startswith("."):
-            raise ValueError("file_extension must start with a dot (e.g., '.pvd').")
-        if self.n_rows <= 1 or self.n_columns <= 1:
-            raise ValueError("n_rows and n_columns must be greater than 1.")
-        if (
-            not isinstance(self.convergence_after_steps, int)
-            or self.convergence_after_steps <= 0
-        ):
-            raise ValueError("convergence_after_steps must be a positive integer.")
 
     def _setup_mesh_and_spaces(self) -> None:
         """Set up the mesh and function spaces for the simulation.
@@ -613,12 +441,12 @@ class DensitySimulation:
             output_path = Path(self.output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
             self.full_file_path = output_path / (
-                self.output_basename + self.file_extension
+                self.output_basename + self.output_extension
             )
         else:
             output_path = Path(output_path)
             output_path.mkdir(parents=True, exist_ok=True)
-            self.full_file_path = str(output_path) + self.file_extension
+            self.full_file_path = str(output_path) + self.output_extension
         try:
             File(str(self.full_file_path)) << to_save_data
         except Exception as e:

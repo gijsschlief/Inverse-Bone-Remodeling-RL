@@ -323,5 +323,6 @@ def main() -> None:
     if isinstance(parameters, dict) and parameters.get("plot", False):
         plot_density_pyvista(simulation)
 
+
 if __name__ == "__main__":
     main()
