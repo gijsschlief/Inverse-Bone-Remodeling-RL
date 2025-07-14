@@ -1,4 +1,4 @@
-"""Create a film of density changes over time using a forward model simulation."""
+"""Create an animation of density changes over time using the forward model simulation."""
 
 import glob
 import logging
