@@ -4,9 +4,10 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from forward_model.data_reader import forward_data_reader
-from surrogate_model.visualizer import plot_density_matrix
+from bone_remodeling.forward_data.reader import forward_data_reader  # type: ignore
+from bone_remodeling.surrogate_model.visualizer import (
+    plot_density_matrix,  # type: ignore
+)
 
 logging.basicConfig(level=logging.INFO)
 

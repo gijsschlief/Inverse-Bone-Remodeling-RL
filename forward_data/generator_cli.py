@@ -10,9 +10,12 @@ import time
 from pathlib import Path
 
 import numpy as np
-
-from forward_model.data_generator import TrainingDataGenerator  # type: ignore
-from forward_model.force_profile_generator import ForceProfileGenerator  # type: ignore
+from bone_remodeling.forward_data.generator import (
+    TrainingDataGenerator,  # type: ignore
+)
+from bone_remodeling.forward_model.force_profile_generator import (
+    ForceProfileGenerator,  # type: ignore
+)
 
 # Configure logging
 logging.basicConfig(
@@ -140,7 +143,7 @@ def main() -> None:
             args.num_samples, force_profile_name="combined"
         )
     elif args.mode == "sequential":
-        data_generator.generate_serial(args.num_samples)
+        data_generator.generate_serial()
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")

@@ -8,12 +8,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
 from bone_remodeling.forward_model.density_simulation import DensitySimulation
-from bone_remodeling.forward_model.force_profile_generator import ForceProfileGenerator
+from bone_remodeling.forward_model.force_profile_generator import (
+    ForceProfileGenerator,
+)
 from bone_remodeling.surrogate_model.visualizer import plot_density_matrix
 from matplotlib.animation import FuncAnimation
 
 
-def animate_density_matplotlib(simulation: DensitySimulation, output_directory: str) -> FuncAnimation:
+def animate_density_matplotlib(
+    simulation: DensitySimulation, output_directory: str
+) -> FuncAnimation:
     """Create an animation of the density changes over time using Matplotlib.
 
     Args:
@@ -26,7 +30,9 @@ def animate_density_matplotlib(simulation: DensitySimulation, output_directory: 
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
-    density_film: np.ndarray = np.zeros((simulation.time_steps, simulation.n_rows, simulation.n_columns))
+    density_film: np.ndarray = np.zeros(
+        (simulation.time_steps, simulation.n_rows, simulation.n_columns)
+    )
 
     simulation.reset()
     for i in range(simulation.time_steps):
@@ -46,7 +52,13 @@ def animate_density_matplotlib(simulation: DensitySimulation, output_directory: 
         )
         return [ax]
 
-    animation = FuncAnimation(fig, _update_to_next_frame, frames=simulation.time_steps, interval=100, repeat=True)
+    animation = FuncAnimation(
+        fig,
+        _update_to_next_frame,
+        frames=simulation.time_steps,
+        interval=100,
+        repeat=True,
+    )
     plt.tight_layout()
     try:
         animation.save(output_directory, writer="ffmpeg")
@@ -55,23 +67,26 @@ def animate_density_matplotlib(simulation: DensitySimulation, output_directory: 
         logging.warning("Could not save animation.")
     return animation
 
+
 def _update_pyvista_files(simulation: DensitySimulation, file_pattern: str) -> None:
     """Update the PyVista files to ensure they are in the correct format."""
     simulation.reset()
     for i in range(simulation.time_steps):
         simulation.step()
-        simulation.save(to_save_data=simulation.density_function, output_path=file_pattern + f"_{i}")
+        simulation.save(
+            to_save_data=simulation.density_function, output_path=file_pattern + f"_{i}"
+        )
         os.rename(
             file_pattern + f"_{i}" + "000000.vtu",
             file_pattern + f"_{i}" + ".vtu",
         )
-        os.rmdir(
-            file_pattern + f"_{i}")
-        os.remove(
-            file_pattern + f"_{i}" + ".pvd"
-        )
+        os.rmdir(file_pattern + f"_{i}")
+        os.remove(file_pattern + f"_{i}" + ".pvd")
 
-def animate_density_pyvista(simulation: DensitySimulation, output_directory: str, file_pattern: str) -> None:
+
+def animate_density_pyvista(
+    simulation: DensitySimulation, output_directory: str, file_pattern: str
+) -> None:
     """Create an animation of the density changes over time using PyVista.
 
     Args:
@@ -88,7 +103,7 @@ def animate_density_pyvista(simulation: DensitySimulation, output_directory: str
 
     file_list = sorted(
         glob.glob(file_pattern + "_*.vtu"),
-        key=lambda fn: int(os.path.splitext(fn)[0].split("_")[-1])
+        key=lambda fn: int(os.path.splitext(fn)[0].split("_")[-1]),
     )
 
     # Initialize the Plotter
@@ -120,6 +135,7 @@ def animate_density_pyvista(simulation: DensitySimulation, output_directory: str
     plotter.close()
     logging.info(f"PyVista animation saved to {output_directory}")
 
+
 def main() -> None:
     """Run the density animations to create to GIFS."""
     logging.basicConfig(level=logging.INFO)
@@ -129,7 +145,9 @@ def main() -> None:
         profile_length=10,
         batch_seed=np.random.randint(0, 10000),
     )
-    force_profile = force_profile_generator.merger(num_samples=1, force_max=20).squeeze()
+    force_profile = force_profile_generator.merger(
+        num_samples=1, force_max=20
+    ).squeeze()
     density_start = np.ones((10, 10)) * 0.8
     parameters: dict = {
         "save": True,
@@ -137,7 +155,12 @@ def main() -> None:
         "plot": True,
         "convergence_after_steps": 10,
     }
-    simulation = DensitySimulation(force_profile=force_profile, initial_density_field=density_start, time_steps=100, parameters=parameters)
+    simulation = DensitySimulation(
+        force_profile=force_profile,
+        initial_density_field=density_start,
+        time_steps=100,
+        parameters=parameters,
+    )
 
     animate_density_matplotlib(
         simulation=simulation,
@@ -148,6 +171,7 @@ def main() -> None:
         output_directory="/home/gijs/Desktop/Thesis/data/animations/9_density_animation_pyvista.gif",
         file_pattern="/home/gijs/Desktop/Thesis/data/animations/density_animation",
     )
+
 
 if __name__ == "__main__":
     main()

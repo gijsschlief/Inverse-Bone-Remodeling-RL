@@ -97,7 +97,7 @@ class SurrogateModelLoader:
 
 
 def load_surrogate_model(
-    model_path: str | Path  = "data/models/trained_model.pth",
+    model_path: str | Path = "data/models/trained_model.pth",
     model_class: Type[torch.nn.Module] = MediumSurrogateModel,
 ) -> Tuple[
     torch.nn.Module | None,

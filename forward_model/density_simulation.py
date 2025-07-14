@@ -280,7 +280,10 @@ class DensitySimulation:
             raise ValueError("file_extension must start with a dot (e.g., '.pvd').")
         if self.n_rows <= 1 or self.n_columns <= 1:
             raise ValueError("n_rows and n_columns must be greater than 1.")
-        if not isinstance(self.convergence_after_steps, int) or self.convergence_after_steps <= 0:
+        if (
+            not isinstance(self.convergence_after_steps, int)
+            or self.convergence_after_steps <= 0
+        ):
             raise ValueError("convergence_after_steps must be a positive integer.")
 
     def _setup_mesh_and_spaces(self) -> None:
@@ -574,11 +577,10 @@ class DensitySimulation:
         self.convergence_counter[active_cells & cells_converged_small_change] += 1
         self.convergence_counter[active_cells & ~cells_converged_small_change] = 0
 
-        cells_converged_small_change = self.convergence_counter >= self.convergence_after_steps
-        self.convergence_flags = (
-            self.convergence_flags
-            | cells_converged_small_change
+        cells_converged_small_change = (
+            self.convergence_counter >= self.convergence_after_steps
         )
+        self.convergence_flags = self.convergence_flags | cells_converged_small_change
 
         self.density_function.vector().set_local(density.copy())
         self.current_density = density
@@ -590,7 +592,11 @@ class DensitySimulation:
         self._update_strain_energy_density(strain_tensor, stress_tensor)
         self._update_density_change()
 
-    def save(self, to_save_data: Function | MeshFunction | Expression, output_path: Path | None = None) -> None:
+    def save(
+        self,
+        to_save_data: Function | MeshFunction | Expression,
+        output_path: Path | None = None,
+    ) -> None:
         """Save data specified to the output_dir.
 
         Args:
@@ -606,7 +612,9 @@ class DensitySimulation:
         if output_path is None:
             output_path = Path(self.output_dir)
             output_path.mkdir(parents=True, exist_ok=True)
-            self.full_file_path = output_path / (self.output_basename + self.file_extension)
+            self.full_file_path = output_path / (
+                self.output_basename + self.file_extension
+            )
         else:
             output_path = Path(output_path)
             output_path.mkdir(parents=True, exist_ok=True)
@@ -761,8 +769,9 @@ if __name__ == "__main__":
         parameters=parameters,
     )
 
-
-    density_film: np.ndarray = np.zeros((TIME_STEPS, simulation.n_rows, simulation.n_columns))
+    density_film: np.ndarray = np.zeros(
+        (TIME_STEPS, simulation.n_rows, simulation.n_columns)
+    )
 
     for i in range(TIME_STEPS):
         simulation.step()
