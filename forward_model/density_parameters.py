@@ -141,7 +141,5 @@ class SimulationParameters:
             raise TypeError("file_extension must be a string.")
         if not self.output_extension.startswith("."):
             raise ValueError("file_extension must start with a dot (e.g., '.pvd').")
-        if self.n_rows <= 1 or self.n_columns <= 1:
-            raise ValueError("n_rows and n_columns must be greater than 1.")
         if not isinstance(self.convergence_after_steps, int) or self.convergence_after_steps <= 0:
             raise ValueError("convergence_after_steps must be a positive integer.")
