@@ -121,7 +121,7 @@ class DensitySimulation:
         and creates the necessary function spaces for the simulation.
         """
         self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
-        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 3)
+        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 2)
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.zero_body_force = Constant((0, 0))
@@ -345,10 +345,8 @@ class DensitySimulation:
         self.shear_function.vector().set_local(shear_modulus)
         self.lame_function.vector().set_local(first_lame_parameter)
 
-    def _calculate_strain_tensor(
-        self,
-        displacement: Function,
-    ) -> ufl.tensors.ListTensor:
+    @staticmethod
+    def _calculate_strain_tensor(displacement: Function) -> ufl.tensors.ListTensor:
         """Calculate the strain tensor from the displacement field."""
         strain_tensor = 0.5 * (grad(displacement) + grad(displacement).T)
         return strain_tensor
@@ -365,12 +363,11 @@ class DensitySimulation:
         )
         return stress_tensor
 
-    def _update_strain_energy_density(
-        self,
-        strain_tensor: ufl.tensors.ListTensor,
-        stress_tensor: ufl.tensors.ListTensor,
-    ) -> None:
+    def _calculate_strain_energy_density(self) -> None:
         """Calculate the strain energy density (SED) from the strain and stress tensors."""
+        strain_tensor = self._calculate_strain_tensor(self.displacement)
+        stress_tensor = self._calculate_stress_tensor(self.displacement, strain_tensor)
+
         sed_expression = 0.5 * inner(stress_tensor, strain_tensor)
         linear_sed_form = inner(sed_expression, self.test_function_density) * dx
         solve(
@@ -415,9 +412,7 @@ class DensitySimulation:
 
     def _update_density(self) -> None:
         """Compute SED and update density based on it."""
-        strain_tensor = self._calculate_strain_tensor(self.displacement)
-        stress_tensor = self._calculate_stress_tensor(self.displacement, strain_tensor)
-        self._update_strain_energy_density(strain_tensor, stress_tensor)
+        self._calculate_strain_energy_density()
         self._update_density_change()
 
     def save(

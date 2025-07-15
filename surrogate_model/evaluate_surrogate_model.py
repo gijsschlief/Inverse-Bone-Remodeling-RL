@@ -3,7 +3,7 @@
 import logging
 
 import numpy as np
-from bone_remodeling.forward_model.data_reader import forward_data_reader
+from bone_remodeling.forward_data.reader import forward_data_reader
 from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )

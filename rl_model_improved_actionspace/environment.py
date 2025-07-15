@@ -8,7 +8,7 @@ from typing import cast
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from bone_remodeling.forward_model.data_reader import forward_data_reader
+from bone_remodeling.forward_data.reader import forward_data_reader
 from bone_remodeling.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.surrogate_model.loader import load_surrogate_model
 from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
