@@ -1,7 +1,6 @@
 """The density updater is responsible for updating the density each timestep when running the forward simulation."""
 
 import numpy as np
-from bone_remodeling.forward_model.density_parameters import SimulationParameters
 
 
 class DensityUpdater:
@@ -12,25 +11,42 @@ class DensityUpdater:
     convergence of each cell and updates the density accordingly.
     """
 
-    def __init__(self, simulation_parameters: SimulationParameters) -> None:
+    def __init__(self,
+        initial_density: np.ndarray,
+        dt: float,
+        remodeling_rate_coefficient: float,
+        stimulus_threshold: float,
+        min_density: float,
+        max_density: float,
+        convergence_tolerance: float,
+        convergence_after_steps: int,
+    ) -> None:
         """Initialize the DensityUpdater with simulation parameters.
 
         Args:
         ----
-            simulation_parameters (SimulationParameters): Parameters for the simulation.
+            initial_density (np.ndarray): Initial density field.
+            dt (float): Time step for the simulation.
+            remodeling_rate_coefficient (float): Coefficient for the remodeling rate.
+            stimulus_threshold (float): Threshold for the stimulus.
+            min_density (float): Minimum allowed density.
+            max_density (float): Maximum allowed density.
+            convergence_tolerance (float): Tolerance for convergence checks.
+            convergence_after_steps (int): Number of steps to consider for convergence.
 
         """
-        self.density = simulation_parameters.initial_density_field.copy()
+        self.initial_density_value = initial_density
+        self.density = self.initial_density_value.copy()
         self.active_cells = np.ones_like(self.density, dtype=bool)
         self.convergence_counter = np.zeros_like(self.density, dtype=int)
 
-        self.dt = simulation_parameters.dt
-        self.remodeling_rate_coefficient = simulation_parameters.remodeling_rate_coefficient
-        self.stimulus_threshold = simulation_parameters.stimulus_threshold
-        self.min_density = simulation_parameters.min_density
-        self.max_density = simulation_parameters.max_density
-        self.convergence_tolerance = simulation_parameters.convergence_tolerance
-        self.convergence_after_steps = simulation_parameters.convergence_after_steps
+        self.dt = dt
+        self.remodeling_rate_coefficient = remodeling_rate_coefficient
+        self.stimulus_threshold = stimulus_threshold
+        self.min_density = min_density
+        self.max_density = max_density
+        self.convergence_tolerance = convergence_tolerance
+        self.convergence_after_steps = convergence_after_steps
 
     def _update_active_cells(self, delta: np.ndarray) -> None:
         """Check which cells are still active based on changes in density."""
@@ -65,3 +81,19 @@ class DensityUpdater:
 
         self._update_active_cells(delta)
         return self.density
+
+    def check_convergence(self) -> bool:
+        """Check which cells have converged based on the convergence counter.
+
+        Returns
+        -------
+            bool: True if all cells have converged, False otherwise.
+
+        """
+        return bool(np.all(~self.active_cells))
+
+    def reset(self) -> None:
+        """Reset the density updater to its initial state."""
+        self.density = np.full_like(self.density, self.initial_density_value)
+        self.active_cells.fill(True)
+        self.convergence_counter.fill(0)

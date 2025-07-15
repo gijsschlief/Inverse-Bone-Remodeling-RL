@@ -13,11 +13,11 @@ and plotting the final density profile using pyvista.
 import logging
 from dataclasses import asdict
 from pathlib import Path
-from typing import Optional
 
 import numpy as np
 import ufl  # type: ignore
 from bone_remodeling.forward_model.density_parameters import SimulationParameters
+from bone_remodeling.forward_model.density_updater import DensityUpdater
 from fenics import (  # type: ignore
     Constant,
     DirichletBC,
@@ -121,7 +121,7 @@ class DensitySimulation:
         and creates the necessary function spaces for the simulation.
         """
         self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
-        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 2)
+        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 3)
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.zero_body_force = Constant((0, 0))
@@ -149,8 +149,18 @@ class DensitySimulation:
         self.mesh_j = np.minimum((xs * self.n_columns).astype(int), self.n_columns - 1)
 
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
-        self.convergence_flags = np.zeros(self.num_cells, dtype=bool)
-        self.convergence_counter = np.zeros(self.num_cells, dtype=int)
+
+        self.density_updater = DensityUpdater(
+            initial_density=self.current_density,
+            dt=self.dt,
+            remodeling_rate_coefficient=self.remodeling_rate_coefficient,
+            stimulus_threshold=self.stimulus_threshold,
+            min_density=self.min_density,
+            max_density=self.max_density,
+            convergence_tolerance=self.convergence_tolerance,
+            convergence_after_steps=self.convergence_after_steps,
+        )
+
 
     def _setup_boundary_conditions(self) -> None:
         """Set up boundary conditions for the simulation.
@@ -376,44 +386,12 @@ class DensitySimulation:
             solver_parameters=self.projection_solver_parameters,
         )
 
-    def _update_density_change(self) -> None:
-        """Calculate the change in density based on the strain energy density (SED).
-
-        Cells which have converged will no longer update in the simulation.
-        Convergence happens when the lower or upper density is hit or the cell has not made a noticeable change in density.
-        """
-        strain_energy_density = self.sed_function.vector().get_local()
-        active_cells = ~self.convergence_flags
-        density = self.current_density
-        stimulus = np.zeros_like(density)
-
-        # Compute the stimulus and density change for active cells
-        stimulus[active_cells] = (
-            strain_energy_density[active_cells] / density[active_cells]
-        )
-        delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
-        density[active_cells] = density[active_cells] + self.dt * delta[active_cells]
-
-        # Clip the new density values to the min and max bounds
-        density = np.clip(density, self.min_density, self.max_density)
-
-        # Count cells that have not changed significantly
-        cells_converged_small_change = np.abs(delta) < self.convergence_tolerance
-        self.convergence_counter[active_cells & cells_converged_small_change] += 1
-        self.convergence_counter[active_cells & ~cells_converged_small_change] = 0
-
-        cells_converged_small_change = (
-            self.convergence_counter >= self.convergence_after_steps
-        )
-        self.convergence_flags = self.convergence_flags | cells_converged_small_change
-
-        self.density_function.vector().set_local(density.copy())
-        self.current_density = density
-
     def _update_density(self) -> None:
         """Compute SED and update density based on it."""
         self._calculate_strain_energy_density()
-        self._update_density_change()
+
+        self.current_density = self.density_updater.update(self.sed_function.vector().get_local())
+        self.density_function.vector().set_local(self.current_density.copy())
 
     def save(
         self,
@@ -450,10 +428,6 @@ class DensitySimulation:
             )
             raise RuntimeError(f"Failed to save the output: {e}") from e
 
-    def _check_convergence(self, time: Optional[float] = None) -> bool:
-        """Return True if simulation converged by checking the cells."""
-        return bool(np.all(self.convergence_flags))
-
     def step(self) -> None:
         """Run a single step of the simulation.
 
@@ -468,9 +442,10 @@ class DensitySimulation:
 
     def run(self) -> None:
         """Run the full simulation loop."""
-        for time in range(self.time_steps):
+        for _ in range(self.time_steps):
             self.step()
-            if self._check_convergence(time):
+
+            if self.density_updater.check_convergence():
                 break
 
     def reset(self) -> None:
@@ -482,9 +457,8 @@ class DensitySimulation:
         self.lame_function.vector().zero()
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
         self.density_function.vector().set_local(self.current_density.copy())
-        self.convergence_flags.fill(False)
-        self.convergence_counter.fill(0)
         self._update_material_properties()
+        self.density_updater.reset()
 
     def update_force_profile(self, new_force_profile: np.ndarray) -> None:
         """Update the force profile for the simulation.

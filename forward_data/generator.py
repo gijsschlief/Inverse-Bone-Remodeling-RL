@@ -16,6 +16,9 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 import numpy as np
+from bone_remodeling.forward_model.density_parameters import (
+    SimulationParameters,  # type: ignore
+)
 from bone_remodeling.forward_model.density_simulation import (
     DensitySimulation,  # type: ignore
 )
@@ -45,13 +48,13 @@ def init_worker(
     """Initialize the per-process simulation (no RNG here)."""
     global _worker_sim, _profile_length
 
-    _worker_sim = DensitySimulation(
+    simulation_parameters = SimulationParameters(
         force_profile=empty_profile,
         initial_density_field=initial_density,
         time_steps=time_steps,
-        dt=dt,
-        parameters=parameters,
-    )
+        dt=dt)
+
+    _worker_sim = DensitySimulation(parameters=simulation_parameters)
 
     _profile_length = empty_profile.shape[1]
 
@@ -224,13 +227,14 @@ class TrainingDataGenerator:
     def generate_serial(self) -> list[dict]:
         """Generate training data serially."""
         results = []
-        simulation = DensitySimulation(
+
+        simulation_parameters = SimulationParameters(
             force_profile=self.empty_force_profile,
             initial_density_field=self.initial_density,
             time_steps=self.time_steps,
-            dt=self.dt,
-            parameters=self.parameters,
-        )
+            dt=self.dt)
+
+        simulation = DensitySimulation(parameters=simulation_parameters)
         for i, profile in enumerate(self.force_profiles):
             try:
                 simulation.reset()
@@ -293,11 +297,6 @@ if __name__ == "__main__":
         num_samples=100,
         force_max=20.0,
     )
-
-    # force_profiles = force_profile_generator.triangular(
-    #    num_samples=10_000,
-    #    force_max=20.0,
-    # )
 
     logging.info("Running forward model simulations...")
 
