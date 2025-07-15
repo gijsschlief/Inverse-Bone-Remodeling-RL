@@ -445,7 +445,7 @@ class DensitySimulation:
         for _ in range(self.time_steps):
             self.step()
 
-            if self.density_updater.check_convergence():
+            if self.density_updater.convergenced():
                 break
 
     def reset(self) -> None:

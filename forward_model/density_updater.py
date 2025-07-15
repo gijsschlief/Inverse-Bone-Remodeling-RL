@@ -35,8 +35,8 @@ class DensityUpdater:
             convergence_after_steps (int): Number of steps to consider for convergence.
 
         """
-        self.initial_density_value = initial_density
-        self.density = self.initial_density_value.copy()
+        self._initial_density = initial_density.copy()
+        self.density = self._initial_density.copy()
         self.active_cells = np.ones_like(self.density, dtype=bool)
         self.convergence_counter = np.zeros_like(self.density, dtype=int)
 
@@ -77,12 +77,12 @@ class DensityUpdater:
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
 
         self.density[self.active_cells] = self.density[self.active_cells] + self.dt * delta[self.active_cells]
-        self.density = np.clip(self.density, self.min_density, self.max_density)
+        np.clip(self.density, self.min_density, self.max_density, out=self.density)
 
         self._update_active_cells(delta)
         return self.density
 
-    def check_convergence(self) -> bool:
+    def convergenced(self) -> bool:
         """Check which cells have converged based on the convergence counter.
 
         Returns
@@ -94,6 +94,6 @@ class DensityUpdater:
 
     def reset(self) -> None:
         """Reset the density updater to its initial state."""
-        self.density = np.full_like(self.density, self.initial_density_value)
-        self.active_cells.fill(True)
-        self.convergence_counter.fill(0)
+        self.density[:] = self._initial_density
+        self.active_cells[:] = True
+        self.convergence_counter[:] = 0
