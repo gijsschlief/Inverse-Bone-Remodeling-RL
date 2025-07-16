@@ -16,14 +16,14 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Union
 
 import numpy as np
+from bone_remodeling.forward_data.force_profile_generator import (
+    ForceProfileGenerator,  # type: ignore
+)
 from bone_remodeling.forward_model.density_parameters import (
     SimulationParameters,  # type: ignore
 )
 from bone_remodeling.forward_model.density_simulation import (
     DensitySimulation,  # type: ignore
-)
-from bone_remodeling.forward_data.force_profile_generator import (
-    ForceProfileGenerator,  # type: ignore
 )
 from fenics import LogLevel, set_log_level  # type: ignore
 

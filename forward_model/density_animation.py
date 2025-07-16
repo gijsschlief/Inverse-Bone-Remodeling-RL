@@ -142,7 +142,7 @@ def main() -> None:
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=674,
+        batch_seed=673,
     )
     force_profile = force_profile_generator.merger(
         num_samples=1, force_max=20

@@ -15,7 +15,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
-import ufl  # type: ignore
 from bone_remodeling.forward_model.boundary_condition_builder import (
     BoundaryConditionBuilder,
 )
@@ -27,6 +26,7 @@ from bone_remodeling.forward_model.density_updater import DensityUpdater
 from bone_remodeling.forward_model.load_form_builder import (
     LoadFormBuilder,
 )
+from bone_remodeling.forward_model.stiffness_form_builder import StiffnessFormBuilder
 from fenics import (  # type: ignore
     Expression,
     File,
@@ -37,15 +37,9 @@ from fenics import (  # type: ignore
     LogLevel,
     MeshFunction,
     TestFunction,
-    TrialFunction,
     UnitSquareMesh,
     VectorFunctionSpace,
     cells,
-    div,
-    dot,
-    dx,
-    grad,
-    inner,
     set_log_level,
 )
 
@@ -121,7 +115,13 @@ class DensitySimulation:
 
         self._initialize_fenics_functions()
         self._update_material_properties()
-        self._initialize_stiffness_form()
+
+        self.stiffness_form_builder = StiffnessFormBuilder(
+            shear_function=self.shear_function,
+            lame_function=self.lame_function,
+            displacement_space=self.displacement_space,
+            displacement_test_function=self.displacement_test_function,
+        )
         self._initialize_solver()
 
         self.sed_calculator = StrainEnergyDensityCalculator(
@@ -140,8 +140,6 @@ class DensitySimulation:
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.displacement_test_function = TestFunction(self.displacement_space)
-        self.displacement_trial = TrialFunction(self.displacement_space)
-        self.num_cells = self.mesh.num_cells()
 
     def _setup_density_field(self) -> None:
         """Set up the density values for the simulation based on the initial density field.
@@ -184,31 +182,13 @@ class DensitySimulation:
         self.lame_function = Function(self.cell_density_space)
         self.displacement = Function(self.displacement_space)
 
-    def _initialize_stiffness_form(self) -> None:
-        self.stiffness_form = (
-            2
-            * self.shear_function
-            * inner(
-                self._calculate_strain_tensor(self.displacement_trial),
-                self._calculate_strain_tensor(self.displacement_test_function),
-            )
-            * dx
-            + self.lame_function
-            * dot(div(self.displacement_trial), div(self.displacement_test_function))
-            * dx
-        )
-
-    @staticmethod
-    def _calculate_strain_tensor(displacement: Function) -> ufl.tensors.ListTensor:
-        """Calculate the strain tensor from the displacement field."""
-        return 0.5 * (grad(displacement) + grad(displacement).T)
-
     def _initialize_solver(self) -> None:
         """Initialize the solver for the elasticity problem."""
         load_form = self.load_form_builder.get_load_form()
+        stiffness_form = self.stiffness_form_builder.get_stiffness_form()
 
         problem = LinearVariationalProblem(
-            self.stiffness_form,
+            stiffness_form,
             load_form,
             self.displacement,
             self.boundary_condition_builder.get_boundary_conditions(),

@@ -1,6 +1,7 @@
 """Builds load forms for the forward model of bone remodeling."""
 
 import numpy as np
+import ufl  # type: ignore
 from fenics import (  # type: ignore
     Constant,
     Expression,
@@ -49,7 +50,7 @@ class LoadFormBuilder:
         self._setup_force_expression()
         self._setup_load_form()
 
-    def get_load_form(self) -> Expression:
+    def get_load_form(self) -> ufl.form.Form:
         """Return the load form for the boundaries."""
         return self.load_form
 
