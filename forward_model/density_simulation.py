@@ -16,22 +16,27 @@ from pathlib import Path
 
 import numpy as np
 import ufl  # type: ignore
+from bone_remodeling.forward_model.boundary_condition_builder import (
+    BoundaryConditionBuilder,
+)
+from bone_remodeling.forward_model.calculate_strain_energy_density import (
+    StrainEnergyDensityCalculator,
+)
 from bone_remodeling.forward_model.density_parameters import SimulationParameters
 from bone_remodeling.forward_model.density_updater import DensityUpdater
+from bone_remodeling.forward_model.force_expression_builder import (
+    ForceExpressionBuilder,
+)
 from fenics import (  # type: ignore
     Constant,
-    DirichletBC,
     Expression,
     File,
     Function,
     FunctionSpace,
-    Identity,
     LinearVariationalProblem,
     LinearVariationalSolver,
     LogLevel,
-    Measure,
     MeshFunction,
-    SubDomain,
     TestFunction,
     TrialFunction,
     UnitSquareMesh,
@@ -42,9 +47,7 @@ from fenics import (  # type: ignore
     dx,
     grad,
     inner,
-    near,
     set_log_level,
-    solve,
 )
 
 
@@ -104,15 +107,28 @@ class DensitySimulation:
 
         self._setup_mesh_and_spaces()
         self._setup_density_field()
-        self._setup_boundary_conditions()
-        self._setup_subdomains()
-        self._setup_force_expression()
+        self.boundary_condition_builder = BoundaryConditionBuilder(
+            mesh=self.mesh,
+            displacement_space=self.displacement_space,
+            boundary_tolerance=self.boundary_tolerance,
+        )
+
+        self.force_expression_builder = ForceExpressionBuilder(
+            mesh=self.mesh,
+            force_profile=self.force_profile,
+            boundary_tolerance=self.boundary_tolerance,
+        )
+
         self._initialize_fenics_functions()
         self._update_material_properties()
         self._initialize_stiffness_form()
         self._initialize_load_form()
         self._initialize_solver()
-        self._initialize_projector()
+
+        self.sed_calculator = StrainEnergyDensityCalculator(
+            cell_density_space=self.cell_density_space,
+            spatial_dimension=self.spatial_dimension,
+        )
 
     def _setup_mesh_and_spaces(self) -> None:
         """Set up the mesh and function spaces for the simulation.
@@ -161,120 +177,6 @@ class DensitySimulation:
             convergence_after_steps=self.convergence_after_steps,
         )
 
-
-    def _setup_boundary_conditions(self) -> None:
-        """Set up boundary conditions for the simulation.
-
-        This function defines the fixed and roller boundary conditions for the mesh.
-        The fixed boundary condition is applied to the bottom left corner,
-        while the roller boundary condition is applied to the entire bottom edge.
-        """
-
-        def bottom_fixed_boundary(x: np.ndarray, on_boundary: bool) -> bool:
-            """Check if the point is on the bottom boundary and in the left corner (x=0, y=0)."""
-            return near(x[0], 0, self.boundary_tolerance) and near(
-                x[1],
-                0,
-                self.boundary_tolerance,
-            )
-
-        def bottom_roller_boundary(x: np.ndarray, on_boundary: bool) -> bool:
-            """Check if the point is on the bottom boundary and apply roller."""
-            return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
-
-        boundary_condition_fixed = DirichletBC(
-            self.displacement_space,
-            Constant((0.0, 0.0)),
-            bottom_fixed_boundary,
-            method="pointwise",
-        )
-        boundary_condition_roller = DirichletBC(
-            self.displacement_space.sub(1),
-            Constant(0),
-            bottom_roller_boundary,
-        )
-        self.boundary_conditions = [boundary_condition_fixed, boundary_condition_roller]
-
-    def _setup_subdomains(self) -> None:
-        """Set up subdomains for the boundaries of the mesh.
-
-        This function defines the top, right, and left boundaries of the mesh as subdomains
-        and marks them with unique identifiers.
-        """
-
-        class Top(SubDomain):
-            def __init__(self, boundary_tolerance: float) -> None:
-                super().__init__()
-                self.boundary_tolerance = boundary_tolerance
-
-            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
-                return near(x[1], 1, self.boundary_tolerance) and on_boundary
-
-        class Right(SubDomain):
-            def __init__(self, boundary_tolerance: float) -> None:
-                super().__init__()
-                self.boundary_tolerance = boundary_tolerance
-
-            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
-                return near(x[0], 1, self.boundary_tolerance) and on_boundary
-
-        class Left(SubDomain):
-            def __init__(self, boundary_tolerance: float) -> None:
-                super().__init__()
-                self.boundary_tolerance = boundary_tolerance
-
-            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
-                return near(x[0], 0, self.boundary_tolerance) and on_boundary
-
-        class BoundaryID:
-            TOP = 1
-            RIGHT = 2
-            LEFT = 3
-
-        self.boundaries = MeshFunction("size_t", self.mesh, 1)
-        self.boundaries.set_all(0)
-        Top(self.boundary_tolerance).mark(self.boundaries, BoundaryID.TOP)
-        Right(self.boundary_tolerance).mark(self.boundaries, BoundaryID.RIGHT)
-        Left(self.boundary_tolerance).mark(self.boundaries, BoundaryID.LEFT)
-        self.ds = Measure("ds", domain=self.mesh, subdomain_data=self.boundaries)
-
-    def _setup_force_expression(self) -> None:
-        """Set up the force expressions based on the force profile.
-
-        This function builds the force expressions for the top, right, and left boundaries
-        based on the provided force profile.
-        """
-        self.top_force_expr = self._build_force_expression(
-            self.force_profile[0],
-            axis="x",
-        )
-        self.right_force_expr = self._build_force_expression(
-            self.force_profile[1],
-            axis="y",
-        )
-        self.left_force_expr = self._build_force_expression(
-            self.force_profile[2],
-            axis="y",
-        )
-
-    @staticmethod
-    def _build_force_expression(force_row: np.ndarray, axis: str) -> Expression:
-        """Build the force expression based on the force profile."""
-        expression_pieces = []
-        dx = 1.0 / len(force_row)
-        for i, value in enumerate(force_row):
-            if value != 0:
-                start = i * dx
-                end = (i + 1) * dx
-                condition = (
-                    f"{start} <= x[0] && x[0] <= {end}"
-                    if axis == "x"
-                    else f"{start} <= x[1] && x[1] <= {end}"
-                )
-                expression_pieces.append(f"({value})*({condition})")
-        full_expression = " + ".join(expression_pieces) if expression_pieces else "0.0"
-        return Expression(full_expression, degree=1)
-
     def _initialize_fenics_functions(self) -> None:
         """Initialize reusable objects for the simulation."""
         self.sed_function = Function(self.cell_density_space)
@@ -298,13 +200,21 @@ class DensitySimulation:
             * dx
         )
 
+    @staticmethod
+    def _calculate_strain_tensor(displacement: Function) -> ufl.tensors.ListTensor:
+        """Calculate the strain tensor from the displacement field."""
+        return 0.5 * (grad(displacement) + grad(displacement).T)
+
     def _initialize_load_form(self) -> None:
         """Initialize the load form for the elasticity problem."""
+        force_expressions = self.force_expression_builder.get_force_expressions()
+        ds = self.force_expression_builder.get_ds()
+
         self.load_form = (
             dot(self.zero_body_force, self.displacement_test_function) * dx
-            + self.displacement_test_function[1] * self.top_force_expr * self.ds(1)
-            + self.displacement_test_function[0] * self.right_force_expr * self.ds(2)
-            + self.displacement_test_function[0] * self.left_force_expr * self.ds(3)
+            + self.displacement_test_function[1] * force_expressions["top"] * ds(1)
+            + self.displacement_test_function[0] * force_expressions["right"] * ds(2)
+            + self.displacement_test_function[0] * force_expressions["left"] * ds(3)
         )
 
     def _initialize_solver(self) -> None:
@@ -313,7 +223,7 @@ class DensitySimulation:
             self.stiffness_form,
             self.load_form,
             self.displacement,
-            self.boundary_conditions,
+            self.boundary_condition_builder.get_boundary_conditions(),
         )
         solver = LinearVariationalSolver(problem)
         solver.parameters["linear_solver"] = "default"
@@ -322,24 +232,6 @@ class DensitySimulation:
         solver.parameters["krylov_solver"]["absolute_tolerance"] = 1e-10
         solver.parameters["krylov_solver"]["maximum_iterations"] = 1000
         self.elasticity_solver = solver
-
-    def _initialize_projector(self) -> None:
-        """Initialize the projector for the strain energy density (SED)."""
-        trial_function_density = TrialFunction(self.cell_density_space)
-        self.test_function_density = TestFunction(self.cell_density_space)
-        self.strain_energy_density_form = (
-            inner(trial_function_density, self.test_function_density) * dx
-        )
-
-        self.projection_solver_parameters = {
-            "linear_solver": "cg",
-            "preconditioner": "hypre_amg",
-            "krylov_solver": {
-                "absolute_tolerance": 1e-10,
-                "relative_tolerance": 1e-10,
-                "maximum_iterations": 1000,
-            },
-        }
 
     def _update_material_properties(self) -> None:
         """Update the modulus of elasticity, Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
@@ -355,43 +247,83 @@ class DensitySimulation:
         self.shear_function.vector().set_local(shear_modulus)
         self.lame_function.vector().set_local(first_lame_parameter)
 
-    @staticmethod
-    def _calculate_strain_tensor(displacement: Function) -> ufl.tensors.ListTensor:
-        """Calculate the strain tensor from the displacement field."""
-        strain_tensor = 0.5 * (grad(displacement) + grad(displacement).T)
-        return strain_tensor
-
-    def _calculate_stress_tensor(
-        self,
-        displacement: Function,
-        strain_tensor: ufl.tensors.ListTensor,
-    ) -> ufl.tensors.ListTensor:
-        """Calculate the stress tensor using the strain tensor, shear_modules and first Lame coefficient (lambda)."""
-        stress_tensor = (
-            self.lame_function * div(displacement) * Identity(self.spatial_dimension)
-            + 2 * self.shear_function * strain_tensor
-        )
-        return stress_tensor
-
-    def _calculate_strain_energy_density(self) -> None:
-        """Calculate the strain energy density (SED) from the strain and stress tensors."""
-        strain_tensor = self._calculate_strain_tensor(self.displacement)
-        stress_tensor = self._calculate_stress_tensor(self.displacement, strain_tensor)
-
-        sed_expression = 0.5 * inner(stress_tensor, strain_tensor)
-        linear_sed_form = inner(sed_expression, self.test_function_density) * dx
-        solve(
-            self.strain_energy_density_form == linear_sed_form,
-            self.sed_function,
-            solver_parameters=self.projection_solver_parameters,
-        )
-
     def _update_density(self) -> None:
         """Compute SED and update density based on it."""
-        self._calculate_strain_energy_density()
+        self.sed_function = self.sed_calculator.calculate(
+            displacement=self.displacement,
+            lame_function=self.lame_function,
+            shear_function=self.shear_function,
+        )
 
-        self.current_density = self.density_updater.update(self.sed_function.vector().get_local())
+        self.current_density = self.density_updater.update(
+            self.sed_function.vector().get_local()
+        )
         self.density_function.vector().set_local(self.current_density.copy())
+
+    def step(self) -> None:
+        """Run a single step of the simulation.
+
+        This method solves the elasticity problem, updates the density, and checks for convergence.
+        It is intended to be called repeatedly to advance the simulation in time steps.
+        """
+        self.elasticity_solver.solve()
+        self._update_density()
+        self._update_material_properties()
+        if self.save_data:
+            self.save(self.density_function)
+
+    def run(self) -> None:
+        """Run the full simulation loop."""
+        for _ in range(self.time_steps):
+            self.step()
+
+            if self.density_updater:
+                break
+
+    def reset(self) -> None:
+        """Reset the simulation state to the initial conditions."""
+        self.displacement.vector().zero()
+        self.sed_function.vector().zero()
+        self.elasticity_modulus_function.vector().zero()
+        self.shear_function.vector().zero()
+        self.lame_function.vector().zero()
+        self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
+        self.density_function.vector().set_local(self.current_density.copy())
+        self._update_material_properties()
+        self.density_updater.reset()
+
+    def update_force_profile(self, new_force_profile: np.ndarray) -> None:
+        """Update the force profile for the simulation.
+
+        Args:
+        ----
+            new_force_profile (np.ndarray): New force profile matrix with shape (3, n).
+
+        """
+        if new_force_profile.shape != self.force_profile.shape:
+            raise ValueError(
+                "New force profile must have the same shape as the original force profile.",
+            )
+        self.force_profile = new_force_profile
+        self.force_expression_builder.rebuild(self.force_profile)
+        self._initialize_load_form()
+        self._initialize_solver()
+
+    def get_density(self) -> np.ndarray:
+        """Reconstruct an (n_rows x n_columns) density array by binning the DG0 cell values back onto a structured grid."""
+        density_indices = self.mesh_i * self.n_columns + self.mesh_j
+        flat_grid = np.bincount(
+            density_indices,
+            weights=self.current_density,
+            minlength=self.n_rows * self.n_columns,
+        )
+        flat_counts = np.bincount(
+            density_indices, minlength=self.n_rows * self.n_columns
+        )
+        safe_density = np.divide(
+            flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0
+        )
+        return np.flipud(safe_density.reshape(self.n_rows, self.n_columns))
 
     def save(
         self,
@@ -427,83 +359,3 @@ class DensitySimulation:
                 f"Failed to save the output to {self.full_file_path}: {e}"
             )
             raise RuntimeError(f"Failed to save the output: {e}") from e
-
-    def step(self) -> None:
-        """Run a single step of the simulation.
-
-        This method solves the elasticity problem, updates the density, and checks for convergence.
-        It is intended to be called repeatedly to advance the simulation in time steps.
-        """
-        self.elasticity_solver.solve()
-        self._update_density()
-        self._update_material_properties()
-        if self.save_data:
-            self.save(self.density_function)
-
-    def run(self) -> None:
-        """Run the full simulation loop."""
-        for _ in range(self.time_steps):
-            self.step()
-
-            if self.density_updater.convergenced():
-                break
-
-    def reset(self) -> None:
-        """Reset the simulation state to the initial conditions."""
-        self.displacement.vector().zero()
-        self.sed_function.vector().zero()
-        self.elasticity_modulus_function.vector().zero()
-        self.shear_function.vector().zero()
-        self.lame_function.vector().zero()
-        self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
-        self.density_function.vector().set_local(self.current_density.copy())
-        self._update_material_properties()
-        self.density_updater.reset()
-
-    def update_force_profile(self, new_force_profile: np.ndarray) -> None:
-        """Update the force profile for the simulation.
-
-        Args:
-        ----
-            new_force_profile (np.ndarray): New force profile matrix with shape (3, n).
-
-        """
-        if new_force_profile.shape != self.force_profile.shape:
-            raise ValueError(
-                "New force profile must have the same shape as the original force profile.",
-            )
-        self.force_profile = new_force_profile
-        self._update_force_expression()
-        self._initialize_load_form()
-        self._initialize_solver()
-
-    def _update_force_expression(self) -> None:
-        """Update the force expressions based on the new force profile."""
-        self.top_force_expr = self._build_force_expression(
-            self.force_profile[0],
-            axis="x",
-        )
-        self.right_force_expr = self._build_force_expression(
-            self.force_profile[1],
-            axis="y",
-        )
-        self.left_force_expr = self._build_force_expression(
-            self.force_profile[2],
-            axis="y",
-        )
-
-    def get_density(self) -> np.ndarray:
-        """Reconstruct an (n_rows x n_columns) density array by binning the DG0 cell values back onto a structured grid."""
-        density_indices = self.mesh_i * self.n_columns + self.mesh_j
-        flat_grid = np.bincount(
-            density_indices,
-            weights=self.current_density,
-            minlength=self.n_rows * self.n_columns,
-        )
-        flat_counts = np.bincount(
-            density_indices, minlength=self.n_rows * self.n_columns
-        )
-        safe_density = np.divide(
-            flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0
-        )
-        return np.flipud(safe_density.reshape(self.n_rows, self.n_columns))

@@ -11,7 +11,8 @@ class DensityUpdater:
     convergence of each cell and updates the density accordingly.
     """
 
-    def __init__(self,
+    def __init__(
+        self,
         initial_density: np.ndarray,
         dt: float,
         remodeling_rate_coefficient: float,
@@ -54,9 +55,7 @@ class DensityUpdater:
         self.convergence_counter[self.active_cells & cells_converged] += 1
         self.convergence_counter[self.active_cells & ~cells_converged] = 0
 
-        cells_converged = (
-            self.convergence_counter >= self.convergence_after_steps
-        )
+        cells_converged = self.convergence_counter >= self.convergence_after_steps
         self.active_cells &= ~cells_converged
 
     def update(self, strain_energy_density: np.ndarray) -> np.ndarray:
@@ -72,17 +71,21 @@ class DensityUpdater:
 
         """
         stimulus = np.zeros_like(self.density)
-        stimulus[self.active_cells] = (strain_energy_density[self.active_cells] / self.density[self.active_cells])
+        stimulus[self.active_cells] = (
+            strain_energy_density[self.active_cells] / self.density[self.active_cells]
+        )
 
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
 
-        self.density[self.active_cells] = self.density[self.active_cells] + self.dt * delta[self.active_cells]
+        self.density[self.active_cells] = (
+            self.density[self.active_cells] + self.dt * delta[self.active_cells]
+        )
         np.clip(self.density, self.min_density, self.max_density, out=self.density)
 
         self._update_active_cells(delta)
         return self.density
 
-    def convergenced(self) -> bool:
+    def converged(self) -> bool:
         """Check which cells have converged based on the convergence counter.
 
         Returns
@@ -91,6 +94,8 @@ class DensityUpdater:
 
         """
         return bool(np.all(~self.active_cells))
+
+    __bool__ = converged
 
     def reset(self) -> None:
         """Reset the density updater to its initial state."""

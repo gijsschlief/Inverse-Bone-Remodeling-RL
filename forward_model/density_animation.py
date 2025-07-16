@@ -142,7 +142,7 @@ def main() -> None:
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=np.random.randint(0, 10000),
+        batch_seed=674,
     )
     force_profile = force_profile_generator.merger(
         num_samples=1, force_max=20
@@ -151,17 +151,18 @@ def main() -> None:
     parameters = SimulationParameters(
         force_profile=force_profile,
         initial_density_field=np.ones((10, 10)) * 0.8,
-        save_data=True)
+        save_data=True,
+    )
 
     simulation = DensitySimulation(parameters)
 
     animate_density_matplotlib(
         simulation=simulation,
-        output_directory="/home/gijs/Desktop/Thesis/data/animations/9_density_animation.gif",
+        output_directory="/home/gijs/Desktop/Thesis/data/animations/0_density_animation.gif",
     )
     animate_density_pyvista(
         simulation=simulation,
-        output_directory="/home/gijs/Desktop/Thesis/data/animations/9_density_animation_pyvista.gif",
+        output_directory="/home/gijs/Desktop/Thesis/data/animations/0_density_animation_pyvista.gif",
         file_pattern="/home/gijs/Desktop/Thesis/data/animations/density_animation",
     )
 

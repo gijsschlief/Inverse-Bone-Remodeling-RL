@@ -52,7 +52,8 @@ def init_worker(
         force_profile=empty_profile,
         initial_density_field=initial_density,
         time_steps=time_steps,
-        dt=dt)
+        dt=dt,
+    )
 
     _worker_sim = DensitySimulation(parameters=simulation_parameters)
 
@@ -232,7 +233,8 @@ class TrainingDataGenerator:
             force_profile=self.empty_force_profile,
             initial_density_field=self.initial_density,
             time_steps=self.time_steps,
-            dt=self.dt)
+            dt=self.dt,
+        )
 
         simulation = DensitySimulation(parameters=simulation_parameters)
         for i, profile in enumerate(self.force_profiles):
