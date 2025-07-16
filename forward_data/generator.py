@@ -22,7 +22,7 @@ from bone_remodeling.forward_model.density_parameters import (
 from bone_remodeling.forward_model.density_simulation import (
     DensitySimulation,  # type: ignore
 )
-from bone_remodeling.forward_model.force_profile_generator import (
+from bone_remodeling.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
 from fenics import LogLevel, set_log_level  # type: ignore

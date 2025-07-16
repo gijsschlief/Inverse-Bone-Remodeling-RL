@@ -24,11 +24,10 @@ from bone_remodeling.forward_model.calculate_strain_energy_density import (
 )
 from bone_remodeling.forward_model.density_parameters import SimulationParameters
 from bone_remodeling.forward_model.density_updater import DensityUpdater
-from bone_remodeling.forward_model.force_expression_builder import (
-    ForceExpressionBuilder,
+from bone_remodeling.forward_model.load_form_builder import (
+    LoadFormBuilder,
 )
 from fenics import (  # type: ignore
-    Constant,
     Expression,
     File,
     Function,
@@ -113,16 +112,16 @@ class DensitySimulation:
             boundary_tolerance=self.boundary_tolerance,
         )
 
-        self.force_expression_builder = ForceExpressionBuilder(
+        self.load_form_builder = LoadFormBuilder(
             mesh=self.mesh,
             force_profile=self.force_profile,
+            displacement_test_function=self.displacement_test_function,
             boundary_tolerance=self.boundary_tolerance,
         )
 
         self._initialize_fenics_functions()
         self._update_material_properties()
         self._initialize_stiffness_form()
-        self._initialize_load_form()
         self._initialize_solver()
 
         self.sed_calculator = StrainEnergyDensityCalculator(
@@ -140,7 +139,6 @@ class DensitySimulation:
         self.displacement_space = VectorFunctionSpace(self.mesh, "P", 3)
         self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
-        self.zero_body_force = Constant((0, 0))
         self.displacement_test_function = TestFunction(self.displacement_space)
         self.displacement_trial = TrialFunction(self.displacement_space)
         self.num_cells = self.mesh.num_cells()
@@ -205,23 +203,13 @@ class DensitySimulation:
         """Calculate the strain tensor from the displacement field."""
         return 0.5 * (grad(displacement) + grad(displacement).T)
 
-    def _initialize_load_form(self) -> None:
-        """Initialize the load form for the elasticity problem."""
-        force_expressions = self.force_expression_builder.get_force_expressions()
-        ds = self.force_expression_builder.get_ds()
-
-        self.load_form = (
-            dot(self.zero_body_force, self.displacement_test_function) * dx
-            + self.displacement_test_function[1] * force_expressions["top"] * ds(1)
-            + self.displacement_test_function[0] * force_expressions["right"] * ds(2)
-            + self.displacement_test_function[0] * force_expressions["left"] * ds(3)
-        )
-
     def _initialize_solver(self) -> None:
         """Initialize the solver for the elasticity problem."""
+        load_form = self.load_form_builder.get_load_form()
+
         problem = LinearVariationalProblem(
             self.stiffness_form,
-            self.load_form,
+            load_form,
             self.displacement,
             self.boundary_condition_builder.get_boundary_conditions(),
         )
@@ -305,8 +293,7 @@ class DensitySimulation:
                 "New force profile must have the same shape as the original force profile.",
             )
         self.force_profile = new_force_profile
-        self.force_expression_builder.rebuild(self.force_profile)
-        self._initialize_load_form()
+        self.load_form_builder.rebuild(self.force_profile)
         self._initialize_solver()
 
     def get_density(self) -> np.ndarray:

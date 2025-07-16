@@ -13,7 +13,7 @@ import numpy as np
 from bone_remodeling.forward_data.generator import (
     TrainingDataGenerator,  # type: ignore
 )
-from bone_remodeling.forward_model.force_profile_generator import (
+from bone_remodeling.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
 

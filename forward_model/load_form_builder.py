@@ -1,18 +1,22 @@
-"""Builds force expressions for the forward model of bone remodeling."""
+"""Builds load forms for the forward model of bone remodeling."""
 
 import numpy as np
 from fenics import (  # type: ignore
+    Constant,
     Expression,
     Measure,
     Mesh,
     MeshFunction,
     SubDomain,
+    TestFunction,
+    dot,
+    dx,
     near,
 )
 
 
-class ForceExpressionBuilder:
-    """The ForceExpressionBuilder class constructs force expressions for the boundaries of the mesh.
+class LoadFormBuilder:
+    """The LoadFormBuilder class constructs load forms for the boundaries of the mesh.
 
     It uses the force profile provided by the ForceProfileGenerator to create expressions
     that can be used in the finite element method for simulating bone remodeling.
@@ -25,7 +29,7 @@ class ForceExpressionBuilder:
     """
 
     def __init__(
-        self, mesh: Mesh, force_profile: np.ndarray, boundary_tolerance: float = 1e-6
+        self, mesh: Mesh, force_profile: np.ndarray, displacement_test_function: TestFunction, boundary_tolerance: float = 1e-6
     ) -> None:
         """Initialize the ForceExpressionBuilder with a mesh and force profile.
 
@@ -33,22 +37,21 @@ class ForceExpressionBuilder:
         ----
             mesh (Mesh): The mesh on which the force expressions will be defined.
             force_profile (np.ndarray): The force profile to be used for building the expressions.
+            displacement_test_function (TestFunction): The test function for the displacement.
             boundary_tolerance (float): Tolerance for defining the boundaries.
 
         """
         self.mesh = mesh
         self.force_profile = force_profile
         self.boundary_tolerance = boundary_tolerance
+        self.displacement_test_function = displacement_test_function
         self._setup_subdomains()
         self._setup_force_expression()
+        self._setup_load_form()
 
-    def get_force_expressions(self) -> dict[str, Expression]:
-        """Return the force expressions for the boundaries."""
-        return self.force_expressions
-
-    def get_ds(self) -> Measure:
-        """Return the measure for a specific boundary ID."""
-        return self.ds
+    def get_load_form(self) -> Expression:
+        """Return the load form for the boundaries."""
+        return self.load_form
 
     def _setup_subdomains(self) -> None:
         """Set up subdomains for the boundaries of the mesh.
@@ -136,8 +139,19 @@ class ForceExpressionBuilder:
         full_expression = " + ".join(expression_pieces) if expression_pieces else "0.0"
         return Expression(full_expression, degree=1)
 
+    def _setup_load_form(self) -> None:
+        """Initialize the load form for the elasticity problem."""
+        zero_body_force = Constant((0, 0))
+
+        self.load_form = (
+            dot(zero_body_force, self.displacement_test_function) * dx
+            + self.displacement_test_function[1] * self.force_expressions["top"] * self.ds(1)
+            + self.displacement_test_function[0] * self.force_expressions["right"] * self.ds(2)
+            + self.displacement_test_function[0] * self.force_expressions["left"] * self.ds(3)
+        )
+
     def rebuild(self, force_profile: np.ndarray) -> None:
-        """Rebuild the force expressions with a new force profile.
+        """Rebuild the load form with a new force profile.
 
         Args:
         ----
@@ -146,3 +160,4 @@ class ForceExpressionBuilder:
         """
         self.force_profile = force_profile
         self._setup_force_expression()
+        self._setup_load_form()
