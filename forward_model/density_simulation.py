@@ -69,7 +69,9 @@ class DensitySimulation:
     modulus_exponent: float
     stimulus_threshold: float
     convergence_tolerance: float
+    convergence_tolerance_decay: float
     convergence_after_steps: int
+    convergence_steps_decay: float
     boundary_tolerance: float
     remodeling_rate_coefficient: float
 
@@ -170,7 +172,9 @@ class DensitySimulation:
             min_density=self.min_density,
             max_density=self.max_density,
             convergence_tolerance=self.convergence_tolerance,
+            convergence_tolerance_decay=self.convergence_tolerance_decay,
             convergence_after_steps=self.convergence_after_steps,
+            convergence_steps_decay=self.convergence_steps_decay,
         )
 
     def _initialize_fenics_functions(self) -> None:
@@ -242,10 +246,11 @@ class DensitySimulation:
 
     def run(self) -> None:
         """Run the full simulation loop."""
-        for _ in range(self.time_steps):
+        for time in range(self.time_steps):
             self.step()
 
             if self.density_updater:
+                logging.info(f"Simulation converged in {time} steps")
                 break
 
     def reset(self) -> None:

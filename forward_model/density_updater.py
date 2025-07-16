@@ -19,8 +19,10 @@ class DensityUpdater:
         stimulus_threshold: float,
         min_density: float,
         max_density: float,
-        convergence_tolerance: float,
-        convergence_after_steps: int,
+        convergence_tolerance: float = 1e-6,
+        convergence_tolerance_decay: float = 1.06,
+        convergence_after_steps: int = 10,
+        convergence_steps_decay: float = 0.97,
     ) -> None:
         """Initialize the DensityUpdater with simulation parameters.
 
@@ -33,7 +35,9 @@ class DensityUpdater:
             min_density (float): Minimum allowed density.
             max_density (float): Maximum allowed density.
             convergence_tolerance (float): Tolerance for convergence checks.
+            convergence_tolerance_decay (float): Decay factor for convergence tolerance.
             convergence_after_steps (int): Number of steps to consider for convergence.
+            convergence_steps_decay (float): Decay factor for convergence.
 
         """
         self._initial_density = initial_density.copy()
@@ -47,15 +51,25 @@ class DensityUpdater:
         self.min_density = min_density
         self.max_density = max_density
         self.convergence_tolerance = convergence_tolerance
+        self.convergence_tolerance_decay = convergence_tolerance_decay
         self.convergence_after_steps = convergence_after_steps
+        self.convergence_steps_decay = convergence_steps_decay
+
+        self.tolerance_decayed = float(self.convergence_tolerance)
+        self.convergence_decayed = float(self.convergence_after_steps)
+
+    def _decay(self) -> None:
+        """Decay the convergence counter for all active cells."""
+        self.convergence_decayed = self.convergence_decayed * self.convergence_steps_decay
+        self.tolerance_decayed = self.tolerance_decayed * self.convergence_tolerance_decay
 
     def _update_active_cells(self, delta: np.ndarray) -> None:
         """Check which cells are still active based on changes in density."""
-        cells_converged = np.abs(delta) < self.convergence_tolerance
+        cells_converged = np.abs(delta) < self.tolerance_decayed
         self.convergence_counter[self.active_cells & cells_converged] += 1
         self.convergence_counter[self.active_cells & ~cells_converged] = 0
 
-        cells_converged = self.convergence_counter >= self.convergence_after_steps
+        cells_converged = self.convergence_counter >= np.ceil(self.convergence_decayed)
         self.active_cells &= ~cells_converged
 
     def update(self, strain_energy_density: np.ndarray) -> np.ndarray:
@@ -70,6 +84,8 @@ class DensityUpdater:
             np.ndarray: Updated density array.
 
         """
+        self._decay()
+
         stimulus = np.zeros_like(self.density)
         stimulus[self.active_cells] = (
             strain_energy_density[self.active_cells] / self.density[self.active_cells]
@@ -85,7 +101,7 @@ class DensityUpdater:
         self._update_active_cells(delta)
         return self.density
 
-    def converged(self) -> bool:
+    def __bool__(self) -> bool:
         """Check which cells have converged based on the convergence counter.
 
         Returns
@@ -95,10 +111,10 @@ class DensityUpdater:
         """
         return bool(np.all(~self.active_cells))
 
-    __bool__ = converged
-
     def reset(self) -> None:
         """Reset the density updater to its initial state."""
         self.density[:] = self._initial_density
         self.active_cells[:] = True
         self.convergence_counter[:] = 0
+        self.tolerance_decayed = float(self.convergence_tolerance)
+        self.convergence_decayed = float(self.convergence_after_steps)
