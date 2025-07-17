@@ -1,5 +1,6 @@
 """Large Neural Network Surrogate Model for bone remodeling simulation."""
 
+import logging
 from typing import List
 
 import numpy as np
@@ -84,7 +85,7 @@ class LargeSurrogateModel(torch.nn.Module):
         import matplotlib.pyplot as plt
 
         if not self.train_losses:
-            print("No training history found.")
+            logging.info("No training history found.")
             return
 
         plt.figure(figsize=(10, 5))
@@ -101,7 +102,9 @@ class LargeSurrogateModel(torch.nn.Module):
         plt.show()
 
     @staticmethod
-    def get_scheduler(optimizer: torch.optim.Optimizer, epochs: int):
+    def get_scheduler(
+        optimizer: torch.optim.Optimizer, epochs: int
+    ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Create a learning rate scheduler for the surrogate model."""
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer, mode="min", factor=0.5, patience=10
@@ -109,20 +112,20 @@ class LargeSurrogateModel(torch.nn.Module):
 
     @staticmethod
     def create_dataloader(
-        X: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True
-    ):
+        x: np.ndarray, y: np.ndarray, batch_size: int = 32, shuffle: bool = True
+    ) -> torch.utils.data.DataLoader:
         """Create a DataLoader for the surrogate model."""
-        if isinstance(X, torch.Tensor):
-            X_tensor = X.clone().detach()
+        if isinstance(x, torch.Tensor):
+            x_tensor = x.clone().detach()
         else:
-            X_tensor = torch.tensor(X.reshape(-1, 3, 10), dtype=torch.float32)
+            x_tensor = torch.tensor(x.reshape(-1, 3, 10), dtype=torch.float32)
 
         if isinstance(y, torch.Tensor):
             y_tensor = y.clone().detach()
         else:
             y_tensor = torch.tensor(y.reshape(-1, 10, 10), dtype=torch.float32)
 
-        dataset = torch.utils.data.TensorDataset(X_tensor, y_tensor)
+        dataset = torch.utils.data.TensorDataset(x_tensor, y_tensor)
         return torch.utils.data.DataLoader(
             dataset, batch_size=batch_size, shuffle=shuffle
         )

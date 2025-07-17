@@ -6,8 +6,8 @@ import numpy as np
 
 
 def calculate_similarity(
-    A: np.ndarray,
-    B: np.ndarray,
+    reference_matrix: np.ndarray,
+    comparison_matrix: np.ndarray,
     method: str = "mse",
     baseline: float = 0.1,
     threshold: float = 0.5,
@@ -16,8 +16,8 @@ def calculate_similarity(
 
     Args:
     ----
-        A (np.ndarray): First matrix.
-        B (np.ndarray): Second matrix.
+        reference_matrix (np.ndarray): First matrix for comparison.
+        comparison_matrix (np.ndarray): Second matrix for comparison.
         method (str): Method to calculate similarity or distance. Options are:
                       "mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein".
         baseline (float): Baseline value for normalization, default is 0.1.
@@ -28,15 +28,17 @@ def calculate_similarity(
         float: Calculated similarity or distance score.
 
     """
-    if A is None or B is None:
+    if reference_matrix is None or comparison_matrix is None:
         raise ValueError("Matrices A and B cannot be None.")
-    elif not isinstance(A, np.ndarray) or not isinstance(B, np.ndarray):
+    elif not isinstance(reference_matrix, np.ndarray) or not isinstance(
+        comparison_matrix, np.ndarray
+    ):
         raise TypeError("Both A and B must be numpy arrays.")
-    elif A.shape != B.shape:
+    elif reference_matrix.shape != comparison_matrix.shape:
         raise ValueError("Matrices A and B must have the same shape.")
-    elif A.size == 0 or B.size == 0:
+    elif reference_matrix.size == 0 or comparison_matrix.size == 0:
         raise ValueError("Matrices A and B cannot be empty.")
-    elif np.all(A == 0) and np.all(B == 0):
+    elif np.all(reference_matrix == 0) and np.all(comparison_matrix == 0):
         raise ValueError("Both matrices A and B cannot contain only zeros.")
     elif baseline <= 0:
         raise ValueError("Baseline value must be positive.")
@@ -57,42 +59,51 @@ def calculate_similarity(
 
     if method == "mse":
         # Mean Squared Error [0, to +inf]
-        metric = np.mean((A - B) ** 2)
+        metric = np.mean((reference_matrix - comparison_matrix) ** 2)
         return 2 * (1 - metric / (metric + baseline)) - 1  # Normalize to [-1, 1]
 
     elif method == "mae":
         # Mean Absolute Error [0, to +inf]
-        metric = np.mean(np.abs(A - B))
+        metric = np.mean(np.abs(reference_matrix - comparison_matrix))
         return 2 * (1 - metric / (metric + baseline)) - 1  # Normalize to [-1, 1]
 
     elif method == "cosine":
         # Cosine Similarity [-1, 1]
-        v1 = A.ravel()
-        v2 = B.ravel()
+        v1 = reference_matrix.ravel()
+        v2 = comparison_matrix.ravel()
         return np.dot(v1, v2) / (np.linalg.norm(v1) * np.linalg.norm(v2) + 1e-8)
 
     elif method == "iou":
         # Intersection over Union (IoU) [0, 1]
-        A_bin = (A > threshold).astype(int)
-        B_bin = (B > threshold).astype(int)
-        intersection = np.logical_and(A_bin, B_bin).sum()
-        union = np.logical_or(A_bin, B_bin).sum()
+        a_thresholded_array = (reference_matrix > threshold).astype(int)
+        b_thresholded_array = (comparison_matrix > threshold).astype(int)
+        intersection = np.logical_and(a_thresholded_array, b_thresholded_array).sum()
+        union = np.logical_or(a_thresholded_array, b_thresholded_array).sum()
         metric = intersection / (union + 1e-8)
         return 2 * metric - 1  # Normalize to [-1, 1]
 
     elif method == "dice":
         # Dice Coefficient [0, 1]
-        A_bin = (A > threshold).astype(int)
-        B_bin = (B > threshold).astype(int)
-        intersection = np.logical_and(A_bin, B_bin).sum()
-        metric = 2 * intersection / (A_bin.sum() + B_bin.sum() + 1e-8)
+        a_thresholded_array = (reference_matrix > threshold).astype(int)
+        b_thresholded_array = (comparison_matrix > threshold).astype(int)
+        intersection = np.logical_and(a_thresholded_array, b_thresholded_array).sum()
+        metric = (
+            2
+            * intersection
+            / (a_thresholded_array.sum() + b_thresholded_array.sum() + 1e-8)
+        )
         return 2 * metric - 1  # Normalize to [-1, 1]
 
     elif method == "ssim":
         # Structural Similarity Index (SSIM) [-1, 1]
         from skimage.metrics import structural_similarity as ssim
 
-        score, _ = ssim(A, B, full=True, data_range=A.max() - A.min())
+        score, _ = ssim(
+            reference_matrix,
+            comparison_matrix,
+            full=True,
+            data_range=reference_matrix.max() - reference_matrix.min(),
+        )
         return score
 
     elif method == "wasserstein":
@@ -100,9 +111,11 @@ def calculate_similarity(
         from scipy.stats import wasserstein_distance  # type: ignore
 
         metric = 0
-        for i in range(A.shape[0]):
-            metric += wasserstein_distance(A[i, :], B[i, :])
-        metric /= A.shape[0]  # Average over rows
+        for i in range(reference_matrix.shape[0]):
+            metric += wasserstein_distance(
+                reference_matrix[i, :], comparison_matrix[i, :]
+            )
+        metric /= reference_matrix.shape[0]  # Average over rows
         return 2 * (1 - metric / (metric + baseline)) - 1  # Normalize to [-1, 1]
 
     else:

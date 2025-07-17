@@ -6,6 +6,9 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
+from bone_remodeling.forward_model.density_visualizer import (
+    plot_density_matrix as new_plot_density_matrix,  # type: ignore
+)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -15,6 +18,7 @@ logging.basicConfig(
 def plot_surrogate_model(
     predicted_matrices: np.ndarray,
     true_matrices: np.ndarray,
+    force_profiles: np.ndarray | None = None,
     sample_count: int = 3,
     show_plot: bool = True,
 ) -> List[plt.Figure]:
@@ -24,6 +28,7 @@ def plot_surrogate_model(
     ----
         predicted_matrices (np.ndarray): Predicted density matrices from the surrogate model.
         true_matrices (np.ndarray): Actual density matrices from the validation set.
+        force_profiles (np.ndarray, None): Force profiles corresponding to the matrices.
         sample_count (int): Number of random samples to visualize. Default is 3.
         show_plot (bool): Whether to display the plots. Default is True.
 
@@ -56,11 +61,15 @@ def plot_surrogate_model(
 
         logging.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
         logging.info(f"Predicted Density Matrix:\n{predicted_matrix}")
+        logging.info(
+            f"Force Profile: {force_profiles[idx] if force_profiles is not None else 'N/A'}"
+        )
 
         # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
         figure, axes = plt.subplots(1, 3, figsize=(18, 6))
         plot_density_matrix(
             actual_matrix,
+            force_profiles[idx] if force_profiles is not None else None,
             "Original Density Matrix",
             axes[0],
             min_true_value,
@@ -68,6 +77,7 @@ def plot_surrogate_model(
         )
         plot_density_matrix(
             predicted_matrix,
+            force_profiles[idx] if force_profiles is not None else None,
             "Predicted Density Matrix",
             axes[1],
             min_true_value,
@@ -78,13 +88,11 @@ def plot_surrogate_model(
             actual_matrix,
             "Difference Matrix (Predicted - Actual)",
             axes[2],
-            vmin=-1.0,
-            vmax=1.0,
+            color_scale_min=-1.0,
+            color_scale_max=1.0,
         )
 
         figures.append(figure)
-
-        # Adjust layout and show the plot
         plt.tight_layout()
 
         if show_plot:
@@ -94,70 +102,77 @@ def plot_surrogate_model(
     return figures
 
 
-def plot_density_matrix(matrix: np.ndarray, title: str, ax, vmin, vmax) -> None:
-    """Plot a density matrix with annotations.
+def plot_density_matrix(
+    matrix: np.ndarray,
+    force_profile: np.ndarray | None,
+    title: str,
+    axis: plt.Axes,
+    color_scale_min: float = 0.01,
+    color_scale_max: float = 1.73,
+) -> None:
+    """Plot a density matrix with annotations and optional force profile arrows.
 
     Args:
     ----
-        matrix (np.ndarray): The density matrix to plot.
+        matrix (np.ndarray): Density matrix to plot.
+        force_profile (np.ndarray | None): Force profile corresponding to the matrix.
         title (str): Title of the plot.
-        ax: Matplotlib axis to plot on.
-        vmin (float): Minimum value for color scaling.
-        vmax (float): Maximum value for color scaling.
+        axis: Matplotlib axis to plot on.
+        color_scale_min (float): Minimum value for color scaling.
+        color_scale_max (float): Maximum value for color scaling.
 
     """
-    ax.imshow(matrix, cmap="viridis", interpolation="nearest", vmin=vmin, vmax=vmax)
-    ax.set_title(title)
-    ax.set_xlabel("Columns")
-    ax.set_ylabel("Rows")
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            ax.text(
-                j,
-                i,
-                f"{matrix[i, j]:.2f}",
-                ha="center",
-                va="center",
-                color="white",
-                fontsize=8,
-            )
+    # Call the new_plot_density_matrix function with the same parameters
+    logging.warning("Old location of plot_density_matrix, please update your imports.")
+    new_plot_density_matrix(
+        matrix=matrix,
+        force_profile=force_profile,
+        title=title,
+        axis=axis,
+        color_scale_min=color_scale_min,
+        color_scale_max=color_scale_max,
+    )
+    # The function returns the axis, but we don't need to capture it here.
+    # It is used for plotting directly on the provided axis.
 
 
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
     actual_matrix: np.ndarray,
     title: str,
-    ax,
-    vmin: float = -1.0,
-    vmax: float = 1.0,
+    axis: plt.Axes,
+    color_scale_min: float = -1.0,
+    color_scale_max: float = 1.0,
+    color_bar: bool = True,
 ) -> None:
     """Plot the difference between predicted and actual matrices with a diverging colormap.
 
     Args:
     ----
-        predicted_matrix (np.ndarray): The predicted density matrix.
-        actual_matrix (np.ndarray): The actual density matrix.
+        predicted_matrix (np.ndarray): Predicted density matrix.
+        actual_matrix (np.ndarray): Actual density matrix.
         title (str): Title of the plot.
-        ax: Matplotlib axis to plot on.
-        vmin (float): Minimum value for color scaling. Default is -1.0.
-        vmax (float): Maximum value for color scaling. Default is 1.0.
+        axis: Matplotlib axis to plot on.
+        color_scale_min (float): Minimum value for color scaling. Default is -1.0
+        color_scale_max (float): Maximum value for color scaling. Default is 1.0
+        color_bar (bool): Whether to include a color bar. Default is True.
 
     """
     difference_matrix = predicted_matrix - actual_matrix
     # Use a diverging colormap: blue (under), white (exact), red (over)
-    im = ax.imshow(
+    difference_image = axis.imshow(
         difference_matrix,
         cmap="seismic",
         interpolation="nearest",
-        vmin=vmin,
-        vmax=vmax,
+        vmin=color_scale_min,
+        vmax=color_scale_max,
     )
-    ax.set_title(title)
-    ax.set_xlabel("Columns")
-    ax.set_ylabel("Rows")
+    axis.set_title(title)
+    axis.set_xlabel("Columns")
+    axis.set_ylabel("Rows")
     for i in range(difference_matrix.shape[0]):
         for j in range(difference_matrix.shape[1]):
-            ax.text(
+            axis.text(
                 j,
                 i,
                 f"{difference_matrix[i, j]:.2f}",
@@ -165,24 +180,38 @@ def plot_difference_matrix(
                 va="center",
                 color=(
                     "black"
-                    if abs(difference_matrix[i, j]) < (vmax - vmin) / 4
+                    if abs(difference_matrix[i, j])
+                    < (color_scale_max - color_scale_min) / 4
                     else "white"
                 ),
                 fontsize=8,
             )
-    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    if color_bar:
+        plt.colorbar(difference_image, ax=axis, fraction=0.046, pad=0.04)
 
 
 def main() -> None:
-    """Demonstrate the surrogate model visualization."""
-    # Example usage with random data
-    predicted_matrices = np.random.randn(5, 10, 10)  # Random predicted matrices
-    true_matrices = np.random.randn(5, 10, 10)  # Random actual matrices
+    """Demonstrate the surrogate model visualization using example data."""
+    predicted_matrices = np.random.randn(5, 10, 10)
+    true_matrices = np.random.randn(5, 10, 10)
     plot_surrogate_model(
         predicted_matrices=predicted_matrices,
         true_matrices=true_matrices,
-        sample_count=3,
+        force_profiles=np.random.randn(5, 3, 10),
+        sample_count=1,
     )
+
+    # TEST IF THE RIGHT WAY IS UP
+    gradient_example = np.arange(100).reshape(10, 10)
+    plot_density_matrix(
+        gradient_example / 100,
+        None,
+        "Test Matrix",
+        plt.gca(),
+        color_scale_min=0,
+        color_scale_max=1,
+    )
+    plt.show()
 
 
 if __name__ == "__main__":

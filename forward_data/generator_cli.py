@@ -10,16 +10,19 @@ import time
 from pathlib import Path
 
 import numpy as np
-from fenics import LogLevel, set_log_level  # type: ignore
-
-from forward_model.data_generator import TrainingDataGenerator  # type: ignore
+from bone_remodeling.forward_data.force_profile_generator import (
+    ForceProfileGenerator,  # type: ignore
+)
+from bone_remodeling.forward_data.generator import (
+    TrainingDataGenerator,  # type: ignore
+)
+from bone_remodeling.forward_model.parameters import SimulationParameters
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
-logger = logging.getLogger(__name__)
 
 
 def main() -> None:
@@ -85,7 +88,7 @@ def main() -> None:
     parser.add_argument(
         "--force_max",
         type=int,
-        default=2,
+        default=15,
         help="Maximum force magnitude.",
     )
     parser.add_argument(
@@ -97,16 +100,16 @@ def main() -> None:
     parser.add_argument(
         "--batch_seed",
         type=int,
-        default=np.random.randint(0, 1_000_000),
+        default=np.random.randint(0, 1_000),
         help="Random seed.",
     )
     parser.add_argument(
         "-m",
         "--mode",
         type=str,
-        choices=["parallel", "sequential", "edge"],
+        choices=["parallel", "sequential"],
         default="parallel",
-        help="Generation mode: 'parallel', 'sequential', or 'edge'.",
+        help="Generation mode: 'parallel' or 'sequential'",
     )
     parser.add_argument(
         "-v",
@@ -117,31 +120,36 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    if args.verbose:
-        set_log_level(LogLevel.INFO)
-    else:
-        set_log_level(LogLevel.ERROR)
-
     initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
 
-    generator = TrainingDataGenerator(
-        output_dir=args.output_dir,
-        initial_density=initial_density,
+    force_profile_generator = ForceProfileGenerator(
+        profile_length=max(args.x_shape, args.y_shape), batch_seed=args.batch_seed
+    )
+    force_profile = force_profile_generator.merger(
+        num_samples=args.num_samples,
         force_max=args.force_max,
-        force_count_max=args.force_count_max,
-        batch_seed=args.batch_seed,
+    )
+
+    empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
+    simulation_parameters = SimulationParameters(force_profile=empty_force_profile,
+                                                 initial_density_field=initial_density)
+
+    data_generator = TrainingDataGenerator(
+        force_profiles=force_profile,
+        output_dir="/home/gijs/Desktop/Thesis/data/raw",
+        simulation_parameters=simulation_parameters,
     )
 
     start_time = time.time()
     if args.mode == "parallel":
-        generator.generate_parallel(args.num_samples)
+        _ = data_generator.generate_parallel(
+            max_chunk_size=500, force_profile_name="combined_third_order"
+        )
     elif args.mode == "sequential":
-        generator.generate_sequential(args.num_samples)
-    elif args.mode == "edge":
-        generator.generate_edge_cases(args.num_samples)
+        _ = data_generator.generate_serial(force_profile_name="combined_third_order")
     stop_time = time.time()
     elapsed_time = stop_time - start_time
-    logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 
 if __name__ == "__main__":

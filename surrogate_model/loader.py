@@ -97,7 +97,7 @@ class SurrogateModelLoader:
 
 
 def load_surrogate_model(
-    model_path: str = "data/models/trained_model.pth",
+    model_path: str | Path = "data/models/trained_model.pth",
     model_class: Type[torch.nn.Module] = MediumSurrogateModel,
 ) -> Tuple[
     torch.nn.Module | None,
@@ -119,43 +119,44 @@ def load_surrogate_model(
             The loaded model and normalization parameters (if available).
 
     """
-    path = Path(model_path)
+    if isinstance(model_path, str):
+        model_path = Path(model_path)
 
     # Check if the model path is valid
-    if not path.is_absolute():
+    if not model_path.is_absolute():
         code_dir = (
             Path(__file__).resolve().parent.parent.parent
         )  # Resolve Thesis_code directory dynamically
-        path = code_dir / path
-        if not path.is_absolute():
+        model_path = code_dir / model_path
+        if not model_path.is_absolute():
             logging.error(
                 f"Failed to resolve absolute path for model file: {model_path}"
             )
             raise ValueError(
                 f"Failed to resolve absolute path for model file: {model_path}"
             )
-    if not path.is_file():
+    if not model_path.is_file():
         logging.error(f"Model file does not exist: {model_path}")
         raise FileNotFoundError(f"Model file does not exist: {model_path}")
-    if not path.suffix == ".pth":
+    if model_path.suffix != ".pth":
         logging.error(f"Invalid model file format: {model_path}. Expected a .pth file.")
         raise ValueError(
             f"Invalid model file format: {model_path}. Expected a .pth file."
         )
-    if not path.is_absolute():
+    if not model_path.is_absolute():
         logging.error(f"Model file path is not absolute: {model_path}")
         raise ValueError(f"Model file path is not absolute: {model_path}")
     logging.info(f"Loading model from {model_path} with class {model_class.__name__}")
 
     # Load the surrogate model
-    model_loader = SurrogateModelLoader(model_path=path, model_class=model_class)
+    model_loader = SurrogateModelLoader(model_path=model_path, model_class=model_class)
 
     # If the model has normalization parameters, load them
-    if path.with_suffix(".npz").exists():
-        X_mean, X_std, y_mean, y_std = load_normalization_params(
-            path=path.with_suffix(".npz")
+    if model_path.with_suffix(".npz").exists():
+        x_mean, x_std, y_mean, y_std = load_normalization_params(
+            path=model_path.with_suffix(".npz")
         )
-        return model_loader.model, X_mean, X_std, y_mean, y_std
+        return model_loader.model, x_mean, x_std, y_mean, y_std
 
     return model_loader.model, None, None, None, None
 

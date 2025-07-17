@@ -4,8 +4,10 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-
-from forward_model.data_reader import forward_data_reader
+from bone_remodeling.forward_data.reader import forward_data_reader  # type: ignore
+from bone_remodeling.forward_model.density_visualizer import (
+    plot_density_matrix,  # type: ignore
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -29,7 +31,7 @@ def visualize_force_comparison(
 
     """
 
-    def preprocess_force(fp):
+    def preprocess_force(fp: np.ndarray) -> np.ndarray:
         fp = np.asarray(fp)
         if fp.ndim == 3:
             fp = fp[:, np.newaxis, :, :]  # Ensure shape (N, 1, 3, 10)
@@ -93,7 +95,9 @@ def visualize_force_comparison(
 
 def main() -> None:
     """Load and visualize forward model data."""
-    data = forward_data_reader(file_path="/home/gijs/Desktop/Thesis/data/raw/")
+    data = forward_data_reader(
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_second_order_100_samples_0716_2346.json"
+    )
     if data is None:
         logging.error("Failed to load the forward model data.")
         return
@@ -105,19 +109,30 @@ def main() -> None:
         return
 
     old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_batch_unknown_samples_25000_0605_0234.json"
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_third_order_18000_samples_0717_0004.json"
     )
-    if data is None:
+    if old_data is None:
         logging.error("Failed to load the forward model data.")
         return
 
     _, old_force_profiles, old_final_output_densities = old_data
 
-    if force_profiles is None or final_output_densities is None:
+    if old_force_profiles is None or old_final_output_densities is None:
         logging.error("Missing force or density data.")
         return
 
     visualize_force_comparison(force_profiles, old_force_profiles)
+
+    _, axes = plt.subplots(2, 2, figsize=(12, 12))
+    for i in range(4):
+        random_index = np.random.randint(0, len(old_final_output_densities))
+        plot_density_matrix(
+            old_final_output_densities[random_index],
+            force_profile=old_force_profiles[random_index],
+            axis=axes[i // 2, i % 2],
+            title=f"Data at: {random_index}",
+        )
+    plt.show()
 
 
 if __name__ == "__main__":

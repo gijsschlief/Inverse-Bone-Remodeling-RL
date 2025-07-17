@@ -1,11 +1,14 @@
 """Training environment for reinforcement learning in bone remodeling simulation."""
 
 import logging
+import os
 from pathlib import Path
+from typing import cast
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from bone_remodeling.forward_model.data_reader import forward_data_reader
+from bone_remodeling.forward_data.reader import forward_data_reader
 from bone_remodeling.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.surrogate_model.loader import load_surrogate_model
 from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
@@ -15,13 +18,16 @@ from bone_remodeling.surrogate_model.normalizor import (
     normalize_data,
     unnormalize_data,
 )
-from bone_remodeling.surrogate_model.visualizer import plot_difference_matrix
+from bone_remodeling.surrogate_model.splitter import splitting
+from bone_remodeling.surrogate_model.visualizer import (
+    plot_density_matrix,
+    plot_difference_matrix,
+)
 from gymnasium import Env, spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
-
-# TODO: Learn on all samples in the dataset
-# TODO: Load previous models
+from stable_baselines3.common.vec_env import DummyVecEnv
+from torch.nn import Module
 
 
 class BoneRemodellingEnvironment(Env):
@@ -31,9 +37,9 @@ class BoneRemodellingEnvironment(Env):
 
     def __init__(
         self,
-        model_path: str,
-        target_densities: list[np.ndarray],
-        target_forces: list[np.ndarray],
+        surrogate_model_path: Path,
+        target_densities: np.ndarray,
+        target_forces: np.ndarray,
         max_steps: int = 50,
         force_boundary: float = 30,
         density_constraint: float = 1.73,
@@ -41,19 +47,24 @@ class BoneRemodellingEnvironment(Env):
     ) -> None:
         """Initialize the environment with a surrogate model."""
         super().__init__()
+        self.action_space: spaces.Box
+        self.observation_space: spaces.Box
 
         # Load the surrogate model and normalization parameters
         surrogate_model_and_normalization_params = load_surrogate_model(
-            model_path, ReversedSurrogateModel
+            surrogate_model_path, ReversedSurrogateModel
         )
-        if surrogate_model_and_normalization_params is None:
-            raise ValueError("Failed to load the surrogate model.")
+        assert (
+            surrogate_model_and_normalization_params is not None
+        ), f"Failed to load surrogate model from {surrogate_model_path}"
+
         self.surrogate_model, self.x_mean, self.x_std, self.y_mean, self.y_std = (
             surrogate_model_and_normalization_params
         )
-        assert (
-            self.surrogate_model is not None
-        ), "Surrogate model is None after loading."
+        if self.surrogate_model is None:
+            raise ValueError(
+                f"Surrogate model could not be loaded from {surrogate_model_path}. Please check the file path and model type."
+            )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.surrogate_model.to(self.device).eval()
 
@@ -71,18 +82,47 @@ class BoneRemodellingEnvironment(Env):
 
         # Define the action and observation spaces
         self.action_space = spaces.Box(
-            low=np.array([0, 0, -force_boundary], dtype=np.float32),
+            low=np.array([0, 0, 0, -force_boundary], dtype=np.float32),
             high=np.array(
-                [self._profile_length - 1, 2, force_boundary], dtype=np.float32
+                [self._profile_length - 1, 1, 1, force_boundary], dtype=np.float32
             ),
             dtype=np.float32,
         )
 
         # Observation space of the agent
+        self.grid_size = int(np.prod(self.return_shape))
+        observation_space_lower_bounds = np.concatenate(
+            [
+                np.full(self.grid_size, -density_constraint, dtype=np.float32),
+                np.array(
+                    [
+                        self.action_space.low[0],
+                        self.action_space.low[1],
+                        self.action_space.low[2],
+                        self.action_space.low[3],
+                    ],
+                    dtype=np.float32,
+                ),
+            ]
+        )
+        observation_space_upper_bounds = np.concatenate(
+            [
+                np.full(self.grid_size, +density_constraint, dtype=np.float32),
+                np.array(
+                    [
+                        self.action_space.high[0],
+                        self.action_space.high[1],
+                        self.action_space.high[2],
+                        self.action_space.high[3],
+                    ],
+                    dtype=np.float32,
+                ),
+            ]
+        )
+
         self.observation_space = spaces.Box(
-            low=-density_constraint,
-            high=density_constraint,
-            shape=self.return_shape,
+            low=observation_space_lower_bounds,
+            high=observation_space_upper_bounds,
             dtype=np.float32,
         )
 
@@ -118,18 +158,17 @@ class BoneRemodellingEnvironment(Env):
         self.target_force = self.target_forces[self.current_sample_index]
         self.return_shape = self.target_density.shape
         self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
-        episode_observation = (
+        difference = (
             self.target_density.astype(np.float32) - self.last_predicted_density
+        ).ravel()
+        episode_observation = np.concatenate(
+            [difference, np.zeros(4, dtype=np.float32)], axis=0
         )
         info: dict = {}
         return episode_observation, info
 
     def render(self, mode: str = "human") -> None:
         """Visualize target, current prediction, and the observation fed to the agent."""
-        import matplotlib.pyplot as plt
-
-        from surrogate_model.visualizer import plot_density_matrix
-
         if mode != "human":
             raise NotImplementedError(f"Render mode '{mode}' is not supported.")
         if self.last_predicted_density is None or self.last_predicted_density.size == 0:
@@ -152,7 +191,7 @@ class BoneRemodellingEnvironment(Env):
             plot_density_matrix(
                 self.target_density,
                 force_profile=self.target_force,
-                title="Target Density",
+                title=f"Target Density (Sample {self.current_sample_index})",
                 axis=ax_target,
             )
             self._last_sample_idx = self.current_sample_index
@@ -162,7 +201,7 @@ class BoneRemodellingEnvironment(Env):
         plot_density_matrix(
             self.last_predicted_density,
             force_profile=self.force_profile,
-            title="Current Density",
+            title=f"Current Density: Step {self.current_step} / {self.max_steps}",
             axis=ax_current,
         )
 
@@ -171,7 +210,7 @@ class BoneRemodellingEnvironment(Env):
         plot_difference_matrix(
             predicted_matrix=self.last_predicted_density,
             actual_matrix=self.target_density,
-            title="Observation (Target - Current)",
+            title=f"Observation (Target - Current), Reward: {self.reward:.4f}",
             axis=ax_obs,
             color_bar=False,
         )
@@ -193,7 +232,7 @@ class BoneRemodellingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        peak_position, side_index, peak_height = action
+        peak_position, top_index, side_index, peak_height = action
         peak_position = int(
             np.clip(
                 round(peak_position),
@@ -201,16 +240,25 @@ class BoneRemodellingEnvironment(Env):
                 self.action_space.high[0],
             )
         )
-        side_index = int(
+        top_index = int(
             np.clip(
-                round(side_index), self.action_space.low[1], self.action_space.high[1]
+                round(top_index), self.action_space.low[1], self.action_space.high[1]
             )
         )
+        side_index = int(
+            np.clip(
+                round(side_index), self.action_space.low[2], self.action_space.high[2]
+            )
+        )  # Ensure side_index is within [0, 2]
         peak_height = float(
-            np.clip(peak_height, self.action_space.low[2], self.action_space.high[2])
+            np.clip(peak_height, self.action_space.low[3], self.action_space.high[3])
         )
 
         # Generate force profile
+        side_index = (
+            (2 if side_index == 0 else 1) if top_index == 0 else 0
+        )  # Left/right if top_index==0, else top side
+
         self.force_profile = self._generate_triangular_profile(
             peak_position=peak_position, side=side_index, peak_height=peak_height
         )
@@ -230,6 +278,7 @@ class BoneRemodellingEnvironment(Env):
         )
 
         self.current_step += 1
+        self.reward = reward
 
         # check success: is the error (observation) small everywhere?
         success = np.allclose(observation, 0.0, atol=0.05)
@@ -254,6 +303,10 @@ class BoneRemodellingEnvironment(Env):
             "current_step": self.current_step,
             "sample_index": self.current_sample_index,
         }
+
+        observation = np.concatenate(
+            ([observation.ravel(), action]), axis=0
+        )  # Append action to observation
         return observation, reward, terminated, truncated, info
 
     def _generate_triangular_profile(
@@ -291,7 +344,7 @@ class BoneRemodellingEnvironment(Env):
 
         """
         # normalize
-        if self.x_mean is not None:
+        if self.x_mean is not None and self.x_std is not None:
             force_profile, _, _, _, _ = normalize_data(
                 self.force_profile, None, None, self.x_mean, self.x_std
             )
@@ -302,14 +355,20 @@ class BoneRemodellingEnvironment(Env):
                 force_profile.reshape(1, -1).astype(np.float32)
             ).to(self.device)
 
-        density_tensor: torch.Tensor = self.surrogate_model(force_profile_tensor)
-        surrogate_density = density_tensor.detach().cpu().numpy()
+        assert (
+            force_profile_tensor is not None
+        ), "Force profile tensor is None after reshaping."
+        model = cast(Module, self.surrogate_model)
+        density_tensor = model(force_profile_tensor)
+        assert (
+            density_tensor is not None
+        ), "Density tensor is None after model forward pass."
 
         # unnormalize
-        if self.y_mean is not None:
-            surrogate_density = unnormalize_data(
-                surrogate_density, self.y_mean, self.y_std
-            )
+        if self.y_mean is not None and self.y_std is not None:
+            density_tensor = unnormalize_data(density_tensor, self.y_mean, self.y_std)
+
+        surrogate_density: np.ndarray = density_tensor.detach().cpu().numpy()
         return surrogate_density.reshape(self.return_shape)
 
 
@@ -329,50 +388,135 @@ class RenderCallback(BaseCallback):
         self.render_freq = render_freq
 
     def _on_step(self) -> bool:
+        vecenv = cast(DummyVecEnv, self.training_env)
         if self.n_calls % self.render_freq == 0:
-            self.training_env.envs[0].render()
+            vecenv.envs[0].render()
         return True
 
 
-def main() -> None:
-    """Demonstrates the environment and reward calculation."""
-    directory_path = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_10000_samples_0708_1959.json"
-    )
-    result = forward_data_reader(directory_path)
-    if result is not None:
-        _, target_forces, target_densities = result
+class RewardSavingCallback(BaseCallback):
+    """Callback to collect episode rewards and save a final plot."""
 
-    # TODO: Split the dataset into training and testing sets
+    def __init__(self, out_path: str = "reward_curve.png", verbose: int = 0) -> None:
+        """Initialize the reward saving callback.
+
+        Args:
+        ----
+            out_path (str): Path to save the reward plot.
+            verbose (int): Verbosity level.
+
+        """
+        super().__init__(verbose)
+        self.out_path = out_path
+        self.episode_rewards: list[float] = []
+
+    def _on_step(self) -> bool:
+        # accumulate the reward at each step
+        self.episode_rewards.append(self.locals["rewards"][0])
+        return True
+
+    def _on_training_end(self) -> None:
+        """Plot and save the figure."""
+        plt.figure(figsize=(8, 4))
+        plt.plot(self.episode_rewards)
+        plt.ylim(-1, 10)
+        plt.xlabel("Timestep")
+        plt.ylabel("Reward")
+        plt.title("Episode Reward over Training")
+        plt.tight_layout()
+        plt.savefig(self.out_path)
+        plt.close()
+        if self.verbose:
+            logging.info(f"Saved reward plot to {self.out_path}")
+
+
+def save_model_safely(model: PPO, path: Path) -> Path:
+    """Save the model to a file, ensuring no overwriting of existing files."""
+    if os.path.exists(path):
+        base_path, ext = os.path.splitext(path)
+        counter = 1
+        while os.path.exists(f"{base_path}_{counter}{ext}"):
+            counter += 1
+        path = Path(f"{base_path}_{counter}{ext}")
+    model.save(path)
+    return Path(path)
+
+
+def find_latest_agent(path: Path) -> Path:
+    """Find the latest agent file in the specified directory."""
+    if os.path.exists(path):
+        base_path, ext = os.path.splitext(path)
+        counter = 1
+    while os.path.exists(f"{base_path}_{counter}{ext}"):
+        counter += 1
+    return Path(f"{base_path}_{counter-1}{ext}")
+
+
+def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
+    """Designs and trains a reinforcement learning agent for bone remodeling.
+
+    This function initializes the bone remodeling environment, loads the surrogate model,
+    and trains a reinforcement learning agent using the Proximal Policy Optimization (PPO)
+    algorithm. It reads training data, splits it into training sets, and uses callbacks for
+    rendering and saving rewards during training.
+
+    Args:
+    ----
+        agent_path (Path): Path to the agent model file.
+        data_path (Path): Path to the data file for training.
+        surrogate_path (Path): Path to the surrogate model file.
+
+    """
+    result = forward_data_reader(data_path)
+    assert result is not None, "Failed to read data from the specified path."
+    _, target_forces, target_densities = result
+
+    train_densities, _, _, train_forces, _, _ = splitting(
+        target_densities, target_forces, random_state=0
+    )
+    logging.info(f"Training RL agent on {len(train_densities)} samples.")
 
     remodeling_environment = BoneRemodellingEnvironment(
-        model_path="/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
-        target_densities=target_densities,
-        target_forces=target_forces,
+        surrogate_model_path=surrogate_path,
+        target_densities=train_densities,
+        target_forces=train_forces,
         max_steps=100,
     )
 
-    if Path("data/agents/trained_agent_2.zip").exists():
-        model = PPO.load("data/agents/trained_agent_2.zip", env=remodeling_environment)
-        model.set_env(remodeling_environment)
-    else:
+    logging.info("Environment created,loading agent if it exists.")
+    if agent_path is None:
         model = PPO("MlpPolicy", remodeling_environment, verbose=1)
+    else:
+        latest_agent_path = find_latest_agent(agent_path)
+        if latest_agent_path is None:
+            model = PPO("MlpPolicy", remodeling_environment, verbose=1)
+        else:
+            model = PPO.load(latest_agent_path, env=remodeling_environment)
+            model.set_env(remodeling_environment)
 
-    """PRETRAINED WONT WOKRK WITH NEW ENVIRONMENT
-    pretrained_path = "/home/gijs/Desktop/Thesis/data/pretrained_agents/trained_agent_weights.pth"
-    try:
-        pretrained_dict = torch.load(pretrained_path, map_location=torch.device("cpu"))
-        model.policy.load_state_dict(pretrained_dict)
-        logging.info("Loaded pretrained weights into PPO agent.")
-    except Exception as e:
-        logging.warning(f"Could not load pretrained policy: {e}")
-    """
+    logging.info(
+        f"Starting training with agent at {latest_agent_path if latest_agent_path else 'new model'}."
+    )
 
-    model.learn(total_timesteps=100, callback=RenderCallback(render_freq=1))
+    model.learn(
+        total_timesteps=1000,
+        callback=[
+            RenderCallback(render_freq=1),
+            RewardSavingCallback(
+                out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png"
+            ),
+        ],
+    )
     logging.info("Training complete.")
 
-    model.save("/home/gijs/Desktop/Thesis/data/agents/trained_agent_3.zip")
+    saved_path = save_model_safely(model, agent_path)
+    logging.info(f"Model saved to {saved_path}")
 
 
 if __name__ == "__main__":
-    main()
+    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/trained_agent_special.zip")
+    DATA_PATH = Path(
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_10000_samples_0708_1959.json"
+    )
+    SURROGATE_PATH = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth")
+    main(agent_path=AGENT_PATH, data_path=DATA_PATH, surrogate_path=SURROGATE_PATH)

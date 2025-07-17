@@ -19,6 +19,7 @@ from bone_remodeling.surrogate_model.normalizor import (
     normalize_data,
     save_normalization_params,
 )
+from bone_remodeling.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.surrogate_model.splitter import splitting
 from pytorch_msssim import ssim
 
@@ -28,10 +29,10 @@ logging.basicConfig(
 )
 
 # Constants
-EPOCHS = 1000
+EPOCHS = 200
 BATCH_SIZE = 32
 LEARNING_RATE = 1e-3
-PATIENCE = 30
+PATIENCE = 20
 MIN_DELTA = 1e-3
 MODEL_PATH = "/home/gijs/Desktop/Thesis/data/models/trained_model.pth"
 DATA_FILE_PATH = "/home/gijs/Desktop/Thesis/data/raw/"
@@ -69,44 +70,13 @@ def load_data(
     _, force_profiles, final_output_densities = result
     if force_profiles is None or final_output_densities is None:
         raise ValueError("Data loading failed. Please check the input path.")
-    X = force_profiles
+    x = force_profiles
     y = final_output_densities
-    return splitting(X, y, random_state=0)
-
-
-def sanitize_data(
-    x_data: np.ndarray, y_data: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
-    """Sanitize the input data by filtering out rows with NaN values in either x_data or y_data.
-
-    Args:
-    ----
-        x_data (np.ndarray): Input features to be sanitized.
-        y_data (np.ndarray): Target labels to be sanitized.
-
-    Returns:
-    -------
-        Tuple[np.ndarray, np.ndarray]: Sanitized x_data and y_data with NaN rows removed.
-
-    Raises:
-    ------
-        ValueError: If the input data is not a numpy array.
-
-    """
-    if not isinstance(x_data, np.ndarray) or not isinstance(y_data, np.ndarray):
-        raise ValueError("Both x_data and y_data must be numpy arrays.")
-    # Flatten all but the first dimension to check for NaNs per sample
-    x_mask = ~np.isnan(x_data.reshape(x_data.shape[0], -1)).any(axis=1)
-    y_mask = ~np.isnan(y_data.reshape(y_data.shape[0], -1)).any(axis=1)
-    mask = x_mask & y_mask
-    removed = x_data.shape[0] - np.count_nonzero(mask)
-    if removed > 0:
-        logging.error(f"sanitize_data: Removed {removed} datapoints due to NaN values.")
-    return x_data[mask], y_data[mask]
+    return splitting(x, y, random_state=0)
 
 
 def prepare_tensors(
-    X_data: np.ndarray | torch.Tensor,
+    x_data: np.ndarray | torch.Tensor,
     y_data: np.ndarray | torch.Tensor,
     device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -114,7 +84,7 @@ def prepare_tensors(
 
     Args:
     ----
-        X_data (np.ndarray or torch.Tensor): Input features.
+        x_data (np.ndarray or torch.Tensor): Input features.
         y_data (np.ndarray or torch.Tensor): Target labels.
         device (torch.device): Device to which tensors will be moved.
 
@@ -127,13 +97,13 @@ def prepare_tensors(
         ValueError: If the input data is not in the expected shape.
 
     """
-    num_samples = X_data.shape[0]
+    num_samples = x_data.shape[0]
 
     # Handle X
-    if isinstance(X_data, torch.Tensor):
-        X_tensor = X_data.clone().detach().to(torch.float32).reshape(num_samples, 3, 10)
+    if isinstance(x_data, torch.Tensor):
+        x_tensor = x_data.clone().detach().to(torch.float32).reshape(num_samples, 3, 10)
     else:
-        X_tensor = torch.tensor(X_data, dtype=torch.float32).reshape(num_samples, 3, 10)
+        x_tensor = torch.tensor(x_data, dtype=torch.float32).reshape(num_samples, 3, 10)
 
     # Handle y
     if isinstance(y_data, torch.Tensor):
@@ -145,44 +115,61 @@ def prepare_tensors(
             num_samples, 10, 10
         )
 
-    return X_tensor.to(device), y_tensor.to(device)
+    return x_tensor.to(device), y_tensor.to(device)
 
 
-def ssim_loss(predicted: torch.Tensor, target: torch.Tensor) -> torch.Tensor:
+def ssim_loss(
+    estimated_output: torch.Tensor, reference_output: torch.Tensor
+) -> torch.Tensor:
     """Calculate the Structural Similarity Index (SSIM) loss between predicted and target tensors.
 
     Args:
     ----
-        predicted (torch.Tensor): Predicted output tensor.
-        target (torch.Tensor): Target output tensor.
+        estimated_output (torch.Tensor): Predicted output tensor.
+        reference_output (torch.Tensor): Target output tensor.
 
     Returns:
     -------
         torch.Tensor: SSIM loss value.
 
     """
-    predicted = predicted.unsqueeze(1)
-    target = target.unsqueeze(1)
+    estimated_output = estimated_output.unsqueeze(1)
+    reference_output = reference_output.unsqueeze(1)
 
     return 1 - ssim(
-        predicted, target, win_size=3, data_range=target.max() - target.min()
+        estimated_output,
+        reference_output,
+        win_size=3,
+        data_range=reference_output.max() - reference_output.min(),
     )
 
 
 def combined_loss(
-    predicted: torch.Tensor, target: torch.Tensor, alpha: float = 0.5
+    predicted: torch.Tensor, target: torch.Tensor, loss_weight: float = 0.5
 ) -> torch.Tensor:
-    """Weighted combination of MSE and SSIM losses."""
-    mse = torch.nn.functional.mse_loss(predicted, target)
-    ssim_l = ssim_loss(predicted, target)
-    return alpha * mse + (1 - alpha) * ssim_l
+    """Weighted combination of Mean Squared Error (MSE) and SSIM loss.
+
+    Args:
+    ----
+        predicted (torch.Tensor): Predicted output tensor.
+        target (torch.Tensor): Target output tensor.
+        loss_weight (float): Weight for the MSE loss in the combined loss function (default is 0.5).
+
+    Returns:
+    -------
+        torch.Tensor: Combined loss value.
+
+    """
+    mean_squared_error = torch.nn.functional.mse_loss(predicted, target)
+    ssim_loss_value = ssim_loss(predicted, target)
+    return loss_weight * mean_squared_error + (1 - loss_weight) * ssim_loss_value
 
 
 def train_model(
     model: MediumSurrogateModel,
-    X_train: torch.Tensor,
+    x_train: torch.Tensor,
     y_train: torch.Tensor,
-    X_val: torch.Tensor,
+    x_val: torch.Tensor,
     y_val: torch.Tensor,
     device: torch.device,
     epochs: int = EPOCHS,
@@ -196,9 +183,9 @@ def train_model(
     Args:
     ----
         model (SurrogateModel): The model to be trained.
-        X_train (torch.Tensor): Training input features.
+        x_train (torch.Tensor): Training input features.
         y_train (torch.Tensor): Training target labels.
-        X_val (torch.Tensor): Validation input features.
+        x_val (torch.Tensor): Validation input features.
         y_val (torch.Tensor): Validation target labels.
         device (torch.device): Device to which tensors will be moved.
         epochs (int): Number of training epochs.
@@ -218,11 +205,11 @@ def train_model(
     for epoch in range(epochs):
         model.train()
         total_loss = 0.0
-        for batch_X, batch_y in model.create_dataloader(
-            X_train, y_train, batch_size=batch_size
+        for batch_x, batch_y in model.create_dataloader(
+            x_train, y_train, batch_size=batch_size
         ):
             optimizer.zero_grad()
-            logits = model(batch_X)
+            logits = model(batch_x)
             loss = loss_fn(logits, batch_y)
             if torch.isnan(loss):
                 logging.error("Loss is NaN, skipping this batch.")
@@ -239,7 +226,7 @@ def train_model(
                 total_loss += loss.item()
 
         avg_train_loss = total_loss / len(
-            model.create_dataloader(X_train, y_train, batch_size=batch_size)
+            model.create_dataloader(x_train, y_train, batch_size=batch_size)
         )
         model.train_losses.append(avg_train_loss)
 
@@ -247,7 +234,7 @@ def train_model(
 
         model.eval()
         with torch.no_grad():
-            val_logits = model(X_val)
+            val_logits = model(x_val)
             val_loss = combined_loss(val_logits, y_val)
         model.val_losses.append(val_loss)
         scheduler.step(val_loss)
@@ -291,17 +278,17 @@ def save_model_safely(model: MediumSurrogateModel, path: str) -> Path:
 
 
 def evaluate_model(
-    model: MediumSurrogateModel, X_val: torch.Tensor, y_val: torch.Tensor
+    model: MediumSurrogateModel, x_val: torch.Tensor, y_val: torch.Tensor
 ) -> None:
     """Evaluate the model on the validation set and log the results."""
     model.eval()
     with torch.no_grad():
-        val_logits = model(X_val)
+        val_logits = model(x_val)
         val_loss = combined_loss(val_logits, y_val).item()
 
     similarities = [
         calculate_similarity(val_logits[i].cpu().numpy(), y_val[i].cpu().numpy())
-        for i in range(X_val.shape[0])
+        for i in range(x_val.shape[0])
     ]
     average_similarity = np.mean(similarities)
     logging.info(
@@ -314,46 +301,46 @@ def main() -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logging.info(f"Loading data from {DATA_FILE_PATH}")
-    X_train_np, X_val_np, X_test_np, y_train_np, y_val_np, y_test_np = load_data(
+    x_train_np, x_val_np, x_test_np, y_train_np, y_val_np, y_test_np = load_data(
         DATA_FILE_PATH
     )
 
     logging.info("Sanitizing data...")
-    X_train_np, y_train_np = sanitize_data(X_train_np, y_train_np)
-    X_val_np, y_val_np = sanitize_data(X_val_np, y_val_np)
-    X_test_np, y_test_np = sanitize_data(X_test_np, y_test_np)
+    x_train_np, y_train_np = sanitize_data(x_train_np, y_train_np)
+    x_val_np, y_val_np = sanitize_data(x_val_np, y_val_np)
+    x_test_np, y_test_np = sanitize_data(x_test_np, y_test_np)
 
     if NORMALIZE:
         logging.info("Normalizing data...")
-        X_train, X_val, X_test, X_mean, X_std = normalize_data(
-            X_train_np, X_val_np, X_test_np
+        x_train, x_val, x_test, x_mean, x_std = normalize_data(
+            x_train_np, x_val_np, x_test_np
         )
         y_train, y_val, y_test, y_mean, y_std = normalize_data(
             y_train_np, y_val_np, y_test_np
         )
         logging.info(
-            f"Normalization parameters: X_mean={X_mean}, X_std={X_std}, y_mean={y_mean}, y_std={y_std}"
+            f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}"
         )
 
     logging.info("Preparing tensors...")
-    X_train, y_train = prepare_tensors(X_train, y_train, device)
-    X_val, y_val = prepare_tensors(X_val, y_val, device)
-    X_test, y_test = prepare_tensors(X_test, y_test, device)
+    x_train, y_train = prepare_tensors(x_train, y_train, device)
+    x_val, y_val = prepare_tensors(x_val, y_val, device)
+    x_test, y_test = prepare_tensors(x_test, y_test, device)
 
     model = ReversedSurrogateModel().to(device)
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(
-        f"Training on {len(X_train)} samples, validating on {len(X_val)} samples."
+        f"Training on {len(x_train)} samples, validating on {len(x_val)} samples."
     )
-    train_model(model, X_train, y_train, X_val, y_val, device)
+    train_model(model, x_train, y_train, x_val, y_val, device)
 
     model_path = save_model_safely(model, MODEL_PATH)
     if NORMALIZE:
         save_normalization_params(
             model_path.with_suffix(".npz"),
-            X_mean,
-            X_std,
+            x_mean,
+            x_std,
             y_mean,
             y_std,
         )
@@ -363,7 +350,7 @@ def main() -> None:
 
     logging.info("Evaluating model on validation set.")
 
-    evaluate_model(model, X_val, y_val)
+    evaluate_model(model, x_val, y_val)
     logging.info("Training and evaluation complete.")
 
 

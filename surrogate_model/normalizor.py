@@ -10,24 +10,26 @@ import torch
 
 def normalize_data(
     train: np.ndarray,
-    val: np.ndarray,
-    test: np.ndarray,
+    val: np.ndarray | None = None,
+    test: np.ndarray | None = None,
     mean: np.ndarray | None = None,
     std: np.ndarray | None = None,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray | None, np.ndarray | None, np.ndarray, np.ndarray]:
     """Normalize datasets based on training statistics.
 
     Args:
     ----
         train (np.ndarray): Training dataset.
-        val (np.ndarray): Validation dataset.
-        test (np.ndarray): Test dataset.
+        val (np.ndarray | None): Validation dataset. If None, it will not be normalized.
+        test (np.ndarray | None): Test dataset. If None, it will not be normalized.
         mean (np.ndarray | None): Precomputed mean for normalization. If None, it will be computed from the training data.
         std (np.ndarray | None): Precomputed standard deviation for normalization. If None, it will be computed from the training data.
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]: Normalized training, validation, and test datasets, along with the mean and standard deviation used for normalization.
+        Tuple[np.ndarray, np.ndarray | None, np.ndarray | None, np.ndarray, np.ndarray]:
+            Normalized training dataset, normalized validation dataset (if provided), normalized test dataset (if provided),
+            mean used for normalization, standard deviation used for normalization.
 
     """
     if mean is None:
@@ -35,8 +37,8 @@ def normalize_data(
     if std is None:
         std = train.std(axis=0, keepdims=True) + 1e-8  # avoid division by zero
     normalized_train = (train - mean) / std
-    normalized_val = (val - mean) / std
-    normalized_test = (test - mean) / std
+    normalized_val = (val - mean) / std if val is not None else None
+    normalized_test = (test - mean) / std if test is not None else None
     return normalized_train, normalized_val, normalized_test, mean, std
 
 
@@ -68,8 +70,8 @@ def unnormalize_data(
 
 def save_normalization_params(
     path: Path,
-    X_mean: np.ndarray,
-    X_std: np.ndarray,
+    x_mean: np.ndarray,
+    x_std: np.ndarray,
     y_mean: np.ndarray,
     y_std: np.ndarray,
 ) -> None:
@@ -78,8 +80,8 @@ def save_normalization_params(
     Args:
     ----
         path (Path): Path to the .npz file where normalization parameters will be saved.
-        X_mean (np.ndarray): Mean of the input features.
-        X_std (np.ndarray): Standard deviation of the input features.
+        x_mean (np.ndarray): Mean of the input features.
+        x_std (np.ndarray): Standard deviation of the input features.
         y_mean (np.ndarray): Mean of the target variable.
         y_std (np.ndarray): Standard deviation of the target variable.
 
@@ -89,26 +91,27 @@ def save_normalization_params(
 
     """
     try:
-        np.savez(path, X_mean=X_mean, X_std=X_std, y_mean=y_mean, y_std=y_std)
+        np.savez(path, X_mean=x_mean, X_std=x_std, y_mean=y_mean, y_std=y_std)
     except Exception as e:
         logging.error(f"Failed to save normalization parameters: {e}")
         raise ValueError(f"Failed to save normalization parameters to {path}") from e
 
 
 def load_normalization_params(
-    path: Path,
+    path: Path | str,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load normalization parameters from a file.
 
     Args:
     ----
-        path (Path): Path to the .npz file containing normalization parameters.
+        path (Path | str): Path to the .npz file containing normalization parameters.
 
     Returns:
     -------
         Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: X_mean, X_std, y_mean, y_std loaded from the file.
 
     """
+    path = Path(path)
     if not path.exists():
         raise FileNotFoundError(f"Normalization parameters file not found: {path}")
     if not path.suffix == ".npz":
@@ -120,8 +123,8 @@ def load_normalization_params(
     logging.info(f"Loading normalization parameters from {path}")
     data = np.load(path)
 
-    X_mean = data.get("X_mean")
-    X_std = data.get("X_std")
+    x_mean = data.get("X_mean")
+    x_std = data.get("X_std")
     y_mean = data.get("y_mean")
     y_std = data.get("y_std")
-    return X_mean, X_std, y_mean, y_std
+    return x_mean, x_std, y_mean, y_std
