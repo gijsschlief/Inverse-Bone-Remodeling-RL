@@ -146,7 +146,7 @@ def main() -> None:
             max_chunk_size=500, force_profile_name="combined_third_order"
         )
     elif args.mode == "sequential":
-        _ = data_generator.generate_serial()
+        _ = data_generator.generate_serial(force_profile_name="combined_third_order")
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
