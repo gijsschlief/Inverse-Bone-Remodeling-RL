@@ -37,13 +37,15 @@ python thesis_cli
 ## Project Structure
 ```
 Thesis_code/
-├── delft_blue/         # Contains .sh files for running the modules on a super computer cluster
-├── forward_model/      # Simulation environment for the forward model and data generation
-├── rl_model/           # RL models and training scripts
-├── surrogate_model/    # Unsupervised learning neural network model to estimate the forward model
-├── tests/              # Test module containing test functions for all code
-├── thesis_cli.py       # Entry point for running experiments
-└── README.md           # Project documentation
+├── delft_blue/             # Contains .sh files for running the modules on a super computer cluster
+├── src/                    # Contains all source code
+|   ├── forward_data/       # Module for data generation and visualization
+|   ├── forward_model/      # Simulation environment for the forward model
+|   ├── rl_model/           # RL models and training scripts
+|   ├── surrogate_model/    # Unsupervised learning neural network model to estimate the forward model
+|   └── main.py             # Entry point for running experiments
+├── tests/                  # Test module containing test functions for all code
+└── README.md               # Project documentation
 ```
 
 ## Contributing
