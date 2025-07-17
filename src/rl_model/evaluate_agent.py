@@ -3,10 +3,10 @@
 import logging
 from pathlib import Path
 
-from bone_remodeling.forward_model.data_reader import forward_data_reader
-from bone_remodeling.rl_model.environment import BoneRemodellingEnvironment
-from bone_remodeling.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.surrogate_model.splitter import splitting
+from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
+from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.splitter import splitting
 from gymnasium import Env
 from stable_baselines3 import PPO
 

@@ -5,17 +5,17 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from bone_remodeling.forward_model.data_reader import forward_data_reader
-from bone_remodeling.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.surrogate_model.loader import load_surrogate_model
-from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
+from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.loader import load_surrogate_model
+from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
-from bone_remodeling.surrogate_model.normalizor import (
+from bone_remodeling.src.surrogate_model.normalizor import (
     normalize_data,
     unnormalize_data,
 )
-from bone_remodeling.surrogate_model.visualizer import plot_difference_matrix
+from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 from gymnasium import Env, spaces
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback

@@ -7,15 +7,15 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
-from bone_remodeling.forward_data.force_profile_generator import (
+from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,
 )
-from bone_remodeling.forward_model.density_visualizer import (
+from bone_remodeling.src.forward_model.density_visualizer import (
     plot_density_matrix,
     render_density_pyvista_frame,
 )
-from bone_remodeling.forward_model.main import DensitySimulation
-from bone_remodeling.forward_model.parameters import SimulationParameters
+from bone_remodeling.src.forward_model.main import DensitySimulation
+from bone_remodeling.src.forward_model.parameters import SimulationParameters
 from matplotlib.animation import FuncAnimation
 
 
