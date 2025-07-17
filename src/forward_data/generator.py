@@ -238,7 +238,7 @@ if __name__ == "__main__":
     )
 
     force_profiles = force_profile_generator.merger(
-        num_samples=100,
+        num_samples=30_000,
         force_max=20.0,
     )
 

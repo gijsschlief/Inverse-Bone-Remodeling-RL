@@ -161,5 +161,5 @@ class ForceProfileGenerator:
             eps = 1e-6
             if actual_energy > 0:
                 scaling_factor = np.sqrt(target_energy / (actual_energy + eps))
-                profiles[i] *= scaling_factor
+                profiles[i] *= scaling_factor * self._rng.uniform(0.5, 2)
         return profiles
