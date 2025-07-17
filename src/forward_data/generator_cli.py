@@ -10,13 +10,13 @@ import time
 from pathlib import Path
 
 import numpy as np
-from bone_remodeling.forward_data.force_profile_generator import (
+from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
-from bone_remodeling.forward_data.generator import (
+from bone_remodeling.src.forward_data.generator import (
     TrainingDataGenerator,  # type: ignore
 )
-from bone_remodeling.forward_model.parameters import SimulationParameters
+from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 # Configure logging
 logging.basicConfig(

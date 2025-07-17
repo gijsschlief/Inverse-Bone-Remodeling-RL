@@ -3,20 +3,22 @@
 import logging
 
 import numpy as np
-from bone_remodeling.forward_data.reader import forward_data_reader
-from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
+from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.surrogate_model.evaluator import (
+    average_similarity_score,
+    validate_surrogate_model,
+)
+from bone_remodeling.src.surrogate_model.loader import load_surrogate_model
+from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
-
-from surrogate_model.evaluator import average_similarity_score, validate_surrogate_model
-from surrogate_model.loader import load_surrogate_model
-from surrogate_model.normalizor import (
+from bone_remodeling.src.surrogate_model.normalizor import (
     normalize_data,
     unnormalize_data,
 )
-from surrogate_model.sanitizer import sanitize_data, sanitize_matrices
-from surrogate_model.splitter import splitting
-from surrogate_model.visualizer import plot_surrogate_model
+from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
+from bone_remodeling.src.surrogate_model.splitter import splitting
+from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
 
 
 def main() -> None:

@@ -4,8 +4,8 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-from bone_remodeling.forward_data.reader import forward_data_reader  # type: ignore
-from bone_remodeling.forward_model.density_visualizer import (
+from bone_remodeling.src.forward_data.reader import forward_data_reader  # type: ignore
+from bone_remodeling.src.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
 )
 

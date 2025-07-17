@@ -5,8 +5,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-
-from rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"

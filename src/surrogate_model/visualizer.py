@@ -6,7 +6,7 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
-from bone_remodeling.forward_model.density_visualizer import (
+from bone_remodeling.src.forward_model.density_visualizer import (
     plot_density_matrix as new_plot_density_matrix,  # type: ignore
 )
 

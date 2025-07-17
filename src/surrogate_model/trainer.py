@@ -7,20 +7,20 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from bone_remodeling.forward_model.data_reader import forward_data_reader
-from bone_remodeling.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.surrogate_model.neural_networks.medium_nn import (
+from bone_remodeling.src.forward_data.data_reader import forward_data_reader
+from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
 )
-from bone_remodeling.surrogate_model.neural_networks.reversed_nn import (
+from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
-from bone_remodeling.surrogate_model.normalizor import (
+from bone_remodeling.src.surrogate_model.normalizor import (
     normalize_data,
     save_normalization_params,
 )
-from bone_remodeling.surrogate_model.sanitizer import sanitize_data
-from bone_remodeling.surrogate_model.splitter import splitting
+from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
+from bone_remodeling.src.surrogate_model.splitter import splitting
 from pytorch_msssim import ssim
 
 # Set up logging
