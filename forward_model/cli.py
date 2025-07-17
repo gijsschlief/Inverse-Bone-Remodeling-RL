@@ -6,7 +6,7 @@ It supports command line arguments for flexibility and ease of use.
 
 Usage:
 -----
-    python density_simulation_cli.py [options]
+    python cli.py [options]
 
 Options:
     --time_steps <int>                Number of time steps for the simulation.
@@ -31,7 +31,6 @@ Options:
     -f, --force <side,location,magnitude>
                                       Specify a force in the format side ('top' / 'left' / 'right'), location [int], magnitude [float].
                                       Use multiple -f or --force arguments for multiple forces.
-    --reset                           Reset parameters to default by deleting parameters.json.
     --save                            Save the simulation results.
     -p, --plot                        Plot the density simulation.
     -v, --verbose                     Enable verbose output (different levels available).
@@ -39,14 +38,13 @@ Options:
 """
 
 import argparse
-import json
 import logging
 import time
-from pathlib import Path
 
 import numpy as np
-from bone_remodeling.forward_model.density_simulation import DensitySimulation
 from bone_remodeling.forward_model.density_visualizer import plot_density_pyvista
+from bone_remodeling.forward_model.main import DensitySimulation
+from bone_remodeling.forward_model.parameters import SimulationParameters
 from fenics import LogLevel, set_log_level  # type: ignore
 
 logging.basicConfig(
@@ -157,11 +155,6 @@ def main() -> None:
     )
     # Actions
     parser.add_argument(
-        "--reset",
-        action="store_true",
-        help="Reset parameters to default by deleting parameters.json.",
-    )
-    parser.add_argument(
         "--save",
         action="store_true",
         help="Save the simulation results.",
@@ -195,41 +188,28 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Set saving to true if plotting is enabled
     if args.plot:
         args.save = True
 
-    parameters_file = Path(__file__).resolve().parent / "parameters.json"
-
-    if args.reset:
-        if parameters_file.exists():
-            parameters_file.unlink()  # Delete the parameters.json file
-            logging.info(f"Parameters reset to default by deleting {parameters_file}.")
-        else:
-            logging.info("No parameters.json file found to reset.")
-        return None
-
-    # Initialize logging based on verbosity
     if args.very_very_verbose:
-        set_log_level(LogLevel.TRACE)  # Set FEniCS log level to TRACE
+        set_log_level(LogLevel.TRACE)
         args.verbose = True
         logging.info("Initializing force profile and parameters...")
     elif args.very_verbose:
-        set_log_level(LogLevel.INFO)  # Set FEniCS log level to INFO
+        set_log_level(LogLevel.INFO)
         args.verbose = True
         logging.info("Initializing force profile and parameters...")
     elif args.verbose:
         logging.info("Initializing force profile and parameters...")
         set_log_level(LogLevel.ERROR)
     else:
-        set_log_level(LogLevel.ERROR)  # Suppress FEniCS log messages
+        set_log_level(LogLevel.ERROR)
 
     initial_density = np.full((args.n_rows, args.n_columns), args.initial_density_value)
 
-    # Initialize force profile based on command-line arguments
     force_profile = np.zeros(
         (3, max(args.n_rows, args.n_columns)),
-    )  # Initialize an empty force profile
+    )
     if args.force:
         for force in args.force:
             try:
@@ -259,21 +239,16 @@ def main() -> None:
             if i < args.n_rows:
                 force_profile[0, i] = 0.4 * i
 
-    # Load existing parameters from JSON file if it exists
-    if parameters_file.exists():
-        with open(parameters_file) as f:
-            parameters = json.load(f)
-    else:
-        parameters = {}
+    # Update simulation_parameters with command-line arguments, excluding reset, save, plot, verbose, force, and density profile
+    simulation_parameters = SimulationParameters(
+        force_profile=force_profile, initial_density_field=initial_density
+    )
 
-    # Update parameters with command-line arguments, excluding reset, save, plot, verbose, force, and density profile
     for key, value in vars(args).items():
         if (
             key
             not in {
                 "reset",
-                "save",
-                "plot",
                 "verbose",
                 "force",
                 "initial_density_value",
@@ -281,31 +256,17 @@ def main() -> None:
                 "n_columns",
             }
             and value is not None
+            and hasattr(simulation_parameters, key)
         ):
-            parameters[key] = value
-
-    # Save updated parameters to the JSON file
-    with open(parameters_file, "w") as f:
-        json.dump(parameters, f, indent=4)
-
-    # Add save and plot to parameters
-    parameters["save"] = args.save
-    parameters["plot"] = args.plot
+            setattr(simulation_parameters, key, value)
 
     if args.verbose:
-        logging.info("Parameters loaded: %s", parameters)
-        logging.info(f"Parameters saved to {parameters_file}")
+        logging.info("Parameters loaded: %s", simulation_parameters)
 
     logging.info("Running forward model simulation...")
     start_time = time.time()
 
-    simulation = DensitySimulation(
-        force_profile=force_profile,
-        initial_density_field=initial_density,
-        time_steps=parameters.get("time_steps", 100),
-        dt=parameters.get("dt", 1.0),
-        parameters=parameters,
-    )
+    simulation = DensitySimulation(parameters=simulation_parameters)
     simulation.run()
 
     final_density = simulation.get_density()
@@ -320,8 +281,8 @@ def main() -> None:
     logging.info("Final Density: %s", final_density)
 
     # plot if enabled
-    if isinstance(parameters, dict) and parameters.get("plot", False):
-        plot_density_pyvista(simulation)
+    if args.plot:
+        plot_density_pyvista(simulation_parameters)
 
 
 if __name__ == "__main__":

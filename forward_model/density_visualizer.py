@@ -6,8 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv  # type: ignore
-from bone_remodeling.forward_model.density_parameters import SimulationParameters
-from bone_remodeling.forward_model.density_simulation import DensitySimulation
+from bone_remodeling.forward_model.parameters import SimulationParameters
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -188,7 +187,7 @@ def plot_density_pyvista(
 
     Args:
     ----
-        simulation (DensitySimulation): The density simulation object.
+        simulation_parameters (SimulationParameters): Parameters for the simulation.
         directory (Path): Directory where the simulation results are stored.
 
     """

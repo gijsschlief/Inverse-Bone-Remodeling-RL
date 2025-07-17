@@ -21,11 +21,11 @@ from bone_remodeling.forward_model.boundary_condition_builder import (
 from bone_remodeling.forward_model.calculate_strain_energy_density import (
     StrainEnergyDensityCalculator,
 )
-from bone_remodeling.forward_model.density_parameters import SimulationParameters
 from bone_remodeling.forward_model.density_updater import DensityUpdater
 from bone_remodeling.forward_model.load_form_builder import (
     LoadFormBuilder,
 )
+from bone_remodeling.forward_model.parameters import SimulationParameters
 from bone_remodeling.forward_model.stiffness_form_builder import StiffnessFormBuilder
 from fenics import (  # type: ignore
     Expression,
@@ -85,11 +85,8 @@ class DensitySimulation:
         """Initialize the density simulation with parameters and setup.
 
         Args:
-            force_profile (np.ndarray): Force profile matrix with shape (3, n) where the rows represent top, left, and right, and n is the exact location in that row.
-            initial_density_field (np.ndarray): Initial bone density matrix.
-            time_steps (int, optional): Number of time steps for the simulation.
-            dt (float, optional): Time step size.
-            parameters (dict[str, Any], optional): Dictionary containing simulation parameters.
+        ----
+            parameters (SimulationParameters): Configuration parameters for the simulation.
 
         """
         set_log_level(LogLevel.ERROR)

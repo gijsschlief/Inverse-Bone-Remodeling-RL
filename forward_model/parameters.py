@@ -26,7 +26,7 @@ class SimulationParameters:
             Scale factor for the elastic modulus.
         modulus_exponent : float
             Exponent for the modulus scaling.
-        remod_rate_coeff : float
+        remodeling_rate_coefficient : float
             Coefficient for the remodeling rate.
         stimulus_threshold : float
             Threshold for remodeling stimulus.
@@ -36,19 +36,21 @@ class SimulationParameters:
             Maximum density value.
         convergence_tolerance : float
             Tolerance for convergence in the simulation.
-        convergence_steps : int
+        convergence_tolerance_decay : float
+            Decay factor for convergence tolerance.
+        convergence_after_steps : int
             Number of steps after which convergence is checked.
-        n_rows : int
-            Number of rows in the initial density array.
-        n_columns : int
-            Number of columns in the initial density array.
+        convergence_steps_decay : float
+            Decay factor for the number of steps for convergence checks.
+        boundary_tolerance : float
+            Tolerance for the boundary conditions.
         output_dir : str
             Directory to save output files.
         output_basename : str
             Base name for output files.
         output_extension : str
             File extension for output files.
-        save : bool
+        save_data : bool
             Whether to save the simulation results.
 
     Raises

@@ -10,12 +10,13 @@ import time
 from pathlib import Path
 
 import numpy as np
-from bone_remodeling.forward_data.generator import (
-    TrainingDataGenerator,  # type: ignore
-)
 from bone_remodeling.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
+from bone_remodeling.forward_data.generator import (
+    TrainingDataGenerator,  # type: ignore
+)
+from bone_remodeling.forward_model.parameters import SimulationParameters
 
 # Configure logging
 logging.basicConfig(
@@ -129,21 +130,23 @@ def main() -> None:
         force_max=args.force_max,
     )
 
+    empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
+    simulation_parameters = SimulationParameters(force_profile=empty_force_profile,
+                                                 initial_density_field=initial_density)
+
     data_generator = TrainingDataGenerator(
         force_profiles=force_profile,
-        output_dir=args.output_dir,
-        initial_density=initial_density,
-        time_steps=250,
-        dt=1.0,
+        output_dir="/home/gijs/Desktop/Thesis/data/raw",
+        simulation_parameters=simulation_parameters,
     )
 
     start_time = time.time()
     if args.mode == "parallel":
-        data_generator.generate_parallel(
-            args.num_samples, force_profile_name="combined"
+        _ = data_generator.generate_parallel(
+            max_chunk_size=500, force_profile_name="combined_third_order"
         )
     elif args.mode == "sequential":
-        data_generator.generate_serial()
+        _ = data_generator.generate_serial()
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")

@@ -5,7 +5,7 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from bone_remodeling.forward_data.reader import forward_data_reader  # type: ignore
-from bone_remodeling.surrogate_model.visualizer import (
+from bone_remodeling.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
 )
 
@@ -109,7 +109,7 @@ def main() -> None:
         return
 
     old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_second_order_100_samples_0716_2346.json"
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_third_order_18000_samples_0717_0004.json"
     )
     if old_data is None:
         logging.error("Failed to load the forward model data.")

@@ -13,17 +13,17 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count, get_context
 from pathlib import Path
-from typing import Any, Dict, Optional, Union
+from typing import Dict, Optional
 
 import numpy as np
 from bone_remodeling.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
-from bone_remodeling.forward_model.density_parameters import (
-    SimulationParameters,  # type: ignore
-)
-from bone_remodeling.forward_model.density_simulation import (
+from bone_remodeling.forward_model.main import (
     DensitySimulation,  # type: ignore
+)
+from bone_remodeling.forward_model.parameters import (
+    SimulationParameters,  # type: ignore
 )
 from fenics import LogLevel, set_log_level  # type: ignore
 
@@ -39,41 +39,29 @@ _profile_length: int
 
 
 def init_worker(
-    empty_profile: np.ndarray,
-    initial_density: np.ndarray,
-    time_steps: int,
-    dt: float,
-    parameters: dict,
+    simulation_parameters: SimulationParameters
 ) -> None:
     """Initialize the per-process simulation (no RNG here)."""
     global _worker_sim, _profile_length
 
-    simulation_parameters = SimulationParameters(
-        force_profile=empty_profile,
-        initial_density_field=initial_density,
-        time_steps=time_steps,
-        dt=dt,
-    )
-
     _worker_sim = DensitySimulation(parameters=simulation_parameters)
-
-    _profile_length = empty_profile.shape[1]
+    _profile_length = simulation_parameters.force_profile.shape[1]
 
 
 def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> list[dict]:
     """Run a batch of simulations in a worker process."""
     results = []
-    for i, profile in worker_args:
+    for i, force_profile in worker_args:
         try:
             _worker_sim.reset()
-            _worker_sim.update_force_profile(profile)
+            _worker_sim.update_force_profile(force_profile)
             _worker_sim.run()
-            dens = _worker_sim.get_density()
+            density = _worker_sim.get_density()
             results.append(
                 {
                     "serial_number": i + 1,
-                    "force_profile": profile.tolist(),
-                    "final_output_density": dens.tolist(),
+                    "force_profile": force_profile.tolist(),
+                    "final_output_density": density.tolist(),
                 }
             )
         except Exception as e:
@@ -81,7 +69,7 @@ def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> list[dict]:
             results.append(
                 {
                     "serial_number": i + 1,
-                    "force_profile": profile.tolist(),
+                    "force_profile": force_profile.tolist(),
                     "final_output_density": None,
                     "error": str(e),
                 }
@@ -96,80 +84,32 @@ class TrainingDataGenerator:
         self,
         force_profiles: np.ndarray,
         output_dir: str,
-        initial_density: Union[np.ndarray, None] = None,
-        time_steps: int = 100,
-        dt: float = 1.0,
+        simulation_parameters: SimulationParameters
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         self.force_profiles: np.ndarray = force_profiles
-        self.output_dir: Path = Path(output_dir)
-        self.time_steps = time_steps
-        self.dt = dt
-        self.parameters: Dict[str, Any] | None = self._load_parameters()
         self.num_samples = force_profiles.shape[0]
-
-        initial_density_value = (
-            self.parameters.get("initial_density_value", 0.8)
-            if self.parameters is not None
-            else 0.8
-        )
-
-        if initial_density is None:
-            sim_size = self.force_profiles.shape[2]
-            self.initial_density: np.ndarray = np.full(
-                (sim_size, sim_size), initial_density_value
-            )
-        else:
-            self.initial_density: np.ndarray = initial_density
-        self.empty_force_profile = np.zeros((3, np.max(self.initial_density.shape)))
+        self.output_dir: Path = Path(output_dir)
+        self.simulation_parameters = simulation_parameters
 
         self._validate_input()
         os.makedirs(self.output_dir, exist_ok=True)
 
-    def _load_parameters(self) -> Dict:
-        """Load simulation parameters from a JSON file."""
-        parameters_file = Path(__file__).resolve().parent / "parameters.json"
-        if parameters_file.exists():
-            with open(parameters_file) as f:
-                loaded_parameters = json.load(f)
-                self.time_steps = loaded_parameters.get("time_steps", self.time_steps)
-                self.dt = loaded_parameters.get("dt", self.dt)
-                return loaded_parameters
-        else:
-            logging.warning(
-                f"parameters.json not found at {parameters_file}. Using default values.",
-            )
-            return {}
-
     def _validate_input(self) -> None:
         """Validate the input parameters."""
         if not isinstance(self.force_profiles, np.ndarray):
-            raise ValueError("force_profiles must be a numpy ndarray.")
+            raise TypeError("force_profiles must be of type numpy ndarray.")
         if not isinstance(self.output_dir, Path):
-            raise ValueError("output_dir must be a Path object.")
+            raise TypeError("output_dir must be of type Path")
         if not self.output_dir.exists():
             raise ValueError(f"Output directory {self.output_dir} does not exist.")
-        if not isinstance(self.time_steps, int) or self.time_steps <= 0:
-            raise ValueError("time_steps must be a positive integer.")
-        if not isinstance(self.dt, (int, float)) or self.dt <= 0:
-            raise ValueError("dt must be a positive number.")
-        if not isinstance(self.parameters, dict):
-            raise ValueError("parameters must be a dictionary.")
-        if not isinstance(self.initial_density, np.ndarray):
-            raise ValueError("initial_density must be a numpy ndarray.")
+        if not isinstance(self.simulation_parameters, SimulationParameters):
+            raise TypeError("simulation_parmaeters must be of type SimulationParameters.")
 
     def generate_parallel(
         self, max_chunk_size: int = 100, force_profile_name: str = "Undefined"
     ) -> list[dict]:
         """Generate training data in parallel."""
-        timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime(
-            "%m%d_%H%M"
-        )
-        filepath = (
-            self.output_dir
-            / f"training_{force_profile_name}_{self.num_samples}_samples_{timestamp}.json"
-        )
-
         num_workers = min(cpu_count(), self.num_samples)
         all_indices = list(range(self.num_samples))
 
@@ -191,13 +131,7 @@ class TrainingDataGenerator:
             for start in range(0, self.num_samples, chunk_size)
         ]
 
-        init_args = (
-            self.empty_force_profile,
-            self.initial_density,
-            self.time_steps,
-            self.dt,
-            self.parameters,
-        )
+        init_args = (self.simulation_parameters,)
         results = []
 
         ctx = get_context("fork")
@@ -220,23 +154,14 @@ class TrainingDataGenerator:
                 bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
                 logging.info(f"Progress: [{bar}] {pct:5.1f}%")
 
-        with open(filepath, "w") as f:
-            json.dump(results, f, indent=4)
-        logging.info(f"Training data saved to {filepath}")
+        self._save_results(results, force_profile_name)
         return results
 
-    def generate_serial(self) -> list[dict]:
+    def generate_serial(self, force_profile_name: str = "Undefined") -> list[dict]:
         """Generate training data serially."""
         results = []
 
-        simulation_parameters = SimulationParameters(
-            force_profile=self.empty_force_profile,
-            initial_density_field=self.initial_density,
-            time_steps=self.time_steps,
-            dt=self.dt,
-        )
-
-        simulation = DensitySimulation(parameters=simulation_parameters)
+        simulation = DensitySimulation(parameters=self.simulation_parameters)
         for i, profile in enumerate(self.force_profiles):
             try:
                 simulation.reset()
@@ -264,7 +189,24 @@ class TrainingDataGenerator:
             pct = (i + 1) / self.num_samples * 100
             bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
             logging.info(f"Progress: [{bar}] {pct:5.1f}%")
+
+        self._save_results(results, force_profile_name)
         return results
+
+    def _save_results(self, results: list[dict], force_profile_name: str) -> None:
+        """Save the results to a JSON file."""
+        timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime(
+            "%m%d_%H%M"
+        )
+        filepath = (
+            self.output_dir
+            / f"training_{force_profile_name}_{self.num_samples}_samples_{timestamp}.json"
+        )
+
+        with open(filepath, "w") as f:
+            json.dump(results, f, indent=4)
+        logging.info(f"Training data saved to {filepath}")
+
 
     @staticmethod
     def serialize_data(
@@ -302,16 +244,18 @@ if __name__ == "__main__":
 
     logging.info("Running forward model simulations...")
 
+    empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
+    simulation_parameters = SimulationParameters(force_profile=empty_force_profile,
+                                                 initial_density_field=initial_density)
+
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
         output_dir="/home/gijs/Desktop/Thesis/data/raw",
-        initial_density=initial_density,
-        time_steps=250,
-        dt=1.0,
+        simulation_parameters=simulation_parameters,
     )
     start_time = time.time()
     _ = data_generator.generate_parallel(
-        max_chunk_size=500, force_profile_name="combined_second_order"
+        max_chunk_size=500, force_profile_name="combined_third_order"
     )
     # _ = data_generator.generate_serial()
     stop_time = time.time()

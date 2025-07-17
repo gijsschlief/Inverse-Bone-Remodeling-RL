@@ -60,8 +60,12 @@ class DensityUpdater:
 
     def _decay(self) -> None:
         """Decay the convergence counter for all active cells."""
-        self.convergence_decayed = self.convergence_decayed * self.convergence_steps_decay
-        self.tolerance_decayed = self.tolerance_decayed * self.convergence_tolerance_decay
+        self.convergence_decayed = (
+            self.convergence_decayed * self.convergence_steps_decay
+        )
+        self.tolerance_decayed = (
+            self.tolerance_decayed * self.convergence_tolerance_decay
+        )
 
     def _update_active_cells(self, delta: np.ndarray) -> None:
         """Check which cells are still active based on changes in density."""

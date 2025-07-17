@@ -11,7 +11,13 @@ class StiffnessFormBuilder:
     for bone remodeling simulations, based on the shear and Lame functions.
     """
 
-    def __init__(self, shear_function: Function, lame_function: Function, displacement_space: Function, displacement_test_function: Function) -> None:
+    def __init__(
+        self,
+        shear_function: Function,
+        lame_function: Function,
+        displacement_space: Function,
+        displacement_test_function: Function,
+    ) -> None:
         """Initialize the StiffnessFormBuilder with shear and Lame functions."""
         self.shear_function = shear_function
         self.lame_function = lame_function

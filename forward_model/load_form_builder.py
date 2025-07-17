@@ -30,7 +30,11 @@ class LoadFormBuilder:
     """
 
     def __init__(
-        self, mesh: Mesh, force_profile: np.ndarray, displacement_test_function: TestFunction, boundary_tolerance: float = 1e-6
+        self,
+        mesh: Mesh,
+        force_profile: np.ndarray,
+        displacement_test_function: TestFunction,
+        boundary_tolerance: float = 1e-6,
     ) -> None:
         """Initialize the ForceExpressionBuilder with a mesh and force profile.
 
@@ -146,9 +150,15 @@ class LoadFormBuilder:
 
         self.load_form = (
             dot(zero_body_force, self.displacement_test_function) * dx
-            + self.displacement_test_function[1] * self.force_expressions["top"] * self.ds(1)
-            + self.displacement_test_function[0] * self.force_expressions["right"] * self.ds(2)
-            + self.displacement_test_function[0] * self.force_expressions["left"] * self.ds(3)
+            + self.displacement_test_function[1]
+            * self.force_expressions["top"]
+            * self.ds(1)
+            + self.displacement_test_function[0]
+            * self.force_expressions["right"]
+            * self.ds(2)
+            + self.displacement_test_function[0]
+            * self.force_expressions["left"]
+            * self.ds(3)
         )
 
     def rebuild(self, force_profile: np.ndarray) -> None:

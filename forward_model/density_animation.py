@@ -10,12 +10,12 @@ import pyvista as pv
 from bone_remodeling.forward_data.force_profile_generator import (
     ForceProfileGenerator,
 )
-from bone_remodeling.forward_model.density_parameters import SimulationParameters
-from bone_remodeling.forward_model.density_simulation import DensitySimulation
 from bone_remodeling.forward_model.density_visualizer import (
     plot_density_matrix,
     render_density_pyvista_frame,
 )
+from bone_remodeling.forward_model.main import DensitySimulation
+from bone_remodeling.forward_model.parameters import SimulationParameters
 from matplotlib.animation import FuncAnimation
 
 
@@ -141,7 +141,7 @@ def main() -> None:
     logging.info("Starting density animation generation.")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_length=10,
+        profile_length=20,
         batch_seed=673,
     )
     force_profile = force_profile_generator.merger(
@@ -150,7 +150,7 @@ def main() -> None:
 
     parameters = SimulationParameters(
         force_profile=force_profile,
-        initial_density_field=np.ones((10, 10)) * 0.8,
+        initial_density_field=np.ones((20, 20)) * 0.8,
         save_data=True,
     )
 
