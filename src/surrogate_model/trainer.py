@@ -7,7 +7,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
-from bone_remodeling.src.forward_data.data_reader import forward_data_reader
+from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.neural_networks.medium_nn import (
     MediumSurrogateModel,
