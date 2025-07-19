@@ -95,7 +95,7 @@ class SurrogateModel(torch.nn.Module):
         plt.show()
 
     @staticmethod
-    def get_scheduler(optimizer: torch.optim.Optimizer, epochs: int) -> torch.optim.lr_scheduler._LRScheduler.ReduceLROnPlateau:
+    def get_scheduler(optimizer: torch.optim.Optimizer, epochs: int) -> torch.optim.lr_scheduler._LRScheduler:
         """Get a learning rate scheduler for the surrogate model.
 
         Args:

@@ -3,12 +3,13 @@
 import logging
 from pathlib import Path
 
+from gymnasium import Env
+from stable_baselines3 import PPO
+
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.splitter import splitting
-from gymnasium import Env
-from stable_baselines3 import PPO
 
 
 def evaluate_agent(
@@ -39,10 +40,10 @@ def evaluate_agent(
         total_reward = 0.0
 
         while not done:
-            action, _states = model.predict(obs, deterministic=True)
+            action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, info = environment.step(action)
 
-            total_reward += reward
+            total_reward += float(reward)
             done = terminated or truncated
 
             if render:
@@ -51,7 +52,7 @@ def evaluate_agent(
         # Evaluation metrics for this episode
         episode_rewards.append(total_reward)
         mse = calculate_similarity(
-            reference_matrix=environment.target_density,
+            reference_matrix=environment.target_densities,
             comparison_matrix=info["predicted_density"],
             method="ssim",
         )
@@ -89,8 +90,8 @@ def main() -> None:
     all_results = []
     for i in range(10):
         agent_evaluation_environment = BoneRemodellingEnvironment(
-            model_path="/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
-            target_density=test_density_profiles[i],
+            surrogate_model_path=Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
+            target_densities=test_density_profiles[i],
             target_forces=test_forces[i],
             max_steps=1,
         )
