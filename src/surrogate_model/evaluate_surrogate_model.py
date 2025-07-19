@@ -61,14 +61,14 @@ def main() -> None:
     # Normalize the validation data if normalization parameters are available
     if x_mean is not None and x_std is not None:
         x_val_unnormalized = x_val.copy()
-        x_train, x_val, x_test, _, _ = normalize_data(
-            x_train, x_val, x_test, x_mean, x_std
-        )
+        x_train, _, _ = normalize_data(x_train, x_mean, x_std)
+        x_val, _, _ = normalize_data(x_val, x_mean, x_std)
+        x_test, _, _ = normalize_data(x_test, x_mean, x_std)
 
     if y_mean is not None and y_std is not None:
-        y_train, y_val, y_test, _, _ = normalize_data(
-            y_train, y_val, y_test, y_mean, y_std
-        )
+        y_train, _, _ = normalize_data(y_train, y_mean, y_std)
+        y_val, _, _ = normalize_data(y_val, y_mean, y_std)
+        y_test, _, _ = normalize_data(y_test, y_mean, y_std)
         output_normalized = True
     else:
         output_normalized = False

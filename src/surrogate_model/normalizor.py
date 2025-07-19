@@ -9,37 +9,29 @@ import torch
 
 
 def normalize_data(
-    train: np.ndarray,
-    val: np.ndarray,
-    test: np.ndarray,
+    data: np.ndarray,
     mean: Optional[np.ndarray] = None,
     std: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, np.ndarray | None, np.ndarray | None, np.ndarray, np.ndarray]:
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Normalize datasets based on training statistics.
 
     Args:
     ----
-        train (np.ndarray): Training dataset.
-        val (np.ndarray | None): Validation dataset, can be None.
-        test (np.ndarray | None): Test dataset, can be None.
-        mean (Optional[np.ndarray]): Mean used for normalization.
-        std (Optional[np.ndarray]): Standard deviation used for normalization.
+        data (np.ndarray): Dataset to normalize.
+        mean (np.ndarray | None): Mean used for normalization, can be None.
+        std (np.ndarray | None): Standard deviation used for normalization, can be None.
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray | None, np.ndarray | None, np.ndarray, np.ndarray]:
-            Normalized training dataset, normalized validation dataset (if provided), normalized test dataset (if provided),
-            mean used for normalization, standard deviation used for normalization.
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: Normalized data, mean, and standard deviation.
 
     """
     if mean is None:
-        mean = train.mean(axis=0, keepdims=True)
+        mean = data.mean(axis=0, keepdims=True)
     if std is None:
-        std = train.std(axis=0, keepdims=True) + 1e-8  # avoid division by zero
-    normalized_train = (train - mean) / std
-    normalized_val = (val - mean) / std if val is not None else None
-    normalized_test = (test - mean) / std if test is not None else None
-    return normalized_train, normalized_val, normalized_test, mean, std
+        std = data.std(axis=0, keepdims=True) + 1e-8  # avoid division by zero
+    normalized_data = (data - mean) / std
+    return normalized_data, mean, std
 
 
 def unnormalize_data(data: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray:

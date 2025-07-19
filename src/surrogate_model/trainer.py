@@ -208,9 +208,8 @@ def main(data_file_path: Path, model_path: Path, normalize: bool = True) -> None
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logging.info(f"Loading data from {data_file_path}")
-    x_train_np, x_val_np, x_test_np, y_train_np, y_val_np, y_test_np = (
-        load_and_split_data(data_file_path, random_state=0)
-    )
+    x_train_np, x_val_np, x_test_np, y_train_np, y_val_np, y_test_np = load_and_split_data(
+        data_file_path, random_state=0)
 
     logging.info("Sanitizing data...")
     x_train_np, y_train_np = sanitize_data(x_train_np, y_train_np)
@@ -219,12 +218,13 @@ def main(data_file_path: Path, model_path: Path, normalize: bool = True) -> None
 
     if normalize:
         logging.info("Normalizing data...")
-        x_train_np, x_val_np, x_test_np, x_mean, x_std = normalize_data(
-            x_train_np, x_val_np, x_test_np
-        )
-        y_train_np, y_val_np, y_test_np, y_mean, y_std = normalize_data(
-            y_train_np, y_val_np, y_test_np
-        )
+        x_train_np, x_mean, x_std = normalize_data(x_train_np)
+        x_val_np, _, _ = normalize_data(x_val_np, x_mean, x_std)
+        x_test_np, _, _ = normalize_data(x_test_np, x_mean, x_std)
+        y_train_np, y_mean, y_std = normalize_data(y_train_np)
+        y_val_np, _, _ = normalize_data(y_val_np, y_mean, y_std)
+        y_test_np, _, _ = normalize_data(y_test_np, y_mean, y_std)
+
         logging.info(
             f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}"
         )
