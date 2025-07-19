@@ -15,20 +15,6 @@ from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
-from bone_remodeling.src.forward_model.boundary_condition_builder import (
-    BoundaryConditionBuilder,
-)
-from bone_remodeling.src.forward_model.calculate_strain_energy_density import (
-    StrainEnergyDensityCalculator,
-)
-from bone_remodeling.src.forward_model.density_updater import DensityUpdater
-from bone_remodeling.src.forward_model.load_form_builder import (
-    LoadFormBuilder,
-)
-from bone_remodeling.src.forward_model.parameters import SimulationParameters
-from bone_remodeling.src.forward_model.stiffness_form_builder import (
-    StiffnessFormBuilder,
-)
 from fenics import (  # type: ignore
     Expression,
     File,
@@ -43,6 +29,21 @@ from fenics import (  # type: ignore
     VectorFunctionSpace,
     cells,
     set_log_level,
+)
+
+from bone_remodeling.src.forward_model.boundary_condition_builder import (
+    BoundaryConditionBuilder,
+)
+from bone_remodeling.src.forward_model.calculate_strain_energy_density import (
+    StrainEnergyDensityCalculator,
+)
+from bone_remodeling.src.forward_model.density_updater import DensityUpdater
+from bone_remodeling.src.forward_model.load_form_builder import (
+    LoadFormBuilder,
+)
+from bone_remodeling.src.forward_model.parameters import SimulationParameters
+from bone_remodeling.src.forward_model.stiffness_form_builder import (
+    StiffnessFormBuilder,
 )
 
 

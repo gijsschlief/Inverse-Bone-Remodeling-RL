@@ -42,10 +42,11 @@ import logging
 import time
 
 import numpy as np
+from fenics import LogLevel, set_log_level  # type: ignore
+
 from bone_remodeling.src.forward_model.density_visualizer import plot_density_pyvista
 from bone_remodeling.src.forward_model.main import DensitySimulation
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
-from fenics import LogLevel, set_log_level  # type: ignore
 
 logging.basicConfig(
     level=logging.INFO,

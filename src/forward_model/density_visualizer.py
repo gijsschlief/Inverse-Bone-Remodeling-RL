@@ -6,6 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv  # type: ignore
+
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 logging.basicConfig(
