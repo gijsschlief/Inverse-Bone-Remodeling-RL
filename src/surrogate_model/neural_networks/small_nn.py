@@ -1,12 +1,13 @@
 """Small Neural Network Surrogate Model for Bone Remodeling Simulation."""
 
-import logging
+from torch import Tensor, nn
 
-import torch
-from torch import nn
+from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
+    SurrogateModel,
+)
 
 
-class SmallSurrogateModel(nn.Module):
+class SmallSurrogateModel(SurrogateModel):
     """Small Neural Network Surrogate Model for Bone Remodeling Simulation.
 
     This model uses a fully connected architecture to process input data and predict bone density profiles.
@@ -21,16 +22,10 @@ class SmallSurrogateModel(nn.Module):
     -------
         forward(x):
             Forward pass through the model.
-        save_model(file_path):
-            Save the model state to a file.
-        load_model(file_path):
-            Load the model state from a file.
-        plot_loss():
-            Plot training and validation loss history.
 
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the NNSurrogateModel."""
         super().__init__()
         self.flatten = nn.Flatten()
@@ -43,56 +38,9 @@ class SmallSurrogateModel(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 10 * 10),  # Output layer (10x10 flattened to 100)
         )
-        self.train_losses = []
-        self.val_losses = []
 
-    def forward(self, x):
+    def forward(self, x: Tensor) -> Tensor:
         """Forward pass through the model."""
         x = self.flatten(x)
         logits = self.linear_relu_stack(x)
         return logits.view(-1, 10, 10)  # Reshape output to 10x10
-
-    def save_model(self, file_path):
-        """Save the model to the specified file path."""
-        torch.save(self.state_dict(), file_path)
-
-    def load_model(self, file_path):
-        """Load the model from the specified file path."""
-        self.load_state_dict(torch.load(file_path))
-        self.eval()  # Set the model to evaluation mode after loading
-
-    def __str__(self):
-        """Return a string representation of the model architecture."""
-        return f"NeuralNetwork(\n  {self.linear_relu_stack}\n)"
-
-    def __repr__(self):
-        """Return a detailed string representation of the model."""
-        return f"NeuralNetwork(\n  {self.linear_relu_stack}\n)"
-
-    def __call__(self, x):
-        """Call the forward method of the model."""
-        return self.forward(x)
-
-    def __len__(self):
-        """Return the number of layers in the model."""
-        return len(self.linear_relu_stack)
-
-    def plot_loss(self):
-        """Plot training and validation loss history."""
-        import matplotlib.pyplot as plt
-
-        if not self.train_losses:
-            logging.error("No training losses recorded.")
-            return
-
-        plt.figure(figsize=(10, 5))
-        plt.plot(self.train_losses, label="Train Loss")
-        if self.val_losses:
-            plt.plot(self.val_losses, label="Validation Loss")
-        plt.xlabel("Epoch")
-        plt.ylabel("Loss")
-        plt.title("Training and Validation Loss")
-        plt.legend()
-        plt.grid(True)
-        plt.tight_layout()
-        plt.show()
