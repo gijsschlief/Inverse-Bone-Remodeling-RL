@@ -38,9 +38,7 @@ _worker_sim: DensitySimulation
 _profile_length: int
 
 
-def init_worker(
-    simulation_parameters: SimulationParameters
-) -> None:
+def init_worker(simulation_parameters: SimulationParameters) -> None:
     """Initialize the per-process simulation (no RNG here)."""
     global _worker_sim, _profile_length
 
@@ -84,7 +82,7 @@ class TrainingDataGenerator:
         self,
         force_profiles: np.ndarray,
         output_dir: str,
-        simulation_parameters: SimulationParameters
+        simulation_parameters: SimulationParameters,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         self.force_profiles: np.ndarray = force_profiles
@@ -104,7 +102,9 @@ class TrainingDataGenerator:
         if not self.output_dir.exists():
             raise ValueError(f"Output directory {self.output_dir} does not exist.")
         if not isinstance(self.simulation_parameters, SimulationParameters):
-            raise TypeError("simulation_parmaeters must be of type SimulationParameters.")
+            raise TypeError(
+                "simulation_parmaeters must be of type SimulationParameters."
+            )
 
     def generate_parallel(
         self, max_chunk_size: int = 100, force_profile_name: str = "Undefined"
@@ -207,7 +207,6 @@ class TrainingDataGenerator:
             json.dump(results, f, indent=4)
         logging.info(f"Training data saved to {filepath}")
 
-
     @staticmethod
     def serialize_data(
         serial_number: int,
@@ -245,8 +244,9 @@ if __name__ == "__main__":
     logging.info("Running forward model simulations...")
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
-    simulation_parameters = SimulationParameters(force_profile=empty_force_profile,
-                                                 initial_density_field=initial_density)
+    simulation_parameters = SimulationParameters(
+        force_profile=empty_force_profile, initial_density_field=initial_density
+    )
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,

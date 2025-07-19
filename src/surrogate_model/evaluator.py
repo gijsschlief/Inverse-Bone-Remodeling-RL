@@ -5,6 +5,7 @@ from typing import Tuple
 
 import numpy as np
 import torch
+
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 
 logging.basicConfig(

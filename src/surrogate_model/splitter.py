@@ -1,17 +1,11 @@
-"""Splitting module for bone remodeling surrogate model.
+"""Splitting and loading module for bone remodeling surrogate model."""
 
-This module provides functionality to split input and output features into training, validation, and test sets
-without relying on external libraries such as scikit-learn. The main function, `splitting`, ensures reproducibility,
-validates input parameters, and returns a NamedTuple containing the split datasets.
-
-Usage:
-    from splitter import splitting
-    split_data = splitting(input_features, output_features, random_state=42)
-"""
-
-from typing import NamedTuple
+from pathlib import Path
+from typing import NamedTuple, Tuple
 
 import numpy as np
+
+from bone_remodeling.src.forward_data.reader import forward_data_reader
 
 RANDOM_STATE_MAX = 10000
 
@@ -118,3 +112,40 @@ def splitting(
         validation_output=validation_output,
         test_output=test_output,
     )
+
+
+def load_and_split_data(
+    path_pattern: Path, random_state: int = np.random.randint(0, RANDOM_STATE_MAX)
+) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Load and preprocess data using forward_data_reader, which handles directories and checks.
+
+    Args:
+    ----
+        path_pattern (Path): Path to the JSON file or directory.
+        random_state (int): Random seed for reproducibility (default is a random integer).
+
+    Returns:
+    -------
+        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+            - X_train: Training features
+            - X_val: Validation features
+            - X_test: Test features
+            - y_train: Training labels
+            - y_val: Validation labels
+            - y_test: Test labels
+
+    Raises:
+    ------
+        ValueError: If data loading fails or if the input path is invalid.
+        AssertionError: If the loaded data does not match expected dimensions.
+
+    """
+    result = forward_data_reader(path_pattern)
+    if result is None:
+        raise ValueError("Data loading failed. Please check the input path.")
+    _, force_profiles, final_output_densities = result
+    if force_profiles is None or final_output_densities is None:
+        raise ValueError("Data loading failed. Please check the input path.")
+    x = force_profiles
+    y = final_output_densities
+    return splitting(x, y, random_state=random_state)

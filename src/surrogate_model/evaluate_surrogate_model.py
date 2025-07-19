@@ -3,6 +3,7 @@
 import logging
 
 import numpy as np
+
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.surrogate_model.evaluator import (
     average_similarity_score,
@@ -74,13 +75,13 @@ def main() -> None:
 
     predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
 
-    # predicted_matrices, true_matrices = sanitize_matrices(
-    #    predicted_matrices, true_matrices
-    # )
-
-    if output_normalized:
+    if output_normalized and y_mean is not None and y_std is not None:
         predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
         true_matrices = unnormalize_data(true_matrices, y_mean, y_std)
+        if hasattr(predicted_matrices, "detach"):
+            predicted_matrices = predicted_matrices.detach().cpu().numpy()
+        if hasattr(true_matrices, "detach"):
+            true_matrices = true_matrices.detach().cpu().numpy()
 
     # Find the samples with the largest differences
     offset = predicted_matrices - true_matrices

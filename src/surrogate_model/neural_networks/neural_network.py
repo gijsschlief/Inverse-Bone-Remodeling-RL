@@ -1,6 +1,7 @@
 """Neural Network Surrogate Model for Bone Remodeling Simulation."""
 
 import logging
+from pathlib import Path
 from typing import List
 
 import matplotlib.pyplot as plt
@@ -41,7 +42,7 @@ class SurrogateModel(torch.nn.Module):
         )
 
         self.train_losses: List[float] = []
-        self.val_losses: List[float] = []
+        self.val_losses: List[torch.Tensor] = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
@@ -50,7 +51,7 @@ class SurrogateModel(torch.nn.Module):
         x = self.conv_block(x)  # (N, 1, 10, 10)
         return x.squeeze(1)  # (N, 10, 10)
 
-    def save_model(self, file_path: str) -> None:
+    def save_model(self, file_path: Path) -> None:
         """Save the model state to a file."""
         torch.save(self.state_dict(), file_path)
 
@@ -95,7 +96,9 @@ class SurrogateModel(torch.nn.Module):
         plt.show()
 
     @staticmethod
-    def get_scheduler(optimizer: torch.optim.Optimizer, epochs: int) -> torch.optim.lr_scheduler._LRScheduler:
+    def get_scheduler(
+        optimizer: torch.optim.Optimizer, epochs: int
+    ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Get a learning rate scheduler for the surrogate model.
 
         Args:
@@ -105,7 +108,7 @@ class SurrogateModel(torch.nn.Module):
 
         Returns:
         -------
-            torch.optim.lr_scheduler._LRScheduler.ReduceLROnPlateau: The learning rate scheduler.
+            torch.optim.lr_scheduler.ReduceLROnPlateau: The learning rate scheduler.
 
         """
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
@@ -114,14 +117,17 @@ class SurrogateModel(torch.nn.Module):
 
     @staticmethod
     def create_dataloader(
-        input_features: np.ndarray, output_labels: np.ndarray, batch_size: int = 32, shuffle: bool = True
+        input_features: np.ndarray | torch.Tensor,
+        output_labels: np.ndarray | torch.Tensor,
+        batch_size: int = 32,
+        shuffle: bool = True,
     ) -> torch.utils.data.DataLoader:
         """Create a DataLoader for the surrogate model.
 
         Args:
         ----
-            input_features (np.ndarray): Input features of shape (N, 3, 10).
-            output_labels (np.ndarray): Output labels of shape (N, 10, 10).
+            input_features (np.ndarray | torch.Tensor): Input features of shape (N, 3, 10).
+            output_labels (np.ndarray | torch.Tensor): Output labels of shape (N, 10, 10).
             batch_size (int): Batch size for the DataLoader.
             shuffle (bool): Whether to shuffle the data.
 
@@ -133,12 +139,16 @@ class SurrogateModel(torch.nn.Module):
         if isinstance(input_features, torch.Tensor):
             input_tensor = input_features.clone().detach()
         else:
-            input_tensor = torch.tensor(input_features.reshape(-1, 3, 10), dtype=torch.float32)
+            input_tensor = torch.tensor(
+                input_features.reshape(-1, 3, 10), dtype=torch.float32
+            )
 
         if isinstance(output_labels, torch.Tensor):
             y_tensor = output_labels.clone().detach()
         else:
-            y_tensor = torch.tensor(output_labels.reshape(-1, 10, 10), dtype=torch.float32)
+            y_tensor = torch.tensor(
+                output_labels.reshape(-1, 10, 10), dtype=torch.float32
+            )
 
         dataset = torch.utils.data.TensorDataset(input_tensor, y_tensor)
         return torch.utils.data.DataLoader(

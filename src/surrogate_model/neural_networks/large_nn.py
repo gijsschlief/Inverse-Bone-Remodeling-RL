@@ -1,7 +1,5 @@
 """Large Neural Network Surrogate Model for bone remodeling simulation."""
 
-from typing import List
-
 from torch import Tensor, nn
 
 from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
@@ -31,9 +29,7 @@ class LargeSurrogateModel(SurrogateModel):
             nn.BatchNorm2d(128),
         )
 
-        self.global_pool = nn.AdaptiveAvgPool2d(
-            (3, 10)
-        )  # keep spatial shape fixed
+        self.global_pool = nn.AdaptiveAvgPool2d((3, 10))  # keep spatial shape fixed
 
         self.fc = nn.Sequential(
             nn.Flatten(),  # (N, 128, 3, 10) => (N, 128*3*10)
@@ -45,9 +41,6 @@ class LargeSurrogateModel(SurrogateModel):
             nn.Dropout(0.3),
             nn.Linear(512, 100),
         )
-
-        self.train_losses: List[float] = []
-        self.val_losses: List[float] = []
 
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass of the model."""

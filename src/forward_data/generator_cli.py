@@ -131,8 +131,9 @@ def main() -> None:
     )
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
-    simulation_parameters = SimulationParameters(force_profile=empty_force_profile,
-                                                 initial_density_field=initial_density)
+    simulation_parameters = SimulationParameters(
+        force_profile=empty_force_profile, initial_density_field=initial_density
+    )
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profile,

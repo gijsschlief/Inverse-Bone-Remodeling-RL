@@ -27,7 +27,9 @@ def main() -> None:
         _, target_forces, target_densities = result
 
     remodeling_environment = BoneRemodellingEnvironment(
-        surrogate_model_path=Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
+        surrogate_model_path=Path(
+            "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"
+        ),
         target_densities=target_densities[0],
         target_forces=target_forces[0],
         max_steps=100,

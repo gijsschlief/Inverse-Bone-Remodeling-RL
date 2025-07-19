@@ -2,7 +2,7 @@
 
 import logging
 from pathlib import Path
-from typing import Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -10,20 +10,20 @@ import torch
 
 def normalize_data(
     train: np.ndarray,
-    val: np.ndarray | None = None,
-    test: np.ndarray | None = None,
-    mean: np.ndarray | None = None,
-    std: np.ndarray | None = None,
+    val: np.ndarray,
+    test: np.ndarray,
+    mean: Optional[np.ndarray] = None,
+    std: Optional[np.ndarray] = None,
 ) -> Tuple[np.ndarray, np.ndarray | None, np.ndarray | None, np.ndarray, np.ndarray]:
     """Normalize datasets based on training statistics.
 
     Args:
     ----
         train (np.ndarray): Training dataset.
-        val (np.ndarray | None): Validation dataset. If None, it will not be normalized.
-        test (np.ndarray | None): Test dataset. If None, it will not be normalized.
-        mean (np.ndarray | None): Precomputed mean for normalization. If None, it will be computed from the training data.
-        std (np.ndarray | None): Precomputed standard deviation for normalization. If None, it will be computed from the training data.
+        val (np.ndarray | None): Validation dataset, can be None.
+        test (np.ndarray | None): Test dataset, can be None.
+        mean (Optional[np.ndarray]): Mean used for normalization.
+        std (Optional[np.ndarray]): Standard deviation used for normalization.
 
     Returns:
     -------
@@ -42,20 +42,18 @@ def normalize_data(
     return normalized_train, normalized_val, normalized_test, mean, std
 
 
-def unnormalize_data(
-    data: torch.Tensor | np.ndarray, mean: np.ndarray, std: np.ndarray
-) -> torch.Tensor | np.ndarray:
+def unnormalize_data(data: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.ndarray:
     """Unnormalize data using the provided mean and standard deviation.
 
     Args:
     ----
-        data (torch.Tensor | np.ndarray): Data to be unnormalized.
+        data (np.ndarray): Data to be unnormalized.
         mean (np.ndarray): Mean used for normalization.
         std (np.ndarray): Standard deviation used for normalization.
 
     Returns:
     -------
-        torch.Tensor | np.ndarray: Unnormalized data.
+        np.ndarray: Unnormalized data.
 
     """
     if isinstance(data, np.ndarray):

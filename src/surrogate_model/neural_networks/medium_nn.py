@@ -1,7 +1,5 @@
 """Medium Neural Network Surrogate Model for Bone Remodeling Simulation."""
 
-from typing import List
-
 from torch import Tensor, nn
 
 from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
@@ -35,14 +33,10 @@ class MediumSurrogateModel(SurrogateModel):
         """Initialize the MediumSurrogateModel with a neural network architecture."""
         super().__init__()
         self.model = nn.Sequential(
-            nn.Conv2d(
-                in_channels=1, out_channels=16, kernel_size=(3, 3), padding=1
-            ),
+            nn.Conv2d(in_channels=1, out_channels=16, kernel_size=(3, 3), padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(16),
-            nn.Conv2d(
-                in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1
-            ),
+            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(3, 3), padding=1),
             nn.ReLU(),
             nn.BatchNorm2d(32),
             nn.Flatten(),
@@ -51,8 +45,6 @@ class MediumSurrogateModel(SurrogateModel):
             nn.Dropout(0.3),
             nn.Linear(256, 100),
         )
-        self.train_losses: List[float] = []
-        self.val_losses: List[float] = []
 
     def forward(self, x: Tensor) -> Tensor:
         """Forward pass of the model."""

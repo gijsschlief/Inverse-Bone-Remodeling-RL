@@ -101,6 +101,7 @@ def plot_surrogate_model(
         logging.info("-" * 50)
     return figures
 
+
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
     actual_matrix: np.ndarray,

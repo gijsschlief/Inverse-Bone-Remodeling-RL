@@ -90,7 +90,9 @@ def main() -> None:
     all_results = []
     for i in range(10):
         agent_evaluation_environment = BoneRemodellingEnvironment(
-            surrogate_model_path=Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
+            surrogate_model_path=Path(
+                "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"
+            ),
             target_densities=test_density_profiles[i],
             target_forces=test_forces[i],
             max_steps=1,
