@@ -6,11 +6,10 @@ from pathlib import Path
 
 from stable_baselines3 import PPO
 
-from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_saving_callback import RewardSavingCallback
-from bone_remodeling.src.surrogate_model.splitter import splitting
+from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
 
 
 def save_model_safely(model: PPO, path: Path) -> Path:
@@ -50,13 +49,14 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
         surrogate_path (Path): Path to the surrogate model file.
 
     """
-    result = forward_data_reader(data_path)
-    assert result is not None, "Failed to read data from the specified path."
-    _, target_forces, target_densities = result
-
-    train_densities, _, _, train_forces, _, _ = splitting(
-        target_densities, target_forces, random_state=0
-    )
+    (
+        train_forces,
+        _,
+        _,
+        train_densities,
+        _,
+        _,
+    ) = load_and_split_data(data_path, random_state=0)
     logging.info(f"Training RL agent on {len(train_densities)} samples.")
 
     remodeling_environment = BoneRemodellingEnvironment(
@@ -67,18 +67,16 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
     )
 
     logging.info("Environment created,loading agent if it exists.")
-    if agent_path is None:
+    if agent_path.is_dir():
         model = PPO("MlpPolicy", remodeling_environment, verbose=1)
+        latest_agent_path = None
     else:
         latest_agent_path = find_latest_agent(agent_path)
-        if latest_agent_path is None:
-            model = PPO("MlpPolicy", remodeling_environment, verbose=1)
-        else:
-            model = PPO.load(latest_agent_path, env=remodeling_environment)
-            model.set_env(remodeling_environment)
+        model = PPO.load(latest_agent_path, env=remodeling_environment)
+        model.set_env(remodeling_environment)
 
     logging.info(
-        f"Starting training with agent at {latest_agent_path if latest_agent_path else 'new model'}."
+        f"Starting training with agent at {latest_agent_path if latest_agent_path is not None else 'new model'}."
     )
 
     model.learn(
@@ -97,9 +95,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/trained_agent_special.zip")
+    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/")
     DATA_PATH = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_10000_samples_0708_1959.json"
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_1000_samples_0720_1430.json"
     )
-    SURROGATE_PATH = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth")
+    SURROGATE_PATH = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth")
     main(agent_path=AGENT_PATH, data_path=DATA_PATH, surrogate_path=SURROGATE_PATH)

@@ -208,8 +208,9 @@ def main(data_file_path: Path, model_path: Path, normalize: bool = True) -> None
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logging.info(f"Loading data from {data_file_path}")
-    x_train_np, x_val_np, x_test_np, y_train_np, y_val_np, y_test_np = load_and_split_data(
-        data_file_path, random_state=0)
+    x_train_np, x_val_np, x_test_np, y_train_np, y_val_np, y_test_np = (
+        load_and_split_data(data_file_path, random_state=0)
+    )
 
     logging.info("Sanitizing data...")
     x_train_np, y_train_np = sanitize_data(x_train_np, y_train_np)

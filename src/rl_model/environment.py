@@ -62,57 +62,41 @@ class BoneRemodellingEnvironment(Env):
         self.surrogate_model.to(self.device).eval()
 
         self.target_densities = target_densities
-        self.return_shape = target_densities[0].shape
-        self._profile_length = np.max(self.return_shape)
+        self.density_shape = target_densities[0].shape
+        self._profile_length = np.max(self.density_shape)
+    
         self.max_steps = max_steps
+
+        self.force_shape = (3, self._profile_length)
         self.force_profile = np.zeros(
-            (3, self._profile_length), dtype=np.float32
+            self.force_shape, dtype=np.float32
+
         )  # Default force profile
         self.render_mode = render_mode
         self.target_forces = target_forces
         self.num_samples = len(target_densities)
         self.current_sample_index = 0
 
-        # Define the action and observation spaces
+        # Define the action space
         self.action_space = spaces.Box(
-            low=np.array([0, 0, 0, -force_boundary], dtype=np.float32),
-            high=np.array(
-                [self._profile_length - 1, 1, 1, force_boundary], dtype=np.float32
-            ),
+            low=np.array([-1, -1], dtype=np.float32),
+            high=np.array([1, 1], dtype=np.float32),
             dtype=np.float32,
         )
 
-        # Observation space of the agent
-        self.grid_size = int(np.prod(self.return_shape))
-        observation_space_lower_bounds = np.concatenate(
-            [
-                np.full(self.grid_size, -density_constraint, dtype=np.float32),
-                np.array(
-                    [
-                        self.action_space.low[0],
-                        self.action_space.low[1],
-                        self.action_space.low[2],
-                        self.action_space.low[3],
-                    ],
-                    dtype=np.float32,
-                ),
-            ]
-        )
-        observation_space_upper_bounds = np.concatenate(
-            [
-                np.full(self.grid_size, +density_constraint, dtype=np.float32),
-                np.array(
-                    [
-                        self.action_space.high[0],
-                        self.action_space.high[1],
-                        self.action_space.high[2],
-                        self.action_space.high[3],
-                    ],
-                    dtype=np.float32,
-                ),
-            ]
-        )
+        self.peak_magnitude = np.float32(0.0)
+        self.peak_location = np.int8(0)
 
+        # Define the observation space
+        self.grid_size = int(np.prod(self.density_shape))
+        observation_space_lower_bounds = np.vstack([
+            np.full(self.density_shape, -density_constraint, dtype=np.float32),
+            np.full(self.force_shape, -force_boundary, dtype=np.float32),
+        ])
+        observation_space_upper_bounds = np.vstack([
+            np.full(self.density_shape, density_constraint, dtype=np.float32),
+            np.full(self.force_shape, force_boundary, dtype=np.float32),
+        ])
         self.observation_space = spaces.Box(
             low=observation_space_lower_bounds,
             high=observation_space_upper_bounds,
@@ -121,7 +105,7 @@ class BoneRemodellingEnvironment(Env):
 
         # Episode variables
         self.current_step = 0
-        self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
+        self.last_predicted_density = np.zeros(self.density_shape, dtype=np.float32)
 
     def reset(
         self, *, seed: int | None = None, options: dict | None = None
@@ -142,6 +126,9 @@ class BoneRemodellingEnvironment(Env):
         """
         super().reset(seed=seed)
         self.current_step = 0
+        self.reward = 0.0
+        self.peak_magnitude = np.float32(0.0)
+        self.peak_location = np.int8(0)
 
         # Pick a new random sample
         self.current_sample_index = np.random.randint(self.num_samples)
@@ -149,13 +136,14 @@ class BoneRemodellingEnvironment(Env):
         # Update target for this episode
         self.target_density = self.target_densities[self.current_sample_index]
         self.target_force = self.target_forces[self.current_sample_index]
-        self.return_shape = self.target_density.shape
-        self.last_predicted_density = np.zeros(self.return_shape, dtype=np.float32)
+
+        # reset observation
+        self.last_predicted_density = np.zeros(self.density_shape, dtype=np.float32)
         difference = (
             self.target_density.astype(np.float32) - self.last_predicted_density
-        ).ravel()
-        episode_observation = np.concatenate(
-            [difference, np.zeros(4, dtype=np.float32)], axis=0
+        ).astype(np.float32)
+        episode_observation = np.vstack(
+            [difference, np.zeros(self.force_profile.shape, dtype=np.float32)]
         )
         info: dict = {}
         return episode_observation, info
@@ -225,35 +213,19 @@ class BoneRemodellingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        peak_position, top_index, side_index, peak_height = action
-        peak_position = int(
-            np.clip(
-                round(peak_position),
-                self.action_space.low[0],
-                self.action_space.high[0],
-            )
-        )
-        top_index = int(
-            np.clip(
-                round(top_index), self.action_space.low[1], self.action_space.high[1]
-            )
-        )
-        side_index = int(
-            np.clip(
-                round(side_index), self.action_space.low[2], self.action_space.high[2]
-            )
-        )  # Ensure side_index is within [0, 2]
-        peak_height = float(
-            np.clip(peak_height, self.action_space.low[3], self.action_space.high[3])
+        peak_action, location_action = action
+        self.peak_magnitude = self.peak_magnitude + np.float32(peak_action)
+        self.peak_location = np.mod(
+            self.peak_location + np.int8(np.round(location_action)),
+            self._profile_length * 3,
         )
 
-        # Generate force profile
-        side_index = (
-            (2 if side_index == 0 else 1) if top_index == 0 else 0
-        )  # Left/right if top_index==0, else top side
+        side_index, peak_position = np.divmod(self.peak_location, self._profile_length)
 
         self.force_profile = self._generate_triangular_profile(
-            peak_position=peak_position, side=side_index, peak_height=peak_height
+            peak_position=int(peak_position),
+            side=int(np.round(side_index)),
+            peak_height=float(self.peak_magnitude),
         )
 
         predicted_density = self._surrogate_model_forward()
@@ -266,7 +238,7 @@ class BoneRemodellingEnvironment(Env):
         )
 
         self.last_predicted_density = predicted_density.astype(np.float32)
-        observation = (
+        density_difference = (
             self.target_density.astype(np.float32) - self.last_predicted_density
         )
 
@@ -274,7 +246,7 @@ class BoneRemodellingEnvironment(Env):
         self.reward = reward
 
         # check success: is the error (observation) small everywhere?
-        success = np.allclose(observation, 0.0, atol=0.05)
+        success = np.allclose(density_difference, 0.0, atol=0.05)
 
         # base termination: either out of steps or success
         terminated = success or (self.current_step >= self.max_steps)
@@ -297,8 +269,8 @@ class BoneRemodellingEnvironment(Env):
             "sample_index": self.current_sample_index,
         }
 
-        observation = np.concatenate(
-            ([observation.ravel(), action]), axis=0
+        observation = np.vstack(
+            [density_difference, self.force_profile.astype(np.float32)]
         )  # Append action to observation
         return observation, reward, terminated, truncated, info
 
@@ -338,8 +310,8 @@ class BoneRemodellingEnvironment(Env):
         """
         # normalize
         if self.x_mean is not None and self.x_std is not None:
-            force_profile, _, _, _, _ = normalize_data(
-                self.force_profile, None, None, self.x_mean, self.x_std
+            force_profile, _, _ = normalize_data(
+                self.force_profile, self.x_mean, self.x_std
             )
 
         # forward pass through the surrogate model
@@ -362,4 +334,4 @@ class BoneRemodellingEnvironment(Env):
             density_tensor = unnormalize_data(density_tensor, self.y_mean, self.y_std)
 
         surrogate_density: np.ndarray = density_tensor.detach().cpu().numpy()
-        return surrogate_density.reshape(self.return_shape)
+        return surrogate_density.reshape(self.density_shape)
