@@ -203,13 +203,13 @@ def evaluate_model(
     )
 
 
-def main(data_file_path: Path, model_path: Path, normalize: bool = True) -> None:
+def main(data_file_path: Path, model_path: Path, normalize: bool = True, random_state: int = 0) -> None:
     """Train and evaluate the surrogate model."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     logging.info(f"Loading data from {data_file_path}")
     x_train_np, x_val_np, x_test_np, y_train_np, y_val_np, y_test_np = (
-        load_and_split_data(data_file_path, random_state=0)
+        load_and_split_data(data_file_path, random_state=random_state)
     )
 
     logging.info("Sanitizing data...")
@@ -276,4 +276,10 @@ def main(data_file_path: Path, model_path: Path, normalize: bool = True) -> None
 if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
-    main(data_file_path, model_path, normalize=True)
+
+    for i in range(5):
+        main(data_file_path, model_path, normalize=True, random_state=i+1)
+
+    logging.info("All training runs completed.")
+    logging.info("Final model saved at: %s", model_path)
+    # 4 and up are trained on all data
