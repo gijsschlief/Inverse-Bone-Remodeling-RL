@@ -26,11 +26,13 @@ def save_model_safely(model: PPO, path: Path) -> Path:
 
 def find_latest_agent(path: Path) -> Path:
     """Find the latest agent file in the specified directory."""
-    if os.path.exists(path):
-        base_path, ext = os.path.splitext(path)
-        counter = 1
+    base_path, ext = os.path.splitext(path)
+    logging.info(f"Current {base_path} and {ext}")
+    counter = 1
+    # Check for existing files and increment the counter until a unique name is found
     while os.path.exists(f"{base_path}_{counter}{ext}"):
         counter += 1
+
     return Path(f"{base_path}_{counter-1}{ext}")
 
 
@@ -80,7 +82,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
     )
 
     model.learn(
-        total_timesteps=1000,
+        total_timesteps=1_000,
         callback=[
             RenderCallback(render_freq=1),
             RewardSavingCallback(
@@ -95,7 +97,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
 
 
 if __name__ == "__main__":
-    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/")
+    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/agents.zip")
     DATA_PATH = Path(
         "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_1000_samples_0720_1430.json"
     )

@@ -6,9 +6,11 @@ from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
+
 from bone_remodeling.src.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
 )
+from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -86,10 +88,10 @@ def plot_surrogate_model(
         plot_difference_matrix(
             predicted_matrix,
             actual_matrix,
-            "Difference Matrix (Predicted - Actual)",
+            "Difference Matrix (Predicted - Actual) as Percentage",
             axes[2],
-            color_scale_min=-1.0,
-            color_scale_max=1.0,
+            color_scale_min=-100,
+            color_scale_max=100,
         )
 
         figures.append(figure)
@@ -107,11 +109,11 @@ def plot_difference_matrix(
     actual_matrix: np.ndarray,
     title: str,
     axis: plt.Axes,
-    color_scale_min: float = -1.0,
-    color_scale_max: float = 1.0,
+    color_scale_min: float = -100,
+    color_scale_max: float = 100,
     color_bar: bool = True,
 ) -> None:
-    """Plot the difference between predicted and actual matrices with a diverging colormap.
+    """Plot the difference between predicted and actual matrices as percentage with a diverging colormap.
 
     Args:
     ----
@@ -119,12 +121,12 @@ def plot_difference_matrix(
         actual_matrix (np.ndarray): Actual density matrix.
         title (str): Title of the plot.
         axis: Matplotlib axis to plot on.
-        color_scale_min (float): Minimum value for color scaling. Default is -1.0
-        color_scale_max (float): Maximum value for color scaling. Default is 1.0
+        color_scale_min (float): Minimum value for color scaling. Default is -100
+        color_scale_max (float): Maximum value for color scaling. Default is 100
         color_bar (bool): Whether to include a color bar. Default is True.
 
     """
-    difference_matrix = predicted_matrix - actual_matrix
+    difference_matrix = np.divide(predicted_matrix - actual_matrix, np.ones_like(actual_matrix)*SimulationParameters.max_density) * 100
     # Use a diverging colormap: blue (under), white (exact), red (over)
     difference_image = axis.imshow(
         difference_matrix,

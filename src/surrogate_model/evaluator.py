@@ -67,12 +67,12 @@ def validate_surrogate_model(
         # Validate that X_val can be reshaped to (num_samples, 3, 10)
         if x_val.size != num_samples * 3 * 10:
             raise ValueError(
-                f"X_val with shape {x_val.shape} cannot be reshaped to ({num_samples}, 3, 10). "
+                f"x_val with shape {x_val.shape} cannot be reshaped to ({num_samples}, 3, 10)."
             )
         # Validate that y_val can be reshaped to (num_samples, 10, 10)
         if y_val.size != num_samples * 10 * 10:
             raise ValueError(
-                f"y_val with shape {y_val.shape} cannot be reshaped to ({num_samples}, 10, 10). "
+                f"y_val with shape {y_val.shape} cannot be reshaped to ({num_samples}, 10, 10)."
                 "Ensure y_val has the correct number of elements."
             )
         y_val_tensor = torch.from_numpy(

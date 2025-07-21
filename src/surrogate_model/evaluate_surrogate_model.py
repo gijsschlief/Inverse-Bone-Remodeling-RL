@@ -25,7 +25,7 @@ from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
 def main() -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model_and_normalization_params = load_surrogate_model(
-        "/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth",
+        "/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth",
         ReversedSurrogateModel,
     )
     if model_and_normalization_params is None:
