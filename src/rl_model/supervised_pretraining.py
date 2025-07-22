@@ -18,6 +18,8 @@ from bone_remodeling.src.rl_model.validate_pretrained_agent import (
 )
 from bone_remodeling.src.surrogate_model.splitter import splitting
 
+logger = logging.getLogger(__name__)
+
 
 def main() -> None:
     """Supervised pretraining of the rl agent."""
@@ -52,7 +54,7 @@ def main() -> None:
         random_state=0,
     )
     if split_data_result is None:
-        logging.error("Data splitting failed. Exiting.")
+        logger.error("Data splitting failed. Exiting.")
         return
 
     (
@@ -87,7 +89,7 @@ def main() -> None:
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-        logging.info(f"Epoch {epoch + 1} - Loss: {total_loss / len(loader):.6f}")
+        logger.info(f"Epoch {epoch + 1} - Loss: {total_loss / len(loader):.6f}")
 
     # Save model
     torch.save(

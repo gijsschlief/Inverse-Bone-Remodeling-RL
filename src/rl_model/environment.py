@@ -26,7 +26,6 @@ from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matri
 logger = logging.getLogger(__name__)
 
 
-
 class BoneRemodellingEnvironment(Env):
     """Gym Environment for reinforcement learning in bone remodeling simulation."""
 

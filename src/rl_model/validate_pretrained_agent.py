@@ -6,10 +6,7 @@ import numpy as np
 import torch
 from stable_baselines3 import PPO
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
 def validate_pretrained_agent(
@@ -34,7 +31,7 @@ def validate_pretrained_agent(
     """
     num_samples = density_profiles.shape[0]
     if num_samples == 0:
-        logging.error("Validation data is empty. Cannot validate agent.")
+        logger.error("Validation data is empty. Cannot validate agent.")
         raise ValueError("Validation data is empty. Cannot validate agent.")
     predicted_forces = []
 

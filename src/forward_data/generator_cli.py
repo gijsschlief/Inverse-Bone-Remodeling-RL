@@ -21,6 +21,7 @@ from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
 
+
 def main() -> None:
     """Parse command line arguments and generate training data.
 

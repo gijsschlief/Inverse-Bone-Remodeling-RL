@@ -36,7 +36,9 @@ def visualize_force_comparison(
         sides_with_forces = 3
         force_profile = np.asarray(force_profile)
         if force_profile.ndim == sides_with_forces:
-            force_profile = force_profile[:, np.newaxis, :, :]  # Ensure shape (N, 1, 3, 10)
+            force_profile = force_profile[
+                :, np.newaxis, :, :
+            ]  # Ensure shape (N, 1, 3, 10)
         return force_profile
 
     force_profiles_1 = _preprocess_force(force_profiles_1)

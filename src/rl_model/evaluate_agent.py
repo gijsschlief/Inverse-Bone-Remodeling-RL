@@ -8,14 +8,18 @@ from stable_baselines3 import PPO
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
+from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.splitter import splitting
+
+logger = logging.getLogger(__name__)
 
 
 def evaluate_agent(
     model: PPO,
     environment: Env,
     num_episodes: int = 10,
+    *,
     render: bool = False,
 ) -> dict:
     """Evaluate the trained RL agent.
@@ -63,7 +67,7 @@ def evaluate_agent(
         all_force_profiles.append(info["force_profile"])
         all_predicted_densities.append(info["predicted_density"])
 
-        logging.info(
+        logger.info(
             f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}",
         )
 
@@ -92,6 +96,10 @@ def main() -> None:
 
     model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
 
+    rl_parameters = RLParameters(
+        max_steps=1,
+    )
+
     all_results = []
     for i in range(10):
         agent_evaluation_environment = BoneRemodellingEnvironment(
@@ -100,7 +108,7 @@ def main() -> None:
             ),
             target_densities=test_density_profiles[i],
             target_forces=test_forces[i],
-            max_steps=1,
+            rl_parameters=rl_parameters,
         )
         evaluation_result = evaluate_agent(
             model,
@@ -114,7 +122,7 @@ def main() -> None:
     avg_rewards = sum(res["rewards"][0] for res in all_results) / len(all_results)
     avg_mse = sum(res["mse_errors"][0] for res in all_results) / len(all_results)
 
-    logging.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_mse:.6f}")
+    logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_mse:.6f}")
 
 
 if __name__ == "__main__":

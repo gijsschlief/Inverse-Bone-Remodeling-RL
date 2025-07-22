@@ -5,6 +5,8 @@ import logging
 import matplotlib.pyplot as plt
 from stable_baselines3.common.callbacks import BaseCallback
 
+logger = logging.getLogger(__name__)
+
 
 class RewardSavingCallback(BaseCallback):
     """Callback to collect episode rewards and save a final plot."""
@@ -39,4 +41,4 @@ class RewardSavingCallback(BaseCallback):
         plt.savefig(self.out_path)
         plt.close()
         if self.verbose:
-            logging.info(f"Saved reward plot to {self.out_path}")
+            logger.info(f"Saved reward plot to {self.out_path}")

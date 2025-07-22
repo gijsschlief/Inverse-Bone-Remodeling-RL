@@ -13,6 +13,7 @@ from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
 
 logger = logging.getLogger(__name__)
 
+
 def save_model_safely(model: PPO, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
     if Path.exists(path):
