@@ -1,23 +1,25 @@
 """Run a reinforcement learning environment for bone remodeling."""
 
 import logging
-import os
 from pathlib import Path
 
 from stable_baselines3 import PPO
 
 from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
+from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_saving_callback import RewardSavingCallback
 from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
 
+logger = logging.getLogger(__name__)
 
 def save_model_safely(model: PPO, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
-    if os.path.exists(path):
-        base_path, ext = os.path.splitext(path)
+    if Path.exists(path):
+        base_path = Path.stem(path)
+        ext = Path.suffix(path)
         counter = 1
-        while os.path.exists(f"{base_path}_{counter}{ext}"):
+        while Path.exists(f"{base_path}_{counter}{ext}"):
             counter += 1
         path = Path(f"{base_path}_{counter}{ext}")
     model.save(path)
@@ -26,11 +28,12 @@ def save_model_safely(model: PPO, path: Path) -> Path:
 
 def find_latest_agent(path: Path) -> Path:
     """Find the latest agent file in the specified directory."""
-    base_path, ext = os.path.splitext(path)
-    logging.info(f"Current {base_path} and {ext}")
+    base_path = Path.stem(path)
+    ext = Path.suffix(path)
+    logger.info(f"Current {base_path} and {ext}")
     counter = 1
     # Check for existing files and increment the counter until a unique name is found
-    while os.path.exists(f"{base_path}_{counter}{ext}"):
+    while Path.exists(f"{base_path}_{counter}{ext}"):
         counter += 1
 
     return Path(f"{base_path}_{counter - 1}{ext}")
@@ -59,16 +62,18 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
         _,
         _,
     ) = load_and_split_data(data_path, random_state=0)
-    logging.info(f"Training RL agent on {len(train_densities)} samples.")
+    logger.info(f"Training RL agent on {len(train_densities)} samples.")
+
+    rl_parameters = RLParameters()
 
     remodeling_environment = BoneRemodellingEnvironment(
         surrogate_model_path=surrogate_path,
         target_densities=train_densities,
         target_forces=train_forces,
-        max_steps=100,
+        rl_parameters=rl_parameters,
     )
 
-    logging.info("Environment created,loading agent if it exists.")
+    logger.info("Environment created,loading agent if it exists.")
     if agent_path.is_dir():
         model = PPO("MlpPolicy", remodeling_environment, verbose=1)
         latest_agent_path = None
@@ -77,7 +82,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
         model = PPO.load(latest_agent_path, env=remodeling_environment)
         model.set_env(remodeling_environment)
 
-    logging.info(
+    logger.info(
         f"Starting training with agent at {latest_agent_path if latest_agent_path is not None else 'new model'}.",
     )
 
@@ -90,10 +95,10 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
             ),
         ],
     )
-    logging.info("Training complete.")
+    logger.info("Training complete.")
 
     saved_path = save_model_safely(model, agent_path)
-    logging.info(f"Model saved to {saved_path}")
+    logger.info(f"Model saved to {saved_path}")
 
 
 if __name__ == "__main__":

@@ -11,6 +11,7 @@ from gymnasium import Env, spaces
 from torch.nn import Module
 
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
+from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.loader import load_surrogate_model
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
@@ -21,6 +22,9 @@ from bone_remodeling.src.surrogate_model.normalizor import (
     unnormalize_data,
 )
 from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
+
+logger = logging.getLogger(__name__)
+
 
 
 class BoneRemodellingEnvironment(Env):
@@ -33,10 +37,7 @@ class BoneRemodellingEnvironment(Env):
         surrogate_model_path: Path,
         target_densities: np.ndarray,
         target_forces: np.ndarray,
-        max_steps: int = 50,
-        force_boundary: float = 30,
-        density_constraint: float = 1.73,
-        render_mode: str = "human",
+        rl_parameters: RLParameters,
     ) -> None:
         """Initialize the environment with a surrogate model."""
         super().__init__()
@@ -70,14 +71,17 @@ class BoneRemodellingEnvironment(Env):
         self.density_shape = target_densities[0].shape
         self._profile_length = np.max(self.density_shape)
 
-        self.max_steps = max_steps
+        self.max_steps = rl_parameters.max_steps
+        self.render_mode = rl_parameters.render_mode
+        self.density_constraint = rl_parameters.density_constraint
+        self.force_boundary = rl_parameters.force_boundary
 
         self.force_shape = (3, self._profile_length)
         self.force_profile = np.zeros(
             self.force_shape,
             dtype=np.float32,
-        )  # Default force profile
-        self.render_mode = render_mode
+        )
+
         self.target_forces = target_forces
         self.num_samples = len(target_densities)
         self.current_sample_index = 0
@@ -96,14 +100,14 @@ class BoneRemodellingEnvironment(Env):
         self.grid_size = int(np.prod(self.density_shape))
         observation_space_lower_bounds = np.vstack(
             [
-                np.full(self.density_shape, -density_constraint, dtype=np.float32),
-                np.full(self.force_shape, -force_boundary, dtype=np.float32),
+                np.full(self.density_shape, -self.density_constraint, dtype=np.float32),
+                np.full(self.force_shape, -self.force_boundary, dtype=np.float32),
             ],
         )
         observation_space_upper_bounds = np.vstack(
             [
-                np.full(self.density_shape, density_constraint, dtype=np.float32),
-                np.full(self.force_shape, force_boundary, dtype=np.float32),
+                np.full(self.density_shape, self.density_constraint, dtype=np.float32),
+                np.full(self.force_shape, self.force_boundary, dtype=np.float32),
             ],
         )
         self.observation_space = spaces.Box(
@@ -157,7 +161,7 @@ class BoneRemodellingEnvironment(Env):
         episode_observation = np.vstack(
             [difference, np.zeros(self.force_profile.shape, dtype=np.float32)],
         )
-        info: dict = {}
+        info: dict = {options}
         return episode_observation, info
 
     def render(self, mode: str = "human") -> None:
@@ -165,7 +169,7 @@ class BoneRemodellingEnvironment(Env):
         if mode != "human":
             raise NotImplementedError(f"Render mode '{mode}' is not supported.")
         if self.last_predicted_density is None or self.last_predicted_density.size == 0:
-            logging.warning("No density data to render.")
+            logger.warning("No density data to render.")
             return
 
         # On first call, create 3 grid
@@ -268,7 +272,7 @@ class BoneRemodellingEnvironment(Env):
         if success:
             remaining_steps = self.max_steps - self.current_step
             reward += remaining_steps * 1.0
-            logging.info(
+            logger.info(
                 f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}",
             )
 
