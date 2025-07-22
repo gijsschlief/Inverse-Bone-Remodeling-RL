@@ -24,7 +24,8 @@ from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
 
 # Set up logging
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 
@@ -65,7 +66,9 @@ def convert_tensors(
         )
     else:
         y_tensor = torch.tensor(y_data, dtype=torch.float32).reshape(
-            num_samples, 10, 10
+            num_samples,
+            10,
+            10,
         )
 
     return x_tensor.to(device), y_tensor.to(device)
@@ -112,7 +115,9 @@ def train_model(
         model.train()
         total_loss = 0.0
         for batch_x, batch_y in model.create_dataloader(
-            x_train, y_train, batch_size=batch_size
+            x_train,
+            y_train,
+            batch_size=batch_size,
         ):
             optimizer.zero_grad()
             logits = model(batch_x)
@@ -131,7 +136,7 @@ def train_model(
             total_loss += loss.item()
 
         avg_train_loss = total_loss / len(
-            model.create_dataloader(x_train, y_train, batch_size=batch_size)
+            model.create_dataloader(x_train, y_train, batch_size=batch_size),
         )
         model.train_losses.append(avg_train_loss)
 
@@ -149,7 +154,7 @@ def train_model(
             epochs_no_improve = 0
             best_model_state = model.state_dict()
             logging.info(
-                f"Epoch {epoch + 1}: Validation loss improved to {val_loss:.4f}. Saving model state."
+                f"Epoch {epoch + 1}: Validation loss improved to {val_loss:.4f}. Saving model state.",
             )
         else:
             epochs_no_improve += 1
@@ -157,12 +162,12 @@ def train_model(
         # Log every epoch for the first 10, then every 10 epochs
         if epoch < 10 or (epoch + 1) % 10 == 0:
             logging.info(
-                f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}"
+                f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}",
             )
 
         if epochs_no_improve >= patience:
             logging.info(
-                f"Early stopping at epoch {epoch} (no improvement in {patience} epochs)."
+                f"Early stopping at epoch {epoch} (no improvement in {patience} epochs).",
             )
             break
     if best_model_state is not None:
@@ -183,7 +188,9 @@ def save_model_safely(model: SurrogateModel, path: Path) -> Path:
 
 
 def evaluate_model(
-    model: SurrogateModel, x_val: torch.Tensor, y_val: torch.Tensor
+    model: SurrogateModel,
+    x_val: torch.Tensor,
+    y_val: torch.Tensor,
 ) -> None:
     """Evaluate the model on the validation set and log the results."""
     model.eval()
@@ -197,7 +204,7 @@ def evaluate_model(
     ]
     average_similarity = np.mean(similarities)
     logging.info(
-        f"Validation Loss: {val_loss:.4f}, Average Similarity: {average_similarity:.4f}"
+        f"Validation Loss: {val_loss:.4f}, Average Similarity: {average_similarity:.4f}",
     )
 
 
@@ -235,7 +242,7 @@ def main(
         y_test_np, _, _ = normalize_data(y_test_np, y_mean, y_std)
 
         logging.info(
-            f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}"
+            f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}",
         )
     else:
         logging.info("Skipping normalization.")
@@ -258,7 +265,7 @@ def main(
     logging.info(f"Model architecture:\n{model}")
 
     logging.info(
-        f"Training on {len(x_train)} samples, validating on {len(x_val) if x_val is not None else 0} samples."
+        f"Training on {len(x_train)} samples, validating on {len(x_val) if x_val is not None else 0} samples.",
     )
     train_model(model, x_train, y_train, x_val, y_val, device)
 

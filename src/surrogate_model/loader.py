@@ -12,7 +12,8 @@ from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
 from bone_remodeling.src.surrogate_model.normalizor import load_normalization_params
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 
@@ -68,7 +69,7 @@ class SurrogateModelLoader:
         """Load the surrogate model from the .pth file."""
         self.model = self.model_class()
         self.model.load_state_dict(
-            torch.load(self.model_path, map_location="cpu", weights_only=False)
+            torch.load(self.model_path, map_location="cpu", weights_only=False),
         )
         self.model.eval()  # Set the model to evaluation mode
 
@@ -130,10 +131,10 @@ def load_surrogate_model(
         model_path = code_dir / model_path
         if not model_path.is_absolute():
             logging.error(
-                f"Failed to resolve absolute path for model file: {model_path}"
+                f"Failed to resolve absolute path for model file: {model_path}",
             )
             raise ValueError(
-                f"Failed to resolve absolute path for model file: {model_path}"
+                f"Failed to resolve absolute path for model file: {model_path}",
             )
     if not model_path.is_file():
         logging.error(f"Model file does not exist: {model_path}")
@@ -141,7 +142,7 @@ def load_surrogate_model(
     if model_path.suffix != ".pth":
         logging.error(f"Invalid model file format: {model_path}. Expected a .pth file.")
         raise ValueError(
-            f"Invalid model file format: {model_path}. Expected a .pth file."
+            f"Invalid model file format: {model_path}. Expected a .pth file.",
         )
     if not model_path.is_absolute():
         logging.error(f"Model file path is not absolute: {model_path}")
@@ -154,7 +155,7 @@ def load_surrogate_model(
     # If the model has normalization parameters, load them
     if model_path.with_suffix(".npz").exists():
         x_mean, x_std, y_mean, y_std = load_normalization_params(
-            path=model_path.with_suffix(".npz")
+            path=model_path.with_suffix(".npz"),
         )
         return model_loader.model, x_mean, x_std, y_mean, y_std
 

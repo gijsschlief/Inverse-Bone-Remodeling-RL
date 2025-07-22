@@ -208,7 +208,8 @@ class DensitySimulation:
     def _update_material_properties(self) -> None:
         """Update the modulus of elasticity, Shear modules and first Lame coefficient (lambda) from the modulus of elasticity."""
         elastic_modulus = self.elastic_modulus_scale * np.power(
-            self.current_density, self.modulus_exponent
+            self.current_density,
+            self.modulus_exponent,
         )
         shear_modulus = elastic_modulus / (2 * (1 + self.poisson_ratio))
         first_lame_parameter = (elastic_modulus * self.poisson_ratio) / (
@@ -228,7 +229,7 @@ class DensitySimulation:
         )
 
         self.current_density = self.density_updater.update(
-            self.sed_function.vector().get_local()
+            self.sed_function.vector().get_local(),
         )
         self.density_function.vector().set_local(self.current_density.copy())
 
@@ -290,10 +291,14 @@ class DensitySimulation:
             minlength=self.n_rows * self.n_columns,
         )
         flat_counts = np.bincount(
-            density_indices, minlength=self.n_rows * self.n_columns
+            density_indices,
+            minlength=self.n_rows * self.n_columns,
         )
         safe_density = np.divide(
-            flat_grid, flat_counts, out=np.zeros_like(flat_grid), where=flat_counts != 0
+            flat_grid,
+            flat_counts,
+            out=np.zeros_like(flat_grid),
+            where=flat_counts != 0,
         )
         return np.flipud(safe_density.reshape(self.n_rows, self.n_columns))
 
@@ -328,6 +333,6 @@ class DensitySimulation:
             File(str(self.full_file_path)) << to_save_data
         except Exception as e:
             logging.exception(
-                f"Failed to save the output to {self.full_file_path}: {e}"
+                f"Failed to save the output to {self.full_file_path}: {e}",
             )
             raise RuntimeError(f"Failed to save the output: {e}") from e

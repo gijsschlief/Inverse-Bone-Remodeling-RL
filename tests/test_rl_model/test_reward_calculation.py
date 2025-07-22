@@ -42,7 +42,10 @@ def test_calculate_similarity_negative_baseline() -> None:
     for method in methods:
         with pytest.raises(ValueError, match="Baseline value must be positive."):
             calculate_similarity(
-                first_matrix, second_matrix, method=method, baseline=-1
+                first_matrix,
+                second_matrix,
+                method=method,
+                baseline=-1,
             )
 
 
@@ -75,7 +78,8 @@ def test_calculate_similarity_different_shapes() -> None:
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for method in methods:
         with pytest.raises(
-            ValueError, match="Matrices A and B must have the same shape."
+            ValueError,
+            match="Matrices A and B must have the same shape.",
         ):
             calculate_similarity(first_matrix, second_matrix, method=method)
 
@@ -87,7 +91,8 @@ def test_calculate_similarity_all_zeros() -> None:
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for method in methods:
         with pytest.raises(
-            ValueError, match="Both matrices A and B cannot contain only zeros."
+            ValueError,
+            match="Both matrices A and B cannot contain only zeros.",
         ):
             calculate_similarity(first_matrix, second_matrix, method=method)
 
@@ -100,7 +105,10 @@ def test_calculate_similarity_random_matrices_with_baseline() -> None:
     methods = ["mse", "mae", "wasserstein"]
     for method in methods:
         result = calculate_similarity(
-            first_matrix, second_matrix, method=method, baseline=baseline
+            first_matrix,
+            second_matrix,
+            method=method,
+            baseline=baseline,
         )
         assert (
             -1 <= result <= 1
@@ -148,7 +156,9 @@ def test_calculate_similarity_similar_but_not_equal_matrices() -> None:
     """Test that similarity calculation works for matrices that are similar but not equal."""
     first_matrix = np.random.rand(10, 10)
     second_matrix = first_matrix + np.random.normal(
-        0, 0.1, (10, 10)
+        0,
+        0.1,
+        (10, 10),
     )  # Adding small noise to make B slightly different from A
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for method in methods:
@@ -166,7 +176,10 @@ def test_calculate_similarity_thresholding() -> None:
     methods = ["iou", "dice"]
     for method in methods:
         result = calculate_similarity(
-            first_matrix, second_matrix, method=method, threshold=threshold
+            first_matrix,
+            second_matrix,
+            method=method,
+            threshold=threshold,
         )
         assert (
             -1 <= result <= 1
@@ -184,7 +197,10 @@ def test_calculate_similarity_unused_baseline_warning() -> None:
             match=f"The 'baseline' parameter is not used for the '{method}' method.",
         ):
             calculate_similarity(
-                first_matrix, second_matrix, method=method, baseline=2.0
+                first_matrix,
+                second_matrix,
+                method=method,
+                baseline=2.0,
             )
 
 
@@ -199,7 +215,10 @@ def test_calculate_similarity_unused_threshold_warning() -> None:
             match=f"The 'threshold' parameter is not used for the '{method}' method.",
         ):
             calculate_similarity(
-                first_matrix, second_matrix, method=method, threshold=0.7
+                first_matrix,
+                second_matrix,
+                method=method,
+                threshold=0.7,
             )
 
 
@@ -229,7 +248,10 @@ def test_calculate_similarity_warning_and_result() -> None:
         match="The 'baseline' parameter is not used for the 'cosine' method.",
     ):
         result = calculate_similarity(
-            first_matrix, second_matrix, method="cosine", baseline=2.0
+            first_matrix,
+            second_matrix,
+            method="cosine",
+            baseline=2.0,
         )
     assert (
         -1 <= result <= 1
@@ -242,7 +264,8 @@ def test_calculate_similarity_cosine_orthogonal() -> None:
     second_matrix = np.array([[0, 1], [-1, 0]])  # Orthogonal to A
     result = calculate_similarity(first_matrix, second_matrix, method="cosine")
     assert np.isclose(
-        result, 0.0
+        result,
+        0.0,
     ), f"Expected 0 for cosine similarity of orthogonal matrices, got {result}"
 
 
@@ -252,7 +275,8 @@ def test_calculate_similarity_cosine_opposite() -> None:
     second_matrix = -first_matrix  # Opposite to A
     result = calculate_similarity(first_matrix, second_matrix, method="cosine")
     assert np.isclose(
-        result, -1.0
+        result,
+        -1.0,
     ), f"Expected -1 for cosine similarity of opposite matrices, got {result}"
 
 

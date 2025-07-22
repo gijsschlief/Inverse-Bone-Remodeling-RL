@@ -29,7 +29,9 @@ def ssim_loss(estimated_output: Tensor, reference_output: Tensor) -> Tensor:
 
 
 def combined_loss(
-    predicted: Tensor, target: Tensor, loss_weight: float = 0.5
+    predicted: Tensor,
+    target: Tensor,
+    loss_weight: float = 0.5,
 ) -> Tensor:
     """Weighted combination of Mean Squared Error (MSE) and SSIM loss.
 

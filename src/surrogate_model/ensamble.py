@@ -25,7 +25,8 @@ def load_ensemble_models(model_paths: list[Path]) -> list[SurrogateModel]:
 
 
 def predict_with_ensemble(
-    models: list[SurrogateModel], x: np.ndarray
+    models: list[SurrogateModel],
+    x: np.ndarray,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Predict using an ensemble of models and return mean and standard deviation."""
     predictions = []

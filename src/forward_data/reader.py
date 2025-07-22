@@ -20,13 +20,10 @@ from typing import Any, Union
 
 import numpy as np
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
-def forward_data_reader(
+def forward_data_reader(  # noqa: PLR0911
     file_path: Union[Path, str, Sequence[Union[str, Path]]],
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     """Read and parse forward model data from a JSON file or multiple JSON files in a directory.
@@ -46,30 +43,34 @@ def forward_data_reader(
 
     """
     if not isinstance(file_path, (str, Path, list)):
-        logging.error(
+        logger.error(
             f"Invalid file path type: {type(file_path)}. Expected str, Path, or list[str].",
         )
         return None
+
     if isinstance(file_path, list):
         if not all(isinstance(fp, (str, Path)) for fp in file_path):
-            logging.error("All items in the list must be of type str or Path.")
+            logger.error("All items in the list must be of type str or Path.")
             return None
         file_paths: list[Path] = [
             Path(fp) if not isinstance(fp, Path) else fp for fp in file_path
         ]
         return _forward_data_load_multiple(file_paths)
+
     if isinstance(file_path, str):
         file_path = Path(file_path)
+
     if file_path.is_file():
         return _forward_data_load_single(file_path)
+
     if file_path.is_dir():
         file_list = sorted(file_path.glob("*.json"))
         if not file_list:
-            logging.error(f"No JSON files found in directory: {file_path}")
+            logger.error(f"No JSON files found in directory: {file_path}")
             return None
         return _forward_data_load_multiple(file_list)
 
-    logging.error(
+    logger.error(
         f"Invalid file path: {file_path}. It must be a file or a directory containing JSON files.",
     )
     return None
@@ -98,16 +99,16 @@ def _forward_data_load_multiple(
             with file_path.open("r") as f:
                 file_data = json.load(f)
                 all_entries.extend(file_data)
-                logging.info(f"Loaded {len(file_data)} entries from {file_path.name}")
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            logging.warning(f"Failed to load {file_path.name}: {e}")
+                logger.info(f"Loaded {len(file_data)} entries from {file_path.name}")
+        except (FileNotFoundError, json.JSONDecodeError) as e:  # noqa: PERF203
+            logger.warning(f"Failed to load {file_path.name}: {e}")
             continue
 
     if not all_entries:
-        logging.error("No valid data found in the provided files.")
+        logger.error("No valid data found in the provided files.")
         return None
 
-    logging.info(
+    logger.info(
         f"In total loaded {len(all_entries)} entries from {len(file_paths)} files.",
     )
     return _convert_forward_data_to_numpy(all_entries)
@@ -130,10 +131,10 @@ def _forward_data_load_single(
 
     """
     if not data_path.is_file():
-        logging.error(f"File does not exist: {data_path}")
+        logger.error(f"File does not exist: {data_path}")
         return None
     if data_path.suffix != ".json":
-        logging.error(f"Invalid file format: {data_path}. Expected a .json file.")
+        logger.error(f"Invalid file format: {data_path}. Expected a .json file.")
         return None
     if not data_path.is_absolute():
         data_path = data_path.resolve()
@@ -144,11 +145,11 @@ def _forward_data_load_single(
         return _convert_forward_data_to_numpy(data)
 
     except FileNotFoundError:
-        logging.exception(f"File not found: {data_path}")
+        logger.exception(f"File not found: {data_path}")
     except json.JSONDecodeError:
-        logging.exception(f"JSON decode error in file: {data_path}")
+        logger.exception(f"JSON decode error in file: {data_path}")
     except Exception as e:
-        logging.exception(f"An unexpected error occurred: {e}")
+        logger.exception(f"An unexpected error occurred: {e}")
     return None
 
 
@@ -186,13 +187,13 @@ def _convert_forward_data_to_numpy(
                 serial_numbers.append(serial_number)
             force_profiles.append(entry["force_profile"])
             final_output_densities.append(entry["final_output_density"])
-        except (KeyError, IndexError, TypeError) as e:
+        except (KeyError, IndexError, TypeError) as e:  # noqa: PERF203
             error_msg = str(e)
             error_counts[error_msg] = error_counts.get(error_msg, 0) + 1
             continue
 
     for error_msg, count in error_counts.items():
-        logging.warning(
+        logger.warning(
             f"Skipped {count} malformed entr{'y' if count == 1 else 'ies'} (e.g., {error_msg})",
         )
 
@@ -203,15 +204,14 @@ def _convert_forward_data_to_numpy(
     return serial_numbers_array, force_profiles_array, final_densities_array
 
 
-# Example usage:
 if __name__ == "__main__":
     directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
     result = forward_data_reader(directory_path)
     if result is not None:
         _, force_profiles, output_densities = result
-        logging.info(f"Force Profiles Shape: {force_profiles.shape}")
-        logging.info(f"Output Densities Shape: {output_densities.shape}")
-        logging.info(f"Force Profiles Sample: {force_profiles[0]}")
-        logging.info(f"Output Densities Sample: {output_densities[0]}")
+        logger.info(f"Force Profiles Shape: {force_profiles.shape}")
+        logger.info(f"Output Densities Shape: {output_densities.shape}")
+        logger.info(f"Force Profiles Sample: {force_profiles[0]}")
+        logger.info(f"Output Densities Sample: {output_densities[0]}")
     else:
-        logging.error("Failed to load data: forward_data_reader returned None.")
+        logger.error("Failed to load data: forward_data_reader returned None.")

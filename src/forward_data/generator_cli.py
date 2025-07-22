@@ -19,12 +19,7 @@ from bone_remodeling.src.forward_data.generator import (
 )
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
-
+logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Parse command line arguments and generate training data.
@@ -124,7 +119,8 @@ def main() -> None:
     initial_density = np.full((args.x_shape, args.y_shape), args.initial_density_value)
 
     force_profile_generator = ForceProfileGenerator(
-        profile_length=max(args.x_shape, args.y_shape), batch_seed=args.batch_seed
+        profile_length=max(args.x_shape, args.y_shape),
+        batch_seed=args.batch_seed,
     )
     force_profile = force_profile_generator.merger(
         num_samples=args.num_samples,
@@ -133,7 +129,8 @@ def main() -> None:
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
     simulation_parameters = SimulationParameters(
-        force_profile=empty_force_profile, initial_density_field=initial_density
+        force_profile=empty_force_profile,
+        initial_density_field=initial_density,
     )
 
     data_generator = TrainingDataGenerator(
@@ -145,13 +142,14 @@ def main() -> None:
     start_time = time.time()
     if args.mode == "parallel":
         _ = data_generator.generate_parallel(
-            max_chunk_size=500, force_profile_name="combined_third_order"
+            max_chunk_size=500,
+            force_profile_name="combined_third_order",
         )
     elif args.mode == "sequential":
         _ = data_generator.generate_serial(force_profile_name="combined_third_order")
     stop_time = time.time()
     elapsed_time = stop_time - start_time
-    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+    logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 
 if __name__ == "__main__":

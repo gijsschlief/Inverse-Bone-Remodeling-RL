@@ -78,7 +78,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
         model.set_env(remodeling_environment)
 
     logging.info(
-        f"Starting training with agent at {latest_agent_path if latest_agent_path is not None else 'new model'}."
+        f"Starting training with agent at {latest_agent_path if latest_agent_path is not None else 'new model'}.",
     )
 
     model.learn(
@@ -86,7 +86,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
         callback=[
             RenderCallback(render_freq=1),
             RewardSavingCallback(
-                out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png"
+                out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png",
             ),
         ],
     )
@@ -99,7 +99,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:
 if __name__ == "__main__":
     AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/agents.zip")
     DATA_PATH = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_1000_samples_0720_1430.json"
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_1000_samples_0720_1430.json",
     )
     SURROGATE_PATH = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth")
     main(agent_path=AGENT_PATH, data_path=DATA_PATH, surrogate_path=SURROGATE_PATH)

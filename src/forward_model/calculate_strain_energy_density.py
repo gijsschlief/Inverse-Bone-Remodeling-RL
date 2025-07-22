@@ -57,7 +57,8 @@ class StrainEnergyDensityCalculator:
         if solver_parameters and "krylov_solver" in solver_parameters:
             self._solver.parameters.update(solver_parameters["krylov_solver"])
         self._solver.set_operators(
-            strain_energy_density_matrix, strain_energy_density_matrix
+            strain_energy_density_matrix,
+            strain_energy_density_matrix,
         )
 
     @staticmethod
@@ -79,7 +80,10 @@ class StrainEnergyDensityCalculator:
         )
 
     def calculate(
-        self, displacement: Function, lame_function: Function, shear_function: Function
+        self,
+        displacement: Function,
+        lame_function: Function,
+        shear_function: Function,
     ) -> Function:
         """Calculate the strain energy density (SED) from the strain and stress tensors.
 
@@ -96,13 +100,17 @@ class StrainEnergyDensityCalculator:
         """
         strain_tensor = self._calculate_strain_tensor(displacement)
         stress_tensor = self._calculate_stress_tensor(
-            displacement, strain_tensor, lame_function, shear_function
+            displacement,
+            strain_tensor,
+            lame_function,
+            shear_function,
         )
 
         sed_expression = 0.5 * inner(stress_tensor, strain_tensor)
         linear_sed_form = PETScVector()
         assemble(
-            inner(sed_expression, self._sed_test_function) * dx, tensor=linear_sed_form
+            inner(sed_expression, self._sed_test_function) * dx,
+            tensor=linear_sed_form,
         )
 
         self._solver.solve(self.sed_function.vector(), linear_sed_form)
@@ -144,7 +152,7 @@ def example_usage() -> None:
 
     logging.basicConfig(level=logging.INFO)
     logging.info(
-        f"First calculation took {elapsed_time:.6f} seconds, second took {elapsed_time2:.6f} seconds"
+        f"First calculation took {elapsed_time:.6f} seconds, second took {elapsed_time2:.6f} seconds",
     )
     logging.info("Min/Max SED: %.6f / %.6f", sed.vector().min(), sed.vector().max())
 

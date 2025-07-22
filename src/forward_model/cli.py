@@ -242,7 +242,8 @@ def main() -> None:
 
     # Update simulation_parameters with command-line arguments, excluding reset, save, plot, verbose, force, and density profile
     simulation_parameters = SimulationParameters(
-        force_profile=force_profile, initial_density_field=initial_density
+        force_profile=force_profile,
+        initial_density_field=initial_density,
     )
 
     for key, value in vars(args).items():

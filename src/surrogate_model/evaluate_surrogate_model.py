@@ -30,7 +30,7 @@ def main() -> None:
     )
     if model_and_normalization_params is None:
         logging.error(
-            "Failed to load the surrogate model and normalization parameters."
+            "Failed to load the surrogate model and normalization parameters.",
         )
         return
     model, x_mean, x_std, y_mean, y_std = model_and_normalization_params
@@ -48,11 +48,14 @@ def main() -> None:
         logging.error("Failed to load the data.")
         return
     force_profiles, final_output_densities = sanitize_data(
-        force_profiles, final_output_densities
+        force_profiles,
+        final_output_densities,
     )
 
     x_train, x_val, x_test, y_train, y_val, y_test = splitting(
-        force_profiles, final_output_densities, random_state=0
+        force_profiles,
+        final_output_densities,
+        random_state=0,
     )
     if x_val is None or y_val is None:
         logging.error("Failed to split the data into validation sets.")
@@ -102,7 +105,11 @@ def main() -> None:
     )
 
     average_similarity = average_similarity_score(
-        predicted_matrices, true_matrices, baseline=0.1, threshold=0.5, method="ssim"
+        predicted_matrices,
+        true_matrices,
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
     )
 
     logging.info(f"The average similarity = {average_similarity}")

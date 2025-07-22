@@ -45,7 +45,8 @@ class BoneRemodellingEnvironment(Env):
 
         # Load the surrogate model and normalization parameters
         surrogate_model_and_normalization_params = load_surrogate_model(
-            surrogate_model_path, ReversedSurrogateModel
+            surrogate_model_path,
+            ReversedSurrogateModel,
         )
         assert (
             surrogate_model_and_normalization_params is not None
@@ -60,7 +61,7 @@ class BoneRemodellingEnvironment(Env):
         ) = surrogate_model_and_normalization_params
         if self.surrogate_model is None:
             raise ValueError(
-                f"Surrogate model could not be loaded from {surrogate_model_path}. Please check the file path and model type."
+                f"Surrogate model could not be loaded from {surrogate_model_path}. Please check the file path and model type.",
             )
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         self.surrogate_model.to(self.device).eval()
@@ -73,7 +74,8 @@ class BoneRemodellingEnvironment(Env):
 
         self.force_shape = (3, self._profile_length)
         self.force_profile = np.zeros(
-            self.force_shape, dtype=np.float32
+            self.force_shape,
+            dtype=np.float32,
         )  # Default force profile
         self.render_mode = render_mode
         self.target_forces = target_forces
@@ -96,13 +98,13 @@ class BoneRemodellingEnvironment(Env):
             [
                 np.full(self.density_shape, -density_constraint, dtype=np.float32),
                 np.full(self.force_shape, -force_boundary, dtype=np.float32),
-            ]
+            ],
         )
         observation_space_upper_bounds = np.vstack(
             [
                 np.full(self.density_shape, density_constraint, dtype=np.float32),
                 np.full(self.force_shape, force_boundary, dtype=np.float32),
-            ]
+            ],
         )
         self.observation_space = spaces.Box(
             low=observation_space_lower_bounds,
@@ -115,7 +117,10 @@ class BoneRemodellingEnvironment(Env):
         self.last_predicted_density = np.zeros(self.density_shape, dtype=np.float32)
 
     def reset(
-        self, *, seed: int | None = None, options: dict | None = None
+        self,
+        *,
+        seed: int | None = None,
+        options: dict | None = None,
     ) -> tuple[np.ndarray, dict]:
         """Start a new episode.
 
@@ -150,7 +155,7 @@ class BoneRemodellingEnvironment(Env):
             self.target_density.astype(np.float32) - self.last_predicted_density
         ).astype(np.float32)
         episode_observation = np.vstack(
-            [difference, np.zeros(self.force_profile.shape, dtype=np.float32)]
+            [difference, np.zeros(self.force_profile.shape, dtype=np.float32)],
         )
         info: dict = {}
         return episode_observation, info
@@ -264,7 +269,7 @@ class BoneRemodellingEnvironment(Env):
             remaining_steps = self.max_steps - self.current_step
             reward += remaining_steps * 1.0
             logging.info(
-                f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}"
+                f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}",
             )
 
         info = {
@@ -277,12 +282,15 @@ class BoneRemodellingEnvironment(Env):
         }
 
         observation = np.vstack(
-            [density_difference, self.force_profile.astype(np.float32)]
+            [density_difference, self.force_profile.astype(np.float32)],
         )  # Append action to observation
         return observation, reward, terminated, truncated, info
 
     def _generate_triangular_profile(
-        self, peak_position: int, side: int, peak_height: float
+        self,
+        peak_position: int,
+        side: int,
+        peak_height: float,
     ) -> np.ndarray:
         """Generate a 3xN force profile with one triangular peak on the selected side."""
         profile = np.zeros((3, self._profile_length), dtype=np.float32)
@@ -318,13 +326,15 @@ class BoneRemodellingEnvironment(Env):
         # normalize
         if self.x_mean is not None and self.x_std is not None:
             force_profile, _, _ = normalize_data(
-                self.force_profile, self.x_mean, self.x_std
+                self.force_profile,
+                self.x_mean,
+                self.x_std,
             )
 
         # forward pass through the surrogate model
         with torch.no_grad():
             force_profile_tensor = torch.from_numpy(
-                force_profile.reshape(1, -1).astype(np.float32)
+                force_profile.reshape(1, -1).astype(np.float32),
             ).to(self.device)
 
         assert (

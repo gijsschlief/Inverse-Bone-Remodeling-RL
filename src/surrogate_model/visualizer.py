@@ -12,7 +12,8 @@ from bone_remodeling.src.forward_model.density_visualizer import (
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 
@@ -35,18 +36,19 @@ def plot_surrogate_model(
 
     """
     if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
-        true_matrices, np.ndarray
+        true_matrices,
+        np.ndarray,
     ):
         raise ValueError(
-            "Both predicted_matrices and true_matrices must be numpy.ndarray objects."
+            "Both predicted_matrices and true_matrices must be numpy.ndarray objects.",
         )
     if predicted_matrices.shape != true_matrices.shape:
         raise ValueError(
-            "predicted_matrices and true_matrices must have the same shape."
+            "predicted_matrices and true_matrices must have the same shape.",
         )
     if sample_count <= 0 or sample_count > len(true_matrices):
         raise ValueError(
-            "sample_count must be a positive integer less than or equal to the number of validation samples."
+            "sample_count must be a positive integer less than or equal to the number of validation samples.",
         )
 
     random_indices = random.sample(range(len(true_matrices)), sample_count)
@@ -63,7 +65,7 @@ def plot_surrogate_model(
         logging.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
         logging.info(f"Predicted Density Matrix:\n{predicted_matrix}")
         logging.info(
-            f"Force Profile: {force_profiles[idx] if force_profiles is not None else 'N/A'}"
+            f"Force Profile: {force_profiles[idx] if force_profiles is not None else 'N/A'}",
         )
 
         # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)

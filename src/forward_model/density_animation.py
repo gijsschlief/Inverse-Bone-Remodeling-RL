@@ -21,7 +21,8 @@ from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 
 def animate_density_matplotlib(
-    simulation: DensitySimulation, output_directory: str
+    simulation: DensitySimulation,
+    output_directory: str,
 ) -> FuncAnimation:
     """Create an animation of the density changes over time using Matplotlib.
 
@@ -36,7 +37,7 @@ def animate_density_matplotlib(
         os.makedirs(output_directory)
 
     density_film: np.ndarray = np.zeros(
-        (simulation.time_steps, simulation.n_rows, simulation.n_columns)
+        (simulation.time_steps, simulation.n_rows, simulation.n_columns),
     )
 
     simulation.reset()
@@ -79,7 +80,8 @@ def _update_pyvista_files(simulation: DensitySimulation, file_pattern: str) -> N
     for i in range(simulation.time_steps):
         simulation.step()
         simulation.save(
-            to_save_data=simulation.density_function, output_path=file_pattern + f"_{i}"
+            to_save_data=simulation.density_function,
+            output_path=file_pattern + f"_{i}",
         )
         os.rename(
             file_pattern + f"_{i}" + "000000.vtu",
@@ -90,7 +92,9 @@ def _update_pyvista_files(simulation: DensitySimulation, file_pattern: str) -> N
 
 
 def animate_density_pyvista(
-    simulation: DensitySimulation, output_directory: str, file_pattern: str
+    simulation: DensitySimulation,
+    output_directory: str,
+    file_pattern: str,
 ) -> None:
     """Create an animation of the density changes over time using PyVista.
 
@@ -146,7 +150,8 @@ def main() -> None:
         batch_seed=673,
     )
     force_profile = force_profile_generator.merger(
-        num_samples=1, force_max=20
+        num_samples=1,
+        force_max=20,
     ).squeeze()
 
     parameters = SimulationParameters(

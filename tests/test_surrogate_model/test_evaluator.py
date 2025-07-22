@@ -42,7 +42,8 @@ def dummy_model() -> DummyModel:
 
 
 def test_validate_surrogate_model_shapes(
-    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel,
+    dummy_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
     """Test that validate_surrogate_model returns predictions and true matrices with correct shapes."""
     x_val, y_val = dummy_data
@@ -50,23 +51,29 @@ def test_validate_surrogate_model_shapes(
     x_val_flat = x_val.reshape(x_val.shape[0], -1)
     y_val_flat = y_val.reshape(y_val.shape[0], -1)
     preds, trues = evaluator.validate_surrogate_model(
-        dummy_model, x_val_flat, y_val_flat, device=torch.device("cpu")
+        dummy_model,
+        x_val_flat,
+        y_val_flat,
+        device=torch.device("cpu"),
     )
     assert preds.shape == (x_val.shape[0], 10, 10)
     assert trues.shape == (y_val.shape[0], 10, 10)
 
 
 def test_validate_surrogate_model_wrong_type(
-    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel,
+    dummy_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
     """Test that validate_surrogate_model raises ValueError for wrong input types."""
     x_val, y_val = dummy_data
     with pytest.raises(
-        ValueError, match="Both X_val and y_val must be numpy.ndarray objects."
+        ValueError,
+        match="Both X_val and y_val must be numpy.ndarray objects.",
     ):
         evaluator.validate_surrogate_model(dummy_model, list(x_val), y_val)  # type: ignore
     with pytest.raises(
-        ValueError, match="Both X_val and y_val must be numpy.ndarray objects."
+        ValueError,
+        match="Both X_val and y_val must be numpy.ndarray objects.",
     ):
         evaluator.validate_surrogate_model(dummy_model, x_val, list(y_val))  # type: ignore
 
@@ -81,7 +88,8 @@ def test_validate_surrogate_model_wrong_model(
         pass
 
     with pytest.raises(
-        ValueError, match="The model must be an instance of torch.nn.Module."
+        ValueError,
+        match="The model must be an instance of torch.nn.Module.",
     ):
         evaluator.validate_surrogate_model(
             NotAModel(),  # type: ignore
@@ -91,7 +99,8 @@ def test_validate_surrogate_model_wrong_model(
 
 
 def test_validate_surrogate_model_shape_mismatch(
-    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel,
+    dummy_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
     """Test that validate_surrogate_model raises ValueError for shape mismatch."""
     x_val, y_val = dummy_data
@@ -100,26 +109,31 @@ def test_validate_surrogate_model_shape_mismatch(
     with pytest.raises(
         ValueError,
         match=re.escape(
-            f"x_val with shape (5, 2, 10) cannot be reshaped to ({num_samples}, 3, 10)."
+            f"x_val with shape (5, 2, 10) cannot be reshaped to ({num_samples}, 3, 10).",
         ),
     ):
         evaluator.validate_surrogate_model(
-            dummy_model, np.random.rand(5, 2, 10), y_val.reshape(5, -1)
+            dummy_model,
+            np.random.rand(5, 2, 10),
+            y_val.reshape(5, -1),
         )
     # y_val wrong shape
     with pytest.raises(
         ValueError,
         match=re.escape(
-            f"y_val with shape (5, 9, 10) cannot be reshaped to ({num_samples}, 10, 10)."
+            f"y_val with shape (5, 9, 10) cannot be reshaped to ({num_samples}, 10, 10).",
         ),
     ):
         evaluator.validate_surrogate_model(
-            dummy_model, x_val.reshape(5, -1), np.random.rand(5, 9, 10)
+            dummy_model,
+            x_val.reshape(5, -1),
+            np.random.rand(5, 9, 10),
         )
 
 
 def test_validate_surrogate_model_sample_mismatch(
-    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel,
+    dummy_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
     """Test that validate_surrogate_model handles different number of samples in x_val and y_val."""
     x_val, y_val = dummy_data

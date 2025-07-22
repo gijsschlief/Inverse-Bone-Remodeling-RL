@@ -10,7 +10,8 @@ import pyvista as pv  # type: ignore
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
 
@@ -156,7 +157,9 @@ def plot_density_matrix(
 
 
 def _get_force_color(
-    force_val: float, min_force: float = 0.1, max_force: float = 10.0
+    force_val: float,
+    min_force: float = 0.1,
+    max_force: float = 10.0,
 ) -> str:
     """Map a force magnitude to a grayscale hex color between light gray and black."""
     abs_force = abs(force_val)
@@ -181,7 +184,7 @@ def _get_force_color(
 def plot_density_pyvista(
     simulation_parameters: SimulationParameters,
     directory: Path = Path(
-        "/home/gijs/Desktop/Thesis/data/fenics/density_simulation.pvd"
+        "/home/gijs/Desktop/Thesis/data/fenics/density_simulation.pvd",
     ),
 ) -> None:
     """Plot the density simulation using PyVista.
@@ -201,7 +204,11 @@ def plot_density_pyvista(
 
         plotter = pv.Plotter()
         render_density_pyvista_frame(
-            plotter, grid, scalar_field_name, "Final Step", clim
+            plotter,
+            grid,
+            scalar_field_name,
+            "Final Step",
+            clim,
         )
         plotter.show()
     except Exception as e:

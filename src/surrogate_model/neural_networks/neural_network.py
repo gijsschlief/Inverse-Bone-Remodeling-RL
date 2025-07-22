@@ -30,7 +30,12 @@ class SurrogateModel(torch.nn.Module):
         # Reshape to (N, 128, 5, 5) and upsample
         self.conv_block = torch.nn.Sequential(
             torch.nn.ConvTranspose2d(
-                128, 64, kernel_size=3, stride=2, padding=1, output_padding=1
+                128,
+                64,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
             ),
             torch.nn.ReLU(),
             torch.nn.BatchNorm2d(64),
@@ -96,7 +101,8 @@ class SurrogateModel(torch.nn.Module):
 
     @staticmethod
     def get_scheduler(
-        optimizer: torch.optim.Optimizer, epochs: int
+        optimizer: torch.optim.Optimizer,
+        epochs: int,
     ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Get a learning rate scheduler for the surrogate model.
 
@@ -111,7 +117,10 @@ class SurrogateModel(torch.nn.Module):
 
         """
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=10
+            optimizer,
+            mode="min",
+            factor=0.5,
+            patience=10,
         )
 
     @staticmethod
@@ -139,17 +148,21 @@ class SurrogateModel(torch.nn.Module):
             input_tensor = input_features.clone().detach()
         else:
             input_tensor = torch.tensor(
-                input_features.reshape(-1, 3, 10), dtype=torch.float32
+                input_features.reshape(-1, 3, 10),
+                dtype=torch.float32,
             )
 
         if isinstance(output_labels, torch.Tensor):
             y_tensor = output_labels.clone().detach()
         else:
             y_tensor = torch.tensor(
-                output_labels.reshape(-1, 10, 10), dtype=torch.float32
+                output_labels.reshape(-1, 10, 10),
+                dtype=torch.float32,
             )
 
         dataset = torch.utils.data.TensorDataset(input_tensor, y_tensor)
         return torch.utils.data.DataLoader(
-            dataset, batch_size=batch_size, shuffle=shuffle
+            dataset,
+            batch_size=batch_size,
+            shuffle=shuffle,
         )

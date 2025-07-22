@@ -31,7 +31,8 @@ def calculate_similarity(
     if reference_matrix is None or comparison_matrix is None:
         raise ValueError("Matrices A and B cannot be None.")
     if not isinstance(reference_matrix, np.ndarray) or not isinstance(
-        comparison_matrix, np.ndarray
+        comparison_matrix,
+        np.ndarray,
     ):
         raise TypeError("Both A and B must be numpy arrays.")
     if reference_matrix.shape != comparison_matrix.shape:
@@ -113,7 +114,8 @@ def calculate_similarity(
         metric = 0
         for i in range(reference_matrix.shape[0]):
             metric += wasserstein_distance(
-                reference_matrix[i, :], comparison_matrix[i, :]
+                reference_matrix[i, :],
+                comparison_matrix[i, :],
             )
         metric /= reference_matrix.shape[0]  # Average over rows
         return 2 * (1 - metric / (metric + baseline)) - 1  # Normalize to [-1, 1]

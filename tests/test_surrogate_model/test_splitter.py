@@ -7,12 +7,14 @@ from bone_remodeling.src.surrogate_model.splitter import SplitData, splitting
 
 
 def make_data(
-    n_samples: int = 100, n_features: int = 5
+    n_samples: int = 100,
+    n_features: int = 5,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Generate synthetic data for testing."""
     x = np.arange(n_samples * n_features).reshape(n_samples, n_features)
     y = np.arange(n_samples * 3).reshape(n_samples, 3)[
-        :, 0
+        :,
+        0,
     ]  # Use only the first column for output
     return x, y
 
@@ -21,7 +23,11 @@ def test_split_shapes_and_types() -> None:
     """Test that the splitting function returns SplitData with correct shapes and types."""
     x, y = make_data(50, 3)
     split = splitting(
-        x, y, random_state=123, train_data_ratio=0.6, validation_data_ratio=0.2
+        x,
+        y,
+        random_state=123,
+        train_data_ratio=0.6,
+        validation_data_ratio=0.2,
     )
     assert isinstance(split, SplitData)
     n_total = x.shape[0]
@@ -53,7 +59,11 @@ def test_split_sum_of_samples_equals_total() -> None:
     """Test that the sum of training, validation, and test samples equals the total number of samples."""
     x, y = make_data(77, 4)
     split = splitting(
-        x, y, random_state=1, train_data_ratio=0.7, validation_data_ratio=0.2
+        x,
+        y,
+        random_state=1,
+        train_data_ratio=0.7,
+        validation_data_ratio=0.2,
     )
     total = (
         split.training_input.shape[0]
@@ -90,11 +100,13 @@ def test_non_numpy_inputs_raise() -> None:
     """Test that non-numpy inputs raise ValueError with correct message."""
     x, y = make_data(10, 2)
     with pytest.raises(
-        ValueError, match="Input features and output features must be numpy arrays."
+        ValueError,
+        match="Input features and output features must be numpy arrays.",
     ):
         splitting([[1, 2], [3, 4]], y)  # type: ignore
     with pytest.raises(
-        ValueError, match="Input features and output features must be numpy arrays."
+        ValueError,
+        match="Input features and output features must be numpy arrays.",
     ):
         splitting(x, [[1, 2], [3, 4]])  # type: ignore
 
@@ -115,7 +127,8 @@ def test_empty_inputs_raise() -> None:
     x = np.empty((0, 2))
     y = np.empty((0,))
     with pytest.raises(
-        ValueError, match="Input features and output features cannot be empty"
+        ValueError,
+        match="Input features and output features cannot be empty",
     ):
         splitting(x, y)
 

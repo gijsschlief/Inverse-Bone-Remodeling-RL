@@ -13,7 +13,10 @@ from bone_remodeling.src.surrogate_model.splitter import splitting
 
 
 def evaluate_agent(
-    model: PPO, environment: Env, num_episodes: int = 10, render: bool = False
+    model: PPO,
+    environment: Env,
+    num_episodes: int = 10,
+    render: bool = False,
 ) -> dict:
     """Evaluate the trained RL agent.
 
@@ -61,7 +64,7 @@ def evaluate_agent(
         all_predicted_densities.append(info["predicted_density"])
 
         logging.info(
-            f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}"
+            f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}",
         )
 
     return {
@@ -75,14 +78,16 @@ def evaluate_agent(
 def main() -> None:
     """Evaluate the RL agent."""
     directory_path = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json"
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json",
     )
     result = forward_data_reader(directory_path)
     if result is not None:
         _, target_forces, target_densities = result
 
     _, _, test_density_profiles, _, _, test_forces = splitting(
-        target_densities, target_forces, random_state=0
+        target_densities,
+        target_forces,
+        random_state=0,
     )
 
     model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
@@ -91,14 +96,17 @@ def main() -> None:
     for i in range(10):
         agent_evaluation_environment = BoneRemodellingEnvironment(
             surrogate_model_path=Path(
-                "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"
+                "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
             ),
             target_densities=test_density_profiles[i],
             target_forces=test_forces[i],
             max_steps=1,
         )
         evaluation_result = evaluate_agent(
-            model, agent_evaluation_environment, num_episodes=1, render=True
+            model,
+            agent_evaluation_environment,
+            num_episodes=1,
+            render=True,
         )
         all_results.append(evaluation_result)
 

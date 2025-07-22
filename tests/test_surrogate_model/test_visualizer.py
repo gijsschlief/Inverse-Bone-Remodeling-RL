@@ -18,7 +18,10 @@ def test_plot_surrogate_model_returns_figures() -> None:
 
     # Act
     figures = plot_surrogate_model(
-        true_matrices, predicted_matrices, sample_count=sample_count, show_plot=False
+        true_matrices,
+        predicted_matrices,
+        sample_count=sample_count,
+        show_plot=False,
     )
 
     # Assert
@@ -56,11 +59,17 @@ def test_plot_surrogate_model_invalid_sample_count() -> None:
     predicted_matrices = np.ones((3, 4, 4))
     with pytest.raises(ValueError, match="sample_count must be a positive integer"):
         plot_surrogate_model(
-            true_matrices, predicted_matrices, sample_count=0, show_plot=False
+            true_matrices,
+            predicted_matrices,
+            sample_count=0,
+            show_plot=False,
         )
     with pytest.raises(ValueError, match="sample_count must be a positive integer"):
         plot_surrogate_model(
-            true_matrices, predicted_matrices, sample_count=4, show_plot=False
+            true_matrices,
+            predicted_matrices,
+            sample_count=4,
+            show_plot=False,
         )
 
 

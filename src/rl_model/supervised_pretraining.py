@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import stable_baselines3 as sb3
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
@@ -28,7 +28,7 @@ def main() -> None:
 
     remodeling_environment = BoneRemodellingEnvironment(
         surrogate_model_path=Path(
-            "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"
+            "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
         ),
         target_densities=target_densities[0],
         target_forces=target_forces[0],

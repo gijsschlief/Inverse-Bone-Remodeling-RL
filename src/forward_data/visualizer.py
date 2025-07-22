@@ -10,7 +10,7 @@ from bone_remodeling.src.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
 )
 
-logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 def visualize_force_comparison(
@@ -32,14 +32,15 @@ def visualize_force_comparison(
 
     """
 
-    def preprocess_force(fp: np.ndarray) -> np.ndarray:
-        fp = np.asarray(fp)
-        if fp.ndim == 3:
-            fp = fp[:, np.newaxis, :, :]  # Ensure shape (N, 1, 3, 10)
-        return fp
+    def _preprocess_force(force_profile: np.ndarray) -> np.ndarray:
+        sides_with_forces = 3
+        force_profile = np.asarray(force_profile)
+        if force_profile.ndim == sides_with_forces:
+            force_profile = force_profile[:, np.newaxis, :, :]  # Ensure shape (N, 1, 3, 10)
+        return force_profile
 
-    force_profiles_1 = preprocess_force(force_profiles_1)
-    force_profiles_2 = preprocess_force(force_profiles_2)
+    force_profiles_1 = _preprocess_force(force_profiles_1)
+    force_profiles_2 = _preprocess_force(force_profiles_2)
 
     # Non-zero force counts per sample
     nz1 = np.count_nonzero(force_profiles_1, axis=(2, 3)).flatten()
@@ -62,34 +63,54 @@ def visualize_force_comparison(
     color2 = "#ff7f0e"  # orange
 
     # Plotting
-    fig, axs = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
+    fig, axes_array = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
     fig.suptitle(title, fontsize=16)
 
     # Plot non-zero force counts
-    axs[0].hist(
-        nz1, bins=nz_bins, alpha=0.6, label=label_1, color=color1, edgecolor="black"
+    axes_array[0].hist(
+        nz1,
+        bins=nz_bins,
+        alpha=0.6,
+        label=label_1,
+        color=color1,
+        edgecolor="black",
     )
-    axs[0].hist(
-        nz2, bins=nz_bins, alpha=0.6, label=label_2, color=color2, edgecolor="black"
+    axes_array[0].hist(
+        nz2,
+        bins=nz_bins,
+        alpha=0.6,
+        label=label_2,
+        color=color2,
+        edgecolor="black",
     )
-    axs[0].set_title("Non-zero Force Counts")
-    axs[0].set_xlabel("Number of Non-zero Forces (per sample)")
-    axs[0].set_ylabel("Sample Count")
-    axs[0].legend()
-    axs[0].grid(True)
+    axes_array[0].set_title("Non-zero Force Counts")
+    axes_array[0].set_xlabel("Number of Non-zero Forces (per sample)")
+    axes_array[0].set_ylabel("Sample Count")
+    axes_array[0].legend()
+    axes_array[0].grid(visible=True)
 
     # Plot force magnitude distribution
-    axs[1].hist(
-        mag1, bins=mag_bins, alpha=0.6, label=label_1, color=color1, edgecolor="black"
+    axes_array[1].hist(
+        mag1,
+        bins=mag_bins,
+        alpha=0.6,
+        label=label_1,
+        color=color1,
+        edgecolor="black",
     )
-    axs[1].hist(
-        mag2, bins=mag_bins, alpha=0.6, label=label_2, color=color2, edgecolor="black"
+    axes_array[1].hist(
+        mag2,
+        bins=mag_bins,
+        alpha=0.6,
+        label=label_2,
+        color=color2,
+        edgecolor="black",
     )
-    axs[1].set_title("Force Magnitude Distribution")
-    axs[1].set_xlabel("L2 Norm of Force")
-    axs[1].set_ylabel("Frequency")
-    axs[1].legend()
-    axs[1].grid(True)
+    axes_array[1].set_title("Force Magnitude Distribution")
+    axes_array[1].set_xlabel("L2 Norm of Force")
+    axes_array[1].set_ylabel("Frequency")
+    axes_array[1].legend()
+    axes_array[1].grid(visible=True)
 
     plt.show()
 
@@ -97,29 +118,29 @@ def visualize_force_comparison(
 def main() -> None:
     """Load and visualize forward model data."""
     data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_third_order_100_samples_0717_1909.json"
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_third_order_100_samples_0717_1909.json",
     )
     if data is None:
-        logging.error("Failed to load the forward model data.")
+        logger.error("Failed to load the forward model data.")
         return
 
     _, force_profiles, final_output_densities = data
 
     if force_profiles is None or final_output_densities is None:
-        logging.error("Missing force or density data.")
+        logger.error("Missing force or density data.")
         return
 
     old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_third_order_30000_samples_0718_0652.json"
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_combined_third_order_30000_samples_0718_0652.json",
     )
     if old_data is None:
-        logging.error("Failed to load the forward model data.")
+        logger.error("Failed to load the forward model data.")
         return
 
     _, old_force_profiles, old_final_output_densities = old_data
 
     if old_force_profiles is None or old_final_output_densities is None:
-        logging.error("Missing force or density data.")
+        logger.error("Missing force or density data.")
         return
 
     visualize_force_comparison(force_profiles, old_force_profiles)
