@@ -10,6 +10,7 @@ import time
 from pathlib import Path
 
 import numpy as np
+
 from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )

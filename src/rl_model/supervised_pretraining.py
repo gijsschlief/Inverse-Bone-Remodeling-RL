@@ -55,9 +55,14 @@ def main() -> None:
         logging.error("Data splitting failed. Exiting.")
         return
 
-    train_densities, validation_densities, _, train_forces, validation_forces, _ = (
-        split_data_result
-    )
+    (
+        train_densities,
+        validation_densities,
+        _,
+        train_forces,
+        validation_forces,
+        _,
+    ) = split_data_result
 
     # Flatten densities per sample, for example if densities are 10x10:
     density_flat = train_densities.reshape(train_densities.shape[0], -1)

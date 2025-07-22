@@ -2,7 +2,8 @@
 
 import numpy as np
 import pytest
-from bone_remodeling.surrogate_model.splitter import SplitData, splitting
+
+from bone_remodeling.src.surrogate_model.splitter import SplitData, splitting
 
 
 def make_data(

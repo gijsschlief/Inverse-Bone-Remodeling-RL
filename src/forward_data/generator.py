@@ -240,11 +240,11 @@ if __name__ == "__main__":
     force_profiles = force_profile_generator.merger(
         num_samples=40_000,
         force_max=20.0,
-     )
-    #force_profiles = force_profile_generator.triangular(
+    )
+    # force_profiles = force_profile_generator.triangular(
     #    num_samples=1_000,
     #    force_max=20.0,
-    #)
+    # )
 
     logging.info("Running forward model simulations...")
 

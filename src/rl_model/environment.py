@@ -51,9 +51,13 @@ class BoneRemodellingEnvironment(Env):
             surrogate_model_and_normalization_params is not None
         ), f"Failed to load surrogate model from {surrogate_model_path}"
 
-        self.surrogate_model, self.x_mean, self.x_std, self.y_mean, self.y_std = (
-            surrogate_model_and_normalization_params
-        )
+        (
+            self.surrogate_model,
+            self.x_mean,
+            self.x_std,
+            self.y_mean,
+            self.y_std,
+        ) = surrogate_model_and_normalization_params
         if self.surrogate_model is None:
             raise ValueError(
                 f"Surrogate model could not be loaded from {surrogate_model_path}. Please check the file path and model type."
@@ -64,13 +68,12 @@ class BoneRemodellingEnvironment(Env):
         self.target_densities = target_densities
         self.density_shape = target_densities[0].shape
         self._profile_length = np.max(self.density_shape)
-    
+
         self.max_steps = max_steps
 
         self.force_shape = (3, self._profile_length)
         self.force_profile = np.zeros(
             self.force_shape, dtype=np.float32
-
         )  # Default force profile
         self.render_mode = render_mode
         self.target_forces = target_forces
@@ -89,14 +92,18 @@ class BoneRemodellingEnvironment(Env):
 
         # Define the observation space
         self.grid_size = int(np.prod(self.density_shape))
-        observation_space_lower_bounds = np.vstack([
-            np.full(self.density_shape, -density_constraint, dtype=np.float32),
-            np.full(self.force_shape, -force_boundary, dtype=np.float32),
-        ])
-        observation_space_upper_bounds = np.vstack([
-            np.full(self.density_shape, density_constraint, dtype=np.float32),
-            np.full(self.force_shape, force_boundary, dtype=np.float32),
-        ])
+        observation_space_lower_bounds = np.vstack(
+            [
+                np.full(self.density_shape, -density_constraint, dtype=np.float32),
+                np.full(self.force_shape, -force_boundary, dtype=np.float32),
+            ]
+        )
+        observation_space_upper_bounds = np.vstack(
+            [
+                np.full(self.density_shape, density_constraint, dtype=np.float32),
+                np.full(self.force_shape, force_boundary, dtype=np.float32),
+            ]
+        )
         self.observation_space = spaces.Box(
             low=observation_space_lower_bounds,
             high=observation_space_upper_bounds,

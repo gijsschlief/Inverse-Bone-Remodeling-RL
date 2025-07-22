@@ -126,7 +126,13 @@ def plot_difference_matrix(
         color_bar (bool): Whether to include a color bar. Default is True.
 
     """
-    difference_matrix = np.divide(predicted_matrix - actual_matrix, np.ones_like(actual_matrix)*SimulationParameters.max_density) * 100
+    difference_matrix = (
+        np.divide(
+            predicted_matrix - actual_matrix,
+            np.ones_like(actual_matrix) * SimulationParameters.max_density,
+        )
+        * 100
+    )
     # Use a diverging colormap: blue (under), white (exact), red (over)
     difference_image = axis.imshow(
         difference_matrix,

@@ -6,8 +6,9 @@ from typing import Optional, Tuple, Type
 
 import numpy as np
 import torch
-from bone_remodeling.src.surrogate_model.neural_networks.medium_nn import (
-    MediumSurrogateModel,
+
+from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
+    SurrogateModel,
 )
 from bone_remodeling.src.surrogate_model.normalizor import load_normalization_params
 
@@ -98,7 +99,7 @@ class SurrogateModelLoader:
 
 def load_surrogate_model(
     model_path: str | Path = "data/models/trained_model.pth",
-    model_class: Type[torch.nn.Module] = MediumSurrogateModel,
+    model_class: Type[torch.nn.Module] = SurrogateModel,
 ) -> Tuple[
     torch.nn.Module | None,
     np.ndarray | None,
