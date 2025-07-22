@@ -1,7 +1,6 @@
 """Sanitizer module for filtering out NaN values from predicted and true matrices."""
 
 import logging
-from typing import Tuple
 
 import numpy as np
 
@@ -12,7 +11,7 @@ logging.basicConfig(
 
 def sanitize_matrices(
     predicted_matrices: np.ndarray, true_matrices: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Sanitize the predicted and true matrices by filtering out any entries that contain NaN values."""
     if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
         true_matrices, np.ndarray
@@ -45,7 +44,7 @@ def sanitize_matrices(
 
 def sanitize_data(
     x_data: np.ndarray, y_data: np.ndarray
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Sanitize the input data by filtering out rows with NaN values in either x_data or y_data.
 
     Args:
@@ -55,7 +54,7 @@ def sanitize_data(
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray]: Sanitized x_data and y_data with NaN rows removed.
+        tuple[np.ndarray, np.ndarray]: Sanitized x_data and y_data with NaN rows removed.
 
     Raises:
     ------

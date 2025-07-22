@@ -61,7 +61,7 @@ def evaluate_agent(
         all_predicted_densities.append(info["predicted_density"])
 
         logging.info(
-            f"Episode {ep+1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}"
+            f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}"
         )
 
     return {

@@ -1,7 +1,6 @@
 """Test suite for the evaluator module in the bone_remodeling.surrogate_model package."""
 
 import re
-from typing import Tuple
 
 import numpy as np
 import pytest
@@ -13,7 +12,7 @@ from bone_remodeling.src.surrogate_model import evaluator
 class DummyModel(torch.nn.Module):
     """A simple dummy model for testing purposes."""
 
-    def __init__(self, output_shape: Tuple[int, int] = (10, 10)) -> None:
+    def __init__(self, output_shape: tuple[int, int] = (10, 10)) -> None:
         """Initialize the dummy model with a linear layer."""
         super().__init__()
         self.output_shape = output_shape
@@ -28,7 +27,7 @@ class DummyModel(torch.nn.Module):
 
 
 @pytest.fixture
-def dummy_data() -> Tuple[np.ndarray, np.ndarray]:
+def dummy_data() -> tuple[np.ndarray, np.ndarray]:
     """Create dummy data for testing."""
     num_samples = 5
     x_val = np.random.rand(num_samples, 3, 10).astype(np.float32)
@@ -43,7 +42,7 @@ def dummy_model() -> DummyModel:
 
 
 def test_validate_surrogate_model_shapes(
-    dummy_model: DummyModel, dummy_data: Tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
 ) -> None:
     """Test that validate_surrogate_model returns predictions and true matrices with correct shapes."""
     x_val, y_val = dummy_data
@@ -58,7 +57,7 @@ def test_validate_surrogate_model_shapes(
 
 
 def test_validate_surrogate_model_wrong_type(
-    dummy_model: DummyModel, dummy_data: Tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
 ) -> None:
     """Test that validate_surrogate_model raises ValueError for wrong input types."""
     x_val, y_val = dummy_data
@@ -73,7 +72,7 @@ def test_validate_surrogate_model_wrong_type(
 
 
 def test_validate_surrogate_model_wrong_model(
-    dummy_data: Tuple[np.ndarray, np.ndarray]
+    dummy_data: tuple[np.ndarray, np.ndarray],
 ) -> None:
     """Test that validate_surrogate_model raises ValueError for non-model input."""
     x_val, y_val = dummy_data
@@ -92,7 +91,7 @@ def test_validate_surrogate_model_wrong_model(
 
 
 def test_validate_surrogate_model_shape_mismatch(
-    dummy_model: DummyModel, dummy_data: Tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
 ) -> None:
     """Test that validate_surrogate_model raises ValueError for shape mismatch."""
     x_val, y_val = dummy_data
@@ -120,7 +119,7 @@ def test_validate_surrogate_model_shape_mismatch(
 
 
 def test_validate_surrogate_model_sample_mismatch(
-    dummy_model: DummyModel, dummy_data: Tuple[np.ndarray, np.ndarray]
+    dummy_model: DummyModel, dummy_data: tuple[np.ndarray, np.ndarray]
 ) -> None:
     """Test that validate_surrogate_model handles different number of samples in x_val and y_val."""
     x_val, y_val = dummy_data

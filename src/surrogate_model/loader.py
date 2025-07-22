@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional, Tuple, Type
 
 import numpy as np
 import torch
@@ -46,7 +45,7 @@ class SurrogateModelLoader:
     def __init__(
         self,
         model_path: Path,
-        model_class: Type[torch.nn.Module],
+        model_class: type[torch.nn.Module],
         auto_load: bool = True,
     ) -> None:
         """Initialize the loader with the path to the model and the model class.
@@ -60,7 +59,7 @@ class SurrogateModelLoader:
         """
         self.model_path = model_path
         self.model_class = model_class
-        self.model: Optional[torch.nn.Module] = None
+        self.model: torch.nn.Module | None = None
 
         if auto_load:
             self.load()
@@ -99,8 +98,8 @@ class SurrogateModelLoader:
 
 def load_surrogate_model(
     model_path: str | Path = "data/models/trained_model.pth",
-    model_class: Type[torch.nn.Module] = SurrogateModel,
-) -> Tuple[
+    model_class: type[torch.nn.Module] = SurrogateModel,
+) -> tuple[
     torch.nn.Module | None,
     np.ndarray | None,
     np.ndarray | None,
@@ -112,11 +111,11 @@ def load_surrogate_model(
     Args:
     ----
         model_path (str): Path to the .pth file containing the model weights.
-        model_class (Type[torch.nn.Module]): The class of the model to be loaded.
+        model_class (type[torch.nn.Module]): The class of the model to be loaded.
 
     Returns:
     -------
-        Tuple[torch.nn.Module | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+        tuple[torch.nn.Module | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
             The loaded model and normalization parameters (if available).
 
     """

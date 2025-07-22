@@ -307,7 +307,7 @@ class DensitySimulation:
         Args:
         ----
             to_save_data (Function | MeshFunction | Expression): Data to save, can be a Function, MeshFunction, or Expression.
-            output_path (Path | None): Optional path to save the data. If None, uses the default output directory.
+            output_path (Path | str | None): Optional path to save the data. If None, uses the default output directory.
 
         Raises:
         ------

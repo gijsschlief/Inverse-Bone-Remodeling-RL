@@ -1,7 +1,6 @@
 """Evaluator for Surrogate Model."""
 
 import logging
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -18,7 +17,7 @@ def validate_surrogate_model(
     x_val: np.ndarray,
     y_val: np.ndarray,
     device: torch.device = torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-) -> Tuple[np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray]:
     """Run the surrogate model on validation data and return predicted and true matrices.
 
     This function takes a trained surrogate model and validation data, runs the model to get predictions,
@@ -39,7 +38,7 @@ def validate_surrogate_model(
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray]: A tuple containing the predicted matrices and the true matrices.
+        tuple[np.ndarray, np.ndarray]: A tuple containing the predicted matrices and the true matrices.
 
     """
     if device is None:

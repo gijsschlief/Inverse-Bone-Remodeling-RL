@@ -2,7 +2,6 @@
 
 import logging
 import random
-from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,7 +22,7 @@ def plot_surrogate_model(
     force_profiles: np.ndarray | None = None,
     sample_count: int = 3,
     show_plot: bool = True,
-) -> List[plt.Figure]:
+) -> list[plt.Figure]:
     """Compare the surrogate model's predictions with the actual validation data.
 
     Args:

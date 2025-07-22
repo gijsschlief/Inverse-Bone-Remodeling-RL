@@ -19,8 +19,8 @@ class MediumSurrogateModel(SurrogateModel):
     Attributes
     ----------
         model (nn.Sequential): The neural network architecture.
-        train_losses (List[float]): List to store training losses over epochs.
-        val_losses (List[float]): List to store validation losses over epochs.
+        train_losses (list[float]): list to store training losses over epochs.
+        val_losses (list[float]): list to store validation losses over epochs.
 
     Methods
     -------

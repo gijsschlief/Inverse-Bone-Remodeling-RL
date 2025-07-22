@@ -1,7 +1,7 @@
 """Splitting and loading module for bone remodeling surrogate model."""
 
 from pathlib import Path
-from typing import NamedTuple, Tuple
+from typing import NamedTuple
 
 import numpy as np
 
@@ -116,7 +116,7 @@ def splitting(
 
 def load_and_split_data(
     path_pattern: Path, random_state: int = np.random.randint(0, RANDOM_STATE_MAX)
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load and preprocess data using forward_data_reader, which handles directories and checks.
 
     Args:
@@ -126,7 +126,7 @@ def load_and_split_data(
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
             - X_train: Training features
             - X_val: Validation features
             - X_test: Test features

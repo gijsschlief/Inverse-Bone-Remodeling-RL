@@ -87,7 +87,7 @@ def main() -> None:
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
-        logging.info(f"Epoch {epoch+1} - Loss: {total_loss / len(loader):.6f}")
+        logging.info(f"Epoch {epoch + 1} - Loss: {total_loss / len(loader):.6f}")
 
     # Save model
     torch.save(

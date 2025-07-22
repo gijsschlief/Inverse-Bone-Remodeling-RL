@@ -52,7 +52,7 @@ def animate_density_matplotlib(
         plot_density_matrix(
             matrix=density_film[frame, :, :],
             force_profile=simulation.force_profile,
-            title=f"Step {frame+1}",
+            title=f"Step {frame + 1}",
             axis=ax,
         )
         return [ax]
@@ -128,7 +128,7 @@ def animate_density_pyvista(
             plotter=plotter,
             grid=grid,
             scalar_field_name=grid.array_names[0],
-            step_title=f"Step {step+1}",
+            step_title=f"Step {step + 1}",
             clim=(simulation.min_density, simulation.max_density),
         )
         plotter.write_frame()

@@ -3,7 +3,6 @@
 import logging
 import os
 from pathlib import Path
-from typing import Tuple
 
 import numpy as np
 import torch
@@ -33,7 +32,7 @@ def convert_tensors(
     x_data: np.ndarray | torch.Tensor,
     y_data: np.ndarray | torch.Tensor,
     device: torch.device,
-) -> Tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor]:
     """Prepare input and output tensors for the model.
 
     Args:
@@ -44,7 +43,7 @@ def convert_tensors(
 
     Returns:
     -------
-        Tuple[torch.Tensor, torch.Tensor]: Input and output tensors reshaped for the model.
+        tuple[torch.Tensor, torch.Tensor]: Input and output tensors reshaped for the model.
 
     Raises:
     ------
@@ -127,10 +126,9 @@ def train_model(
             if not torch.isfinite(loss):
                 logging.error("Loss is not finite, skipping this batch.")
                 continue
-            else:
-                loss.backward()
-                optimizer.step()
-                total_loss += loss.item()
+            loss.backward()
+            optimizer.step()
+            total_loss += loss.item()
 
         avg_train_loss = total_loss / len(
             model.create_dataloader(x_train, y_train, batch_size=batch_size)

@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import List
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -41,8 +40,8 @@ class SurrogateModel(torch.nn.Module):
             torch.nn.Conv2d(32, 1, kernel_size=3, padding=1),  # Final 10x10 map
         )
 
-        self.train_losses: List[float] = []
-        self.val_losses: List[torch.Tensor] = []
+        self.train_losses: list[float] = []
+        self.val_losses: list[torch.Tensor] = []
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""

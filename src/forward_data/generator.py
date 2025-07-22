@@ -13,7 +13,6 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count, get_context
 from pathlib import Path
-from typing import Dict, Optional
 
 import numpy as np
 from fenics import LogLevel, set_log_level  # type: ignore
@@ -41,7 +40,7 @@ _profile_length: int
 
 def init_worker(simulation_parameters: SimulationParameters) -> None:
     """Initialize the per-process simulation (no RNG here)."""
-    global _worker_sim, _profile_length
+    global _worker_sim, _profile_length  # noqa: PLW0603
 
     _worker_sim = DensitySimulation(parameters=simulation_parameters)
     _profile_length = simulation_parameters.force_profile.shape[1]
@@ -213,8 +212,8 @@ class TrainingDataGenerator:
         serial_number: int,
         force_profile: np.ndarray,
         result: np.ndarray,
-        error: Optional[str] = None,
-    ) -> Dict:
+        error: str | None = None,
+    ) -> dict:
         """Serialize the data for a single sample."""
         serialized_data = {
             "serial_number": serial_number,

@@ -33,7 +33,7 @@ def find_latest_agent(path: Path) -> Path:
     while os.path.exists(f"{base_path}_{counter}{ext}"):
         counter += 1
 
-    return Path(f"{base_path}_{counter-1}{ext}")
+    return Path(f"{base_path}_{counter - 1}{ext}")
 
 
 def main(agent_path: Path, data_path: Path, surrogate_path: Path) -> None:

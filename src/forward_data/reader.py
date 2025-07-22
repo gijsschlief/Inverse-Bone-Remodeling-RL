@@ -16,7 +16,7 @@ import json
 import logging
 from collections.abc import Sequence
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Union
 
 import numpy as np
 
@@ -28,14 +28,14 @@ logging.basicConfig(
 
 def forward_data_reader(
     file_path: Union[Path, str, Sequence[Union[str, Path]]],
-) -> Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     """Read and parse forward model data from a JSON file or multiple JSON files in a directory.
 
     Args:
-        file_path (Path | str | List[str | Path]): Path to the JSON file or a list of paths to JSON files.
+        file_path (Path | str | list[str | Path]): Path to the JSON file or a list of paths to JSON files.
 
     Returns:
-        Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
             A tuple containing three NumPy arrays:
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.
@@ -47,7 +47,7 @@ def forward_data_reader(
     """
     if not isinstance(file_path, (str, Path, list)):
         logging.error(
-            f"Invalid file path type: {type(file_path)}. Expected str, Path, or List[str].",
+            f"Invalid file path type: {type(file_path)}. Expected str, Path, or list[str].",
         )
         return None
     if isinstance(file_path, list):
@@ -77,14 +77,14 @@ def forward_data_reader(
 
 def _forward_data_load_multiple(
     file_paths: Sequence[Path],
-) -> Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     """Read and parse multiple JSON files containing forward model data.
 
     Args:
-        file_paths (List[Path]): List of paths to the JSON files.
+        file_paths (list[Path]): list of paths to the JSON files.
 
     Returns:
-        Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
             A tuple containing three NumPy arrays:
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.
@@ -115,14 +115,14 @@ def _forward_data_load_multiple(
 
 def _forward_data_load_single(
     data_path: Path,
-) -> Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     """Read and parse a single JSON file containing forward model data.
 
     Args:
         data_path (Path): Path to the JSON file.
 
     Returns:
-        Optional[Tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        Optional[tuple[np.ndarray, np.ndarray, np.ndarray]]:
             A tuple containing three NumPy arrays:
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.
@@ -162,10 +162,10 @@ def _convert_forward_data_to_numpy(
     any issues encountered during the extraction process.
 
     Args:
-        data (List[Dict[str, Any]]): List of dictionaries containing forward model data.
+        data (list[dict[str, Any]]): list of dictionaries containing forward model data.
 
     Returns:
-        Tuple[np.ndarray, np.ndarray, np.ndarray]:
+        tuple[np.ndarray, np.ndarray, np.ndarray]:
             A tuple containing three NumPy arrays:
             - serial_numbers: Array of serial numbers.
             - force_profiles: Array of force profiles.

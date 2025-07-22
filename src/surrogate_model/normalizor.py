@@ -2,7 +2,6 @@
 
 import logging
 from pathlib import Path
-from typing import Optional, Tuple
 
 import numpy as np
 import torch
@@ -10,9 +9,9 @@ import torch
 
 def normalize_data(
     data: np.ndarray,
-    mean: Optional[np.ndarray] = None,
-    std: Optional[np.ndarray] = None,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    mean: np.ndarray | None = None,
+    std: np.ndarray | None = None,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Normalize datasets based on training statistics.
 
     Args:
@@ -23,7 +22,7 @@ def normalize_data(
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray, np.ndarray]: Normalized data, mean, and standard deviation.
+        tuple[np.ndarray, np.ndarray, np.ndarray]: Normalized data, mean, and standard deviation.
 
     """
     if mean is None:
@@ -51,7 +50,7 @@ def unnormalize_data(data: np.ndarray, mean: np.ndarray, std: np.ndarray) -> np.
     if isinstance(data, np.ndarray):
         unnormalized_data = data * std + mean
         return unnormalized_data.astype(np.float32)
-    elif isinstance(data, torch.Tensor):
+    if isinstance(data, torch.Tensor):
         tensor = data.float()
     mean_tensor = torch.tensor(mean, dtype=torch.float32, device=tensor.device)
     std_tensor = torch.tensor(std, dtype=torch.float32, device=tensor.device)
@@ -89,7 +88,7 @@ def save_normalization_params(
 
 def load_normalization_params(
     path: Path | str,
-) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load normalization parameters from a file.
 
     Args:
@@ -98,7 +97,7 @@ def load_normalization_params(
 
     Returns:
     -------
-        Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: X_mean, X_std, y_mean, y_std loaded from the file.
+        tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]: X_mean, X_std, y_mean, y_std loaded from the file.
 
     """
     path = Path(path)
