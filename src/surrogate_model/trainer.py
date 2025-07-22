@@ -292,8 +292,8 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
-    for i in range(3):
-        main(data_file_path, model_path, normalize=True, random_state=i + 2)
+    for i in range(5, 10):
+        main(data_file_path, model_path, normalize=True, random_state=i)
 
     logging.info("All training runs completed.")
     logging.info("Final model saved at: %s", model_path)
