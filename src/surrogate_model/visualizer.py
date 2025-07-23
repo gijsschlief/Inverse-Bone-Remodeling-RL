@@ -74,24 +74,20 @@ def plot_surrogate_model(
             force_profiles[idx] if force_profiles is not None else None,
             "Original Density Matrix",
             axes[0],
-            min_true_value,
-            max_true_value,
+            (min_true_value, max_true_value),
         )
         plot_density_matrix(
             predicted_matrix,
             force_profiles[idx] if force_profiles is not None else None,
             "Predicted Density Matrix",
             axes[1],
-            min_true_value,
-            max_true_value,
+            (min_true_value, max_true_value),
         )
         plot_difference_matrix(
             predicted_matrix,
             actual_matrix,
             "Difference Matrix (Predicted - Actual) as Percentage",
             axes[2],
-            color_scale_min=-100,
-            color_scale_max=100,
         )
 
         figures.append(figure)
