@@ -3,9 +3,11 @@
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from bone_remodeling.src.forward_model.density_visualizer import plot_density_matrix
 from bone_remodeling.src.surrogate_model.loader import SurrogateModelLoader
 from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
     SurrogateModel,
@@ -13,9 +15,13 @@ from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
+from bone_remodeling.src.surrogate_model.normalizor import (
+    load_normalization_params,
+    normalize_data,
+    unnormalize_data,
+)
 from bone_remodeling.src.surrogate_model.trainer import load_and_split_data
-from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
-from bone_remodeling.src.surrogate_model.normalizor import load_normalization_params
+from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +46,7 @@ def load_ensemble_models(model_paths: list[Path], model_class: type[SurrogateMod
         x_means.append(x_mean)
         x_stds.append(x_std)
         y_means.append(y_mean)
-        y_stds.append(y_stds)
+        y_stds.append(y_std)
 
     return models, x_means, x_stds, y_means, y_stds
 
@@ -48,15 +54,16 @@ def load_ensemble_models(model_paths: list[Path], model_class: type[SurrogateMod
 def predict_with_ensemble(
     models: list[SurrogateModel],
     x: np.ndarray,
+    x_normalizations: tuple[list[np.ndarray], list[np.ndarray]],
+    y_normalizations: tuple[list[np.ndarray], list[np.ndarray]],
 ) -> tuple[np.ndarray, np.ndarray]:
     """Predict using an ensemble of models and return mean and standard deviation."""
     predictions = []
-    for model in models:
-        model.eval()  # Set model to evaluation mode
-        with torch.no_grad():
-            x_tensor = torch.tensor(x, dtype=torch.float32)
-            pred = model(x_tensor).cpu().numpy()
-            predictions.append(pred)
+    x_means, x_stds = x_normalizations
+    y_means, y_stds = y_normalizations
+    for model, x_mean, x_std, y_mean, y_std in zip(models, x_means, x_stds, y_means, y_stds):
+        prediction = surrogate_model_forward(model, (x_mean, x_std), (y_mean, y_std), x)
+        predictions.append(prediction)
 
     predictions = np.array(predictions)
     mean_prediction = np.mean(predictions, axis=0)
@@ -64,48 +71,60 @@ def predict_with_ensemble(
 
     return mean_prediction, std_prediction
 
-def _surrogate_model_forward() -> np.ndarray:
+def surrogate_model_forward(model: type[SurrogateModel], x_normalization: tuple[np.ndarray, np.ndarray], y_normalization: tuple[np.ndarray, np.ndarray], force_profiles: np.ndarray) -> np.ndarray:
     """Forward pass through the surrogate model.
 
     Args:
     ----
-        force_profile (np.ndarray): The force profile applied to the bone.
-        return_shape (tuple): The shape to return the predicted density.
+        model (SurrogateModel): The surrogate model to use for prediction.
+        x_normalization (tuple[np.ndarray, np.ndarray]): Mean and std for input normalization.
+        y_normalization (tuple[np.ndarray, np.ndarray]): Mean and std for output unnormalization.
+        force_profiles (np.ndarray): Input force profiles.
 
     Returns:
     -------
         np.ndarray: The predicted density from the surrogate model.
 
     """
-    # normalize
-    if self.x_mean is not None and self.x_std is not None:
-        force_profile, _, _ = normalize_data(
-            self.force_profile,
-            self.x_mean,
-            self.x_std,
-        )
+    x_mean, x_std = x_normalization
+    force_profile, _, _ = normalize_data(force_profiles, x_mean, x_std)
 
     # forward pass through the surrogate model
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     with torch.no_grad():
+        # Support batch predictions
         force_profile_tensor = torch.from_numpy(
-            force_profile.reshape(1, -1).astype(np.float32),
-        ).to(self.device)
+            force_profile.reshape(force_profile.shape[0], -1).astype(np.float32)
+            if force_profile.ndim > 1 else force_profile.reshape(1, -1).astype(np.float32),
+        ).to(device)
 
-    assert (
-        force_profile_tensor is not None
-    ), "Force profile tensor is None after reshaping."
-    model = cast(Module, self.surrogate_model)
-    density_tensor = model(force_profile_tensor)
-    assert (
-        density_tensor is not None
-    ), "Density tensor is None after model forward pass."
+        density_tensor = model(force_profile_tensor)
 
-    # unnormalize
-    if self.y_mean is not None and self.y_std is not None:
-        density_tensor = unnormalize_data(density_tensor, self.y_mean, self.y_std)
-
-    surrogate_density: np.ndarray = density_tensor.detach().cpu().numpy()
+        y_mean, y_std = y_normalization
+        density_np = density_tensor.detach().cpu().numpy()
+        surrogate_density: np.ndarray = unnormalize_data(density_np, y_mean, y_std)
     return surrogate_density
+
+
+def plot_ensemble(mean_pred: np.ndarray, std_pred: np.ndarray, true_matrices: np.ndarray, force_profiles: np.ndarray) -> None:
+    """Plot the ensemble predictions against the true values.
+
+    Args:
+    ----
+        mean_pred (np.ndarray): The mean predictions from the ensemble.
+        std_pred (np.ndarray): The standard deviation of the predictions from the ensemble.
+        true_matrices (np.ndarray): The true values to compare against.
+        force_profiles (np.ndarray): The force profiles used for prediction.
+
+    """
+    axes = plt.subplots(2, 2, figsize=(12, 12))[1]
+    plot_density_matrix(matrix=mean_pred, force_profile=force_profiles, title="Ensemble Mean Prediction", axis=axes[0, 0])
+    plot_density_matrix(matrix=true_matrices, force_profile=force_profiles, title="True Density", axis=axes[0, 1])
+    plot_difference_matrix(predicted_matrix=mean_pred, actual_matrix=true_matrices, title="Difference", axis=axes[1, 0])
+    plot_density_matrix(matrix=std_pred, force_profile=force_profiles, title="Prediction Uncertainty (Std Dev)", axis=axes[1, 1], color_scale=(0, 0.5))
+    plt.tight_layout()
+    plt.show()
+
 
 def main(model_paths: list[Path], model_class: type[SurrogateModel], model_loader: type[SurrogateModelLoader], data_file_path: Path, random_state: int = 0) -> None:
     """Load models, make predictions, and save results."""
@@ -120,24 +139,22 @@ def main(model_paths: list[Path], model_class: type[SurrogateModel], model_loade
     ) = load_and_split_data(data_file_path, random_state=random_state)
 
     # Load models
-    models = load_ensemble_models(model_paths, model_class, model_loader)
+    models, x_means, x_stds, y_means, y_stds = load_ensemble_models(model_paths, model_class, model_loader)
 
     # Make predictions on test set
-    mean_pred, std_pred = predict_with_ensemble(models, x_test_np)
+    x_normalizations = (x_means, x_stds)
+    y_normalizations =  (y_means, y_stds)
 
-    # Plot predictions
-    plot_surrogate_model(
-        predicted_matrices=mean_pred,
-        true_matrices=y_test_np,
-        force_profiles=x_test_np,
-        sample_count=20,
-        show_plot=True,
-    )
+    for _ in range(5):
+        k = np.random.randint(0, len(x_test_np))
+        logger.info(f"Predicting for test sample {k}")
+        mean_pred, std_pred = predict_with_ensemble(models, x_test_np[k], x_normalizations, y_normalizations)
+        plot_ensemble(mean_pred.squeeze(), std_pred.squeeze(), y_test_np[k], x_test_np[k])
 
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,                      # Show INFO and above
+        level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )

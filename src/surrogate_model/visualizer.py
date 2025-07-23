@@ -105,7 +105,7 @@ class PlottingParameters:
 
     color_scale_min: float = -100
     color_scale_max: float = 100
-    color_bar: bool = True
+    color_bar: bool = False
 
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
