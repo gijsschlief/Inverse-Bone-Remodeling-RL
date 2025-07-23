@@ -1,12 +1,12 @@
 """Test cases for the visualizer module in the surrogate model package."""
 
-import matplotlib
+import matplotlib as mpl
 import numpy as np
 import pytest
 
 from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
 
-matplotlib.use("Agg")  # Use non-interactive backend for testing
+mpl.use("Agg")  # Use non-interactive backend for testing
 
 
 def test_plot_surrogate_model_returns_figures() -> None:

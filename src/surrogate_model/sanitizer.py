@@ -4,10 +4,7 @@ import logging
 
 import numpy as np
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
 def sanitize_matrices(
@@ -19,7 +16,7 @@ def sanitize_matrices(
         true_matrices,
         np.ndarray,
     ):
-        logging.error(
+        logger.error(
             "Both predicted_matrices and true_matrices must be lists of numpy arrays.",
         )
         raise ValueError(
@@ -38,7 +35,7 @@ def sanitize_matrices(
             nan_count += 1
 
     if nan_count > 0:
-        logging.error(
+        logger.error(
             f"Found {nan_count} entries with NaN values in predicted or true matrices. These entries were filtered out.",
         )
 
@@ -73,5 +70,5 @@ def sanitize_data(
     mask = x_mask & y_mask
     removed = x_data.shape[0] - np.count_nonzero(mask)
     if removed > 0:
-        logging.error(f"sanitize_data: Removed {removed} datapoints due to NaN values.")
+        logger.error(f"sanitize_data: Removed {removed} datapoints due to NaN values.")
     return x_data[mask], y_data[mask]

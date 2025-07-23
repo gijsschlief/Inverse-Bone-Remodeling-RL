@@ -7,10 +7,7 @@ import torch
 
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
 def validate_surrogate_model(
@@ -49,7 +46,7 @@ def validate_surrogate_model(
         raise ValueError("Both X_val and y_val must be numpy.ndarray objects.")
 
     if x_val.shape[0] != y_val.shape[0]:
-        logging.warning(
+        logger.warning(
             "X_val and y_val have different number of samples. Using the minimum of both.",
         )
         num_samples = np.min([x_val.shape[0], y_val.shape[0]])
@@ -92,7 +89,6 @@ def validate_surrogate_model(
 def average_similarity_score(
     predicted_matrices: np.ndarray,
     true_matrices: np.ndarray,
-    num_samples: int | None = None,
     baseline: float = 0.1,
     threshold: float = 0.5,
     method: str = "ssim",
@@ -102,7 +98,7 @@ def average_similarity_score(
         true_matrices,
         np.ndarray,
     ):
-        logging.error(
+        logger.error(
             "Both predicted_matrices and true_matrices must be numpy.ndarray objects.",
         )
         raise ValueError(
@@ -110,7 +106,7 @@ def average_similarity_score(
         )
 
     if predicted_matrices.shape[1:] != true_matrices.shape[1:]:
-        logging.error(
+        logger.error(
             f"Shape mismatch: predicted_matrices has shape {predicted_matrices.shape}, "
             f"true_matrices has shape {true_matrices.shape}.",
         )
@@ -118,21 +114,7 @@ def average_similarity_score(
             "predicted_matrices and true_matrices must have the same shape except for the first dimension.",
         )
 
-    if num_samples is None:
-        num_samples = min(predicted_matrices.shape[0], true_matrices.shape[0])
-
-    if (
-        num_samples > predicted_matrices.shape[0]
-        or num_samples > true_matrices.shape[0]
-    ):
-        logging.error(
-            f"num_samples ({num_samples}) is greater than the number of available samples: "
-            f"predicted_matrices ({predicted_matrices.shape[0]}), true_matrices ({true_matrices.shape[0]}).",
-        )
-        raise ValueError(
-            "num_samples exceeds the available number of samples in the input arrays.",
-        )
-
+    num_samples = min(predicted_matrices.shape[0], true_matrices.shape[0])
     similarity_scores: list = []
 
     for i in range(num_samples):
@@ -145,8 +127,8 @@ def average_similarity_score(
                 threshold=threshold,
             )
             similarity_scores.append(similarity)
-        except Exception as e:
-            logging.error(
+        except RuntimeError as e:  # noqa: PERF203
+            logger.error(
                 f"Error calculating similarity for sample {i}: {e}. "
                 f"predicted_matrix shape: {predicted_matrices[i].shape}, "
                 f"true_matrix shape: {true_matrices[i].shape}",
@@ -154,17 +136,17 @@ def average_similarity_score(
             raise
 
     if not similarity_scores:
-        logging.error("No similarity scores were calculated. Check input data.")
+        logger.error("No similarity scores were calculated. Check input data.")
         raise ValueError("No similarity scores calculated.")
 
     # Filter out NaN values before calculating the mean
     filtered_scores = [score for score in similarity_scores if not np.isnan(score)]
     if not filtered_scores:
-        logging.error("All similarity scores are NaN. Check input data.")
+        logger.error("All similarity scores are NaN. Check input data.")
         raise ValueError("All similarity scores are NaN.")
     mean_score = np.mean(filtered_scores)
     if np.isnan(mean_score):
-        logging.error(
+        logger.error(
             "Mean similarity score is NaN. Check if similarity_scores contains valid values.",
         )
         raise ValueError("Mean similarity score is NaN.")

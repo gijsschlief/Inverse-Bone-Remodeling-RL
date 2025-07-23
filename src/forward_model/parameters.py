@@ -5,6 +5,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
+logger = logging.getLogger(__name__)
 
 @dataclass
 class SimulationParameters:
@@ -87,7 +88,7 @@ class SimulationParameters:
     output_extension: str = ".pvd"
     save_data: bool = False
 
-    def __post_init__(self) -> None:
+    def __post_init__(self) -> None:  # noqa: C901, PLR0912
         """Validate the configuration parameters for the forward simulation."""
         if not isinstance(self.force_profile, np.ndarray):
             raise TypeError("force_profile must be a numpy array.")
@@ -105,7 +106,9 @@ class SimulationParameters:
             raise ValueError(
                 "r_min must be non-negative and max_density must be greater than min_density.",
             )
-        if self.force_profile.shape[0] != 3 or self.force_profile.shape[1] != np.max(
+
+        sides_with_forces = 3
+        if self.force_profile.shape[0] != sides_with_forces or self.force_profile.shape[1] != np.max(
             self.initial_density_field.shape,
         ):
             raise ValueError(
@@ -126,8 +129,10 @@ class SimulationParameters:
             raise ValueError(
                 "dt must be a positive number.",
             )
-        if not (self.time_steps <= 1000):
-            logging.warning(
+
+        large_time_step_warning = 1000
+        if not (self.time_steps <= large_time_step_warning):
+            logger.warning(
                 "time_steps is set to a high value, which may lead to long computation times.",
             )
         if not isinstance(self.save_data, bool):
@@ -137,8 +142,10 @@ class SimulationParameters:
             or self.convergence_tolerance <= 0
         ):
             raise ValueError("convergence_tolerance must be a positive number.")
-        if self.convergence_tolerance > 0.1:
-            logging.warning("convergence tolerance is very large")
+
+        large_convergence_tolerance_warning = 0.1
+        if self.convergence_tolerance > large_convergence_tolerance_warning:
+            logger.warning("convergence tolerance is very large")
         if not isinstance(self.output_basename, str):
             raise TypeError("output_basename must be a string.")
         if not isinstance(self.output_extension, str):

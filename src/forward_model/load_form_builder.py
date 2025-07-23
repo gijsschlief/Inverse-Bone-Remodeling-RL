@@ -70,7 +70,7 @@ class LoadFormBuilder:
                 super().__init__()
                 self.boundary_tolerance = boundary_tolerance
 
-            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
+            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:  # noqa: FBT001
                 return near(x[1], 1, self.boundary_tolerance) and on_boundary
 
         class Right(SubDomain):
@@ -78,7 +78,7 @@ class LoadFormBuilder:
                 super().__init__()
                 self.boundary_tolerance = boundary_tolerance
 
-            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
+            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:  # noqa: FBT001
                 return near(x[0], 1, self.boundary_tolerance) and on_boundary
 
         class Left(SubDomain):
@@ -86,7 +86,7 @@ class LoadFormBuilder:
                 super().__init__()
                 self.boundary_tolerance = boundary_tolerance
 
-            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:
+            def inside(self, x: np.ndarray, on_boundary: bool) -> bool:  # noqa: FBT001
                 return near(x[0], 0, self.boundary_tolerance) and on_boundary
 
         class BoundaryID:

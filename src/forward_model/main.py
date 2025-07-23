@@ -46,6 +46,7 @@ from bone_remodeling.src.forward_model.stiffness_form_builder import (
     StiffnessFormBuilder,
 )
 
+logger = logging.getLogger(__name__)
 
 class DensitySimulation:
     """Class for simulating bone density changes under mechanical loads using FEniCS.
@@ -101,7 +102,7 @@ class DensitySimulation:
         self.n_columns = self.initial_density_field.shape[1]
 
         self._setup_mesh_and_spaces()
-        self._setup_density_field()
+        self._setup_density_field(parameters)
         self.boundary_condition_builder = BoundaryConditionBuilder(
             mesh=self.mesh,
             displacement_space=self.displacement_space,
@@ -143,7 +144,7 @@ class DensitySimulation:
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.displacement_test_function = TestFunction(self.displacement_space)
 
-    def _setup_density_field(self) -> None:
+    def _setup_density_field(self, parameters: SimulationParameters) -> None:
         """Set up the density values for the simulation based on the initial density field.
 
         This function calculates the centroids of the cells in the mesh and assigns the initial density values
@@ -164,18 +165,7 @@ class DensitySimulation:
 
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
 
-        self.density_updater = DensityUpdater(
-            initial_density=self.current_density,
-            dt=self.dt,
-            remodeling_rate_coefficient=self.remodeling_rate_coefficient,
-            stimulus_threshold=self.stimulus_threshold,
-            min_density=self.min_density,
-            max_density=self.max_density,
-            convergence_tolerance=self.convergence_tolerance,
-            convergence_tolerance_decay=self.convergence_tolerance_decay,
-            convergence_after_steps=self.convergence_after_steps,
-            convergence_steps_decay=self.convergence_steps_decay,
-        )
+        self.density_updater = DensityUpdater(initial_density=self.current_density, simulation_parameters=parameters)
 
     def _initialize_fenics_functions(self) -> None:
         """Initialize reusable objects for the simulation."""
@@ -251,7 +241,7 @@ class DensitySimulation:
             self.step()
 
             if self.density_updater:
-                logging.info(f"Simulation converged in {time} steps")
+                logger.info(f"Simulation converged in {time} steps")
                 break
 
     def reset(self) -> None:
@@ -332,7 +322,7 @@ class DensitySimulation:
         try:
             File(str(self.full_file_path)) << to_save_data
         except Exception as e:
-            logging.exception(
+            logger.exception(
                 f"Failed to save the output to {self.full_file_path}: {e}",
             )
             raise RuntimeError(f"Failed to save the output: {e}") from e

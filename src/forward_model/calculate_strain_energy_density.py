@@ -119,10 +119,12 @@ class StrainEnergyDensityCalculator:
 
 def example_usage() -> None:
     """StrainEnergyDensityCalculator example usage."""
-    import logging
-    import timeit
+    import logging  # noqa: PLC0415
+    import timeit  # noqa: PLC0415
 
-    from fenics import Constant, UnitSquareMesh, VectorFunctionSpace
+    from fenics import Constant, UnitSquareMesh, VectorFunctionSpace  # noqa: PLC0415
+
+    logger = logging.getLogger(__name__)
 
     mesh = UnitSquareMesh(10, 10, "left")
 
@@ -151,10 +153,10 @@ def example_usage() -> None:
     elapsed_time2 = timeit.default_timer() - start_time2
 
     logging.basicConfig(level=logging.INFO)
-    logging.info(
+    logger.info(
         f"First calculation took {elapsed_time:.6f} seconds, second took {elapsed_time2:.6f} seconds",
     )
-    logging.info("Min/Max SED: %.6f / %.6f", sed.vector().min(), sed.vector().max())
+    logger.info("Min/Max SED: %.6f / %.6f", sed.vector().min(), sed.vector().max())
 
 
 if __name__ == "__main__":

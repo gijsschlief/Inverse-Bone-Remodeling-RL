@@ -9,10 +9,7 @@ import pyvista as pv  # type: ignore
 
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
 def plot_density_matrix(
@@ -20,8 +17,7 @@ def plot_density_matrix(
     force_profile: np.ndarray | None,
     title: str,
     axis: plt.Axes,
-    color_scale_min: float = 0.01,
-    color_scale_max: float = 1.73,
+    color_scale: tuple[float, float] = (0.01, 1.73),
 ) -> None:
     """Plot a density matrix with annotations.
 
@@ -31,16 +27,17 @@ def plot_density_matrix(
         force_profile (np.ndarray | None): Force profile corresponding to the matrix.
         title (str): Title of the plot.
         axis: Matplotlib axis to plot on.
-        color_scale_min (float): Minimum value for color scaling.
-        color_scale_max (float): Maximum value for color scaling.
+        color_scale (tuple[float, float]): Contains the minimum and maximum color scale values
 
     """
+    min_color_scale, max_color_scale = color_scale
+
     axis.imshow(
         matrix,
         cmap="viridis",
         interpolation="nearest",
-        vmin=color_scale_min,
-        vmax=color_scale_max,
+        vmin=min_color_scale,
+        vmax=max_color_scale,
     )
     axis.set_title(title)
     axis.set_xlabel("Columns")
@@ -69,91 +66,118 @@ def plot_density_matrix(
         # Compute max magnitude for scaling (avoid division by zero)
         max_force = np.max(np.abs(force_profile))
 
-        arrow_scale = 0.5  # Maximum arrow length
+        _build_up_arrows(
+            top_forces,
+            max_force,
+            axis,
+            width,
+        )
 
-        # Top forces: draw downward arrows above row 0
-        for j in range(width):
-            if abs(top_forces[j]) > 1e-3:
-                scaled_length = arrow_scale * abs(top_forces[j]) / max_force
-                force_color = _get_force_color(top_forces[j])
-                if top_forces[j] < 0:
-                    axis.arrow(
-                        j,
-                        -0.5,
-                        0,
-                        scaled_length * np.sign(top_forces[j]),  # downward
-                        head_width=0.2,
-                        head_length=0.15,
-                        fc=force_color,
-                        ec=force_color,
-                    )
-                elif top_forces[j] > 0:
-                    axis.arrow(
-                        j,
-                        -0.5 - scaled_length - 0.15,
-                        0,
-                        scaled_length * np.sign(top_forces[j]),  # upward
-                        head_width=0.2,
-                        head_length=0.15,
-                        fc=force_color,
-                        ec=force_color,
-                    )
+        _build_left_arrows(
+            left_forces,
+            max_force,
+            axis,
+            height,
+        )
 
-        # Left forces: draw rightward arrows left of column 0
-        for i in range(height):
-            if abs(left_forces[i]) > 1e-3:
-                scaled_length = arrow_scale * abs(left_forces[i]) / max_force
-                force_color = _get_force_color(left_forces[i])
-                if left_forces[i] < 0:
-                    axis.arrow(
-                        -0.5,
-                        height - 1 - i,
-                        scaled_length * np.sign(left_forces[i]),
-                        0,  # rightward
-                        head_width=0.2,
-                        head_length=0.15,
-                        fc=force_color,
-                        ec=force_color,
-                    )
-                elif left_forces[i] > 0:
-                    axis.arrow(
-                        -0.5 - scaled_length - 0.15,
-                        height - 1 - i,
-                        scaled_length * np.sign(left_forces[i]),
-                        0,  # leftward
-                        head_width=0.2,
-                        head_length=0.15,
-                        fc=force_color,
-                        ec=force_color,
-                    )
+        _build_right_arrows(right_forces, max_force, axis, height, width)
 
-        # Right forces: draw leftward arrows right of last column
-        for i in range(height):
-            if abs(right_forces[i]) > 1e-3:
-                scaled_length = arrow_scale * abs(right_forces[i]) / max_force
-                force_color = _get_force_color(right_forces[i])
-                if right_forces[i] < 0:
-                    axis.arrow(
-                        width - 0.5 + scaled_length + 0.15,
-                        height - 1 - i,
-                        scaled_length * np.sign(right_forces[i]),
-                        0,  # rightward
-                        head_width=0.2,
-                        head_length=0.15,
-                        fc=force_color,
-                        ec=force_color,
-                    )
-                elif right_forces[i] > 0:
-                    axis.arrow(
-                        width - 0.5,
-                        height - 1 - i,
-                        scaled_length * np.sign(right_forces[i]),
-                        0,  # leftward
-                        head_width=0.2,
-                        head_length=0.15,
-                        fc=force_color,
-                        ec=force_color,
-                    )
+def _build_up_arrows(top_forces: np.ndarray, max_force: float, axis: plt.Axes, width: int) -> None:
+    """Top forces: draw downward arrows above row 0."""
+    minimum_plotting_magnitude: float = 1e-3
+    arrow_scale: float = 0.5
+
+    for j in range(width):
+        if abs(top_forces[j]) > minimum_plotting_magnitude:
+            scaled_length = arrow_scale * abs(top_forces[j]) / max_force
+            force_color = _get_force_color(top_forces[j])
+            if top_forces[j] < 0:
+                axis.arrow(
+                    j,
+                    -0.5,
+                    0,
+                    scaled_length * np.sign(top_forces[j]),  # downward
+                    head_width=0.2,
+                    head_length=0.15,
+                    fc=force_color,
+                    ec=force_color,
+                )
+            elif top_forces[j] > 0:
+                axis.arrow(
+                    j,
+                    -0.5 - scaled_length - 0.15,
+                    0,
+                    scaled_length * np.sign(top_forces[j]),  # upward
+                    head_width=0.2,
+                    head_length=0.15,
+                    fc=force_color,
+                    ec=force_color,
+                )
+
+def _build_left_arrows(left_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int) -> None:
+    """Left forces: draw rightward arrows left of column 0."""
+    minimum_plotting_magnitude: float = 1e-3
+    arrow_scale: float = 0.5
+
+    for i in range(height):
+        if abs(left_forces[i]) > minimum_plotting_magnitude:
+            scaled_length = arrow_scale * abs(left_forces[i]) / max_force
+            force_color = _get_force_color(left_forces[i])
+            if left_forces[i] < 0:
+                axis.arrow(
+                    -0.5,
+                    height - 1 - i,
+                    scaled_length * np.sign(left_forces[i]),
+                    0,  # rightward
+                    head_width=0.2,
+                    head_length=0.15,
+                    fc=force_color,
+                    ec=force_color,
+                )
+            elif left_forces[i] > 0:
+                axis.arrow(
+                    -0.5 - scaled_length - 0.15,
+                    height - 1 - i,
+                    scaled_length * np.sign(left_forces[i]),
+                    0,  # leftward
+                    head_width=0.2,
+                    head_length=0.15,
+                    fc=force_color,
+                    ec=force_color,
+                )
+
+
+def _build_right_arrows(right_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int, width: int) -> None:
+    """Right forces: draw leftward arrows right of last column."""
+    minimum_plotting_magnitude: float = 1e-3
+    arrow_scale: float = 0.5
+
+    for i in range(height):
+        if abs(right_forces[i]) > minimum_plotting_magnitude:
+            scaled_length = arrow_scale * abs(right_forces[i]) / max_force
+            force_color = _get_force_color(right_forces[i])
+            if right_forces[i] < 0:
+                axis.arrow(
+                    width - 0.5 + scaled_length + 0.15,
+                    height - 1 - i,
+                    scaled_length * np.sign(right_forces[i]),
+                    0,  # rightward
+                    head_width=0.2,
+                    head_length=0.15,
+                    fc=force_color,
+                    ec=force_color,
+                )
+            elif right_forces[i] > 0:
+                axis.arrow(
+                    width - 0.5,
+                    height - 1 - i,
+                    scaled_length * np.sign(right_forces[i]),
+                    0,  # leftward
+                    head_width=0.2,
+                    head_length=0.15,
+                    fc=force_color,
+                    ec=force_color,
+                )
 
 
 def _get_force_color(
@@ -177,8 +201,7 @@ def _get_force_color(
     green = 0
     blue = 0
 
-    hex_color = f"#{red:02x}{green:02x}{blue:02x}"
-    return hex_color
+    return f"#{red:02x}{green:02x}{blue:02x}"
 
 
 def plot_density_pyvista(
@@ -212,7 +235,7 @@ def plot_density_pyvista(
         )
         plotter.show()
     except Exception as e:
-        logging.exception(f"Failed to plot result with PyVista: {e}")
+        logger.exception(f"Failed to plot result with PyVista: {e}")
 
 
 def render_density_pyvista_frame(
@@ -236,10 +259,10 @@ def render_density_pyvista_frame(
     plotter.add_text(step_title, position="upper_left", font_size=14)
 
 
-def main() -> None:
+def example_usage() -> None:
     """Run the density visualizer to create plots."""
     logging.basicConfig(level=logging.INFO)
-    logging.info("Starting density visualization.")
+    logger.info("Starting density visualization.")
 
     force_profile = np.random.rand(3, 10) * 10 - 5
 
@@ -250,8 +273,15 @@ def main() -> None:
         save_data=False,
     )
 
+    plot_density_matrix(matrix=simulation_parameters.initial_density_field,
+                        force_profile=force_profile,
+                        title="Initial Density Field",
+                        axis=plt.gca(),
+    )
+    plt.show()
+
     plot_density_pyvista(simulation_parameters=simulation_parameters)
 
 
 if __name__ == "__main__":
-    main()
+    example_usage()

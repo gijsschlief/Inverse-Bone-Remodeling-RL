@@ -34,7 +34,7 @@ class BoundaryConditionBuilder:
         while the roller boundary condition is applied to the entire bottom edge.
         """
 
-        def bottom_fixed_boundary(x: np.ndarray, on_boundary: bool) -> bool:
+        def bottom_fixed_boundary(x: np.ndarray) -> bool:
             """Check if the point is on the bottom boundary and in the left corner (x=0, y=0)."""
             return near(x[0], 0, self.boundary_tolerance) and near(
                 x[1],
@@ -42,7 +42,7 @@ class BoundaryConditionBuilder:
                 self.boundary_tolerance,
             )
 
-        def bottom_roller_boundary(x: np.ndarray, on_boundary: bool) -> bool:
+        def bottom_roller_boundary(x: np.ndarray) -> bool:
             """Check if the point is on the bottom boundary and apply roller."""
             return near(x[1], 0, self.boundary_tolerance) and x[0] > 0
 

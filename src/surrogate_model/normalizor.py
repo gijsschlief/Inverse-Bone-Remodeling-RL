@@ -6,6 +6,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+logger = logging.getLogger(__name__)
 
 def normalize_data(
     data: np.ndarray,
@@ -82,7 +83,7 @@ def save_normalization_params(
     try:
         np.savez(path, X_mean=x_mean, X_std=x_std, y_mean=y_mean, y_std=y_std)
     except Exception as e:
-        logging.error(f"Failed to save normalization parameters: {e}")
+        logger.error(f"Failed to save normalization parameters: {e}")
         raise ValueError(f"Failed to save normalization parameters to {path}") from e
 
 
@@ -109,7 +110,7 @@ def load_normalization_params(
         raise ValueError(f"Expected a file, but found a directory: {path}")
     if not path.stat().st_size > 0:
         raise ValueError(f"File is empty: {path}")
-    logging.info(f"Loading normalization parameters from {path}")
+    logger.info(f"Loading normalization parameters from {path}")
     data = np.load(path)
 
     x_mean = data.get("X_mean")

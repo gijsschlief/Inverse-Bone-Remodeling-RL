@@ -2,6 +2,7 @@
 
 import logging
 import random
+from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -11,10 +12,7 @@ from bone_remodeling.src.forward_model.density_visualizer import (
 )
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
 def plot_surrogate_model(
@@ -22,6 +20,7 @@ def plot_surrogate_model(
     true_matrices: np.ndarray,
     force_profiles: np.ndarray | None = None,
     sample_count: int = 3,
+    *,
     show_plot: bool = True,
 ) -> list[plt.Figure]:
     """Compare the surrogate model's predictions with the actual validation data.
@@ -56,15 +55,15 @@ def plot_surrogate_model(
     max_true_value = np.max(true_matrices)
     min_true_value = np.min(true_matrices)
 
-    logging.info("=== Surrogate Model Comparison ===")
+    logger.info("=== Surrogate Model Comparison ===")
     figures = []
     for idx in random_indices:
         predicted_matrix = predicted_matrices[idx]
         actual_matrix = true_matrices[idx]
 
-        logging.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
-        logging.info(f"Predicted Density Matrix:\n{predicted_matrix}")
-        logging.info(
+        logger.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
+        logger.info(f"Predicted Density Matrix:\n{predicted_matrix}")
+        logger.info(
             f"Force Profile: {force_profiles[idx] if force_profiles is not None else 'N/A'}",
         )
 
@@ -101,18 +100,23 @@ def plot_surrogate_model(
         if show_plot:
             plt.show()
 
-        logging.info("-" * 50)
+        logger.info("-" * 50)
     return figures
 
+@dataclass
+class PlottingParameters:
+    """Parameters for plotting density matrices."""
+
+    color_scale_min: float = -100
+    color_scale_max: float = 100
+    color_bar: bool = True
 
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
     actual_matrix: np.ndarray,
     title: str,
     axis: plt.Axes,
-    color_scale_min: float = -100,
-    color_scale_max: float = 100,
-    color_bar: bool = True,
+    plotting_parameters: PlottingParameters = PlottingParameters(),
 ) -> None:
     """Plot the difference between predicted and actual matrices as percentage with a diverging colormap.
 
@@ -122,9 +126,7 @@ def plot_difference_matrix(
         actual_matrix (np.ndarray): Actual density matrix.
         title (str): Title of the plot.
         axis: Matplotlib axis to plot on.
-        color_scale_min (float): Minimum value for color scaling. Default is -100
-        color_scale_max (float): Maximum value for color scaling. Default is 100
-        color_bar (bool): Whether to include a color bar. Default is True.
+        plotting_parameters (PlottingParameters): Parameters for plotting, including color scale and color bar.
 
     """
     difference_matrix = (
@@ -134,13 +136,12 @@ def plot_difference_matrix(
         )
         * 100
     )
-    # Use a diverging colormap: blue (under), white (exact), red (over)
     difference_image = axis.imshow(
         difference_matrix,
         cmap="seismic",
         interpolation="nearest",
-        vmin=color_scale_min,
-        vmax=color_scale_max,
+        vmin=plotting_parameters.color_scale_min,
+        vmax=plotting_parameters.color_scale_max,
     )
     axis.set_title(title)
     axis.set_xlabel("Columns")
@@ -156,12 +157,12 @@ def plot_difference_matrix(
                 color=(
                     "black"
                     if abs(difference_matrix[i, j])
-                    < (color_scale_max - color_scale_min) / 4
+                    < (plotting_parameters.color_scale_max - plotting_parameters.color_scale_min) / 4
                     else "white"
                 ),
                 fontsize=8,
             )
-    if color_bar:
+    if plotting_parameters.color_bar:
         plt.colorbar(difference_image, ax=axis, fraction=0.046, pad=0.04)
 
 

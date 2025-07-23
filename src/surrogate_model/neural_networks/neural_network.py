@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+logger = logging.getLogger(__name__)
 
 class SurrogateModel(torch.nn.Module):
     """Surrogate Neural Network Model for bone remodeling simulation."""
@@ -83,7 +84,7 @@ class SurrogateModel(torch.nn.Module):
     def plot_loss(self) -> None:
         """Plot the training and validation loss history."""
         if not self.train_losses:
-            logging.error("No training history found.")
+            logger.error("No training history found.")
             return
 
         plt.figure(figsize=(10, 5))
@@ -95,14 +96,14 @@ class SurrogateModel(torch.nn.Module):
         plt.yscale("log")
         plt.title("Training and Validation Loss (Log Scale)")
         plt.legend()
-        plt.grid(True, which="both", linestyle="--", linewidth=0.5)
+        plt.grid(visible=True, which="both", linestyle="--", linewidth=0.5)
         plt.tight_layout()
         plt.show()
 
     @staticmethod
     def get_scheduler(
         optimizer: torch.optim.Optimizer,
-        epochs: int,
+        epochs: int,  # noqa: ARG004
     ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Get a learning rate scheduler for the surrogate model.
 
@@ -128,6 +129,7 @@ class SurrogateModel(torch.nn.Module):
         input_features: np.ndarray | torch.Tensor,
         output_labels: np.ndarray | torch.Tensor,
         batch_size: int = 32,
+        *,
         shuffle: bool = True,
     ) -> torch.utils.data.DataLoader:
         """Create a DataLoader for the surrogate model.

@@ -11,10 +11,7 @@ from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
 )
 from bone_remodeling.src.surrogate_model.normalizor import load_normalization_params
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
 class SurrogateModelLoader:
@@ -47,6 +44,7 @@ class SurrogateModelLoader:
         self,
         model_path: Path,
         model_class: type[torch.nn.Module],
+        *,
         auto_load: bool = True,
     ) -> None:
         """Initialize the loader with the path to the model and the model class.
@@ -89,8 +87,7 @@ class SurrogateModelLoader:
             raise ValueError("Model is not loaded. Call load_model() first.")
 
         with torch.no_grad():  # Disable gradient computation for inference
-            predictions = self.model(data_points)
-        return predictions
+            return self.model(data_points)
 
     def __call__(self, x: torch.Tensor) -> torch.Tensor:
         """Call the forward method of the model."""
@@ -130,24 +127,24 @@ def load_surrogate_model(
         )  # Resolve Thesis_code directory dynamically
         model_path = code_dir / model_path
         if not model_path.is_absolute():
-            logging.error(
+            logger.error(
                 f"Failed to resolve absolute path for model file: {model_path}",
             )
             raise ValueError(
                 f"Failed to resolve absolute path for model file: {model_path}",
             )
     if not model_path.is_file():
-        logging.error(f"Model file does not exist: {model_path}")
+        logger.error(f"Model file does not exist: {model_path}")
         raise FileNotFoundError(f"Model file does not exist: {model_path}")
     if model_path.suffix != ".pth":
-        logging.error(f"Invalid model file format: {model_path}. Expected a .pth file.")
+        logger.error(f"Invalid model file format: {model_path}. Expected a .pth file.")
         raise ValueError(
             f"Invalid model file format: {model_path}. Expected a .pth file.",
         )
     if not model_path.is_absolute():
-        logging.error(f"Model file path is not absolute: {model_path}")
+        logger.error(f"Model file path is not absolute: {model_path}")
         raise ValueError(f"Model file path is not absolute: {model_path}")
-    logging.info(f"Loading model from {model_path} with class {model_class.__name__}")
+    logger.info(f"Loading model from {model_path} with class {model_class.__name__}")
 
     # Load the surrogate model
     model_loader = SurrogateModelLoader(model_path=model_path, model_class=model_class)
@@ -164,4 +161,4 @@ def load_surrogate_model(
 
 if __name__ == "__main__":
     model = load_surrogate_model()
-    logging.info(f"Loaded model: {model}")
+    logger.info(f"Loaded model: {model}")

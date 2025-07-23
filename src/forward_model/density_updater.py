@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from bone_remodeling.src.forward_model.parameters import SimulationParameters
+
 
 class DensityUpdater:
     """The DensityUpdater class manages the density update process during the simulation.
@@ -14,30 +16,14 @@ class DensityUpdater:
     def __init__(
         self,
         initial_density: np.ndarray,
-        dt: float,
-        remodeling_rate_coefficient: float,
-        stimulus_threshold: float,
-        min_density: float,
-        max_density: float,
-        convergence_tolerance: float = 1e-6,
-        convergence_tolerance_decay: float = 1.06,
-        convergence_after_steps: int = 10,
-        convergence_steps_decay: float = 0.97,
+        simulation_parameters: SimulationParameters,
     ) -> None:
         """Initialize the DensityUpdater with simulation parameters.
 
         Args:
         ----
-            initial_density (np.ndarray): Initial density field.
-            dt (float): Time step for the simulation.
-            remodeling_rate_coefficient (float): Coefficient for the remodeling rate.
-            stimulus_threshold (float): Threshold for the stimulus.
-            min_density (float): Minimum allowed density.
-            max_density (float): Maximum allowed density.
-            convergence_tolerance (float): Tolerance for convergence checks.
-            convergence_tolerance_decay (float): Decay factor for convergence tolerance.
-            convergence_after_steps (int): Number of steps to consider for convergence.
-            convergence_steps_decay (float): Decay factor for convergence.
+            initial_density (np.ndarray): The initial density values for the simulation.
+            simulation_parameters (SimulationParameters): The parameters for the simulation.
 
         """
         self._initial_density = initial_density.copy()
@@ -45,15 +31,15 @@ class DensityUpdater:
         self.active_cells = np.ones_like(self.density, dtype=bool)
         self.convergence_counter = np.zeros_like(self.density, dtype=int)
 
-        self.dt = dt
-        self.remodeling_rate_coefficient = remodeling_rate_coefficient
-        self.stimulus_threshold = stimulus_threshold
-        self.min_density = min_density
-        self.max_density = max_density
-        self.convergence_tolerance = convergence_tolerance
-        self.convergence_tolerance_decay = convergence_tolerance_decay
-        self.convergence_after_steps = convergence_after_steps
-        self.convergence_steps_decay = convergence_steps_decay
+        self.dt = simulation_parameters.dt
+        self.remodeling_rate_coefficient = simulation_parameters.remodeling_rate_coefficient
+        self.stimulus_threshold = simulation_parameters.stimulus_threshold
+        self.min_density = simulation_parameters.min_density
+        self.max_density = simulation_parameters.max_density
+        self.convergence_tolerance = simulation_parameters.convergence_tolerance
+        self.convergence_tolerance_decay = simulation_parameters.convergence_tolerance_decay
+        self.convergence_after_steps = simulation_parameters.convergence_after_steps
+        self.convergence_steps_decay = simulation_parameters.convergence_steps_decay
 
         self.tolerance_decayed = float(self.convergence_tolerance)
         self.convergence_decayed = float(self.convergence_after_steps)

@@ -141,27 +141,27 @@ def test_validate_surrogate_model_sample_mismatch(
     x_val2 = x_val[:3].reshape(3, -1)
     y_val2 = y_val[:5].reshape(5, -1)
     preds, trues = evaluator.validate_surrogate_model(dummy_model, x_val2, y_val2)
-    assert preds.shape[0] == 3
-    assert trues.shape[0] == 3
+    assert preds.shape[0] == 3  # noqa: PLR2004
+    assert trues.shape[0] == 3  # noqa: PLR2004
 
 
 def test_average_similarity_score(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test average_similarity_score with a known similarity value."""
     # Patch calculate_similarity to return a known value
-    monkeypatch.setattr(evaluator, "calculate_similarity", lambda a, b, **kwargs: 0.5)
+    monkeypatch.setattr(evaluator, "calculate_similarity", lambda: 0.5)
     preds = np.zeros((4, 10, 10))
     trues = np.ones((4, 10, 10))
     score = evaluator.average_similarity_score(preds, trues)
-    assert score == 0.5
+    assert score == 0.5  # noqa: PLR2004
 
 
 def test_average_similarity_score_partial(monkeypatch: pytest.MonkeyPatch) -> None:
     """Test average_similarity_score with num_samples parameter."""
-    monkeypatch.setattr(evaluator, "calculate_similarity", lambda a, b, **kwargs: 0.8)
+    monkeypatch.setattr(evaluator, "calculate_similarity", lambda: 0.8)
     preds = np.zeros((6, 10, 10))
     trues = np.ones((6, 10, 10))
     score = evaluator.average_similarity_score(preds, trues, num_samples=3)
-    assert round(score, 6) == 0.8
+    assert round(score, 6) == 0.8  # noqa: PLR2004
 
 
 if __name__ == "__main__":

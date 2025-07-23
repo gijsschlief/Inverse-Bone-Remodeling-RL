@@ -1,7 +1,6 @@
 """Trainer script for the SurrogateModel."""
 
 import logging
-import os
 from pathlib import Path
 
 import numpy as np
@@ -21,12 +20,11 @@ from bone_remodeling.src.surrogate_model.normalizor import (
 )
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
-
-# Set up logging
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
+from bone_remodeling.src.surrogate_model.train_parameters import (
+    SurrogateTrainParameters,
 )
+
+logger = logging.getLogger(__name__)
 
 
 def convert_tensors(
@@ -76,67 +74,56 @@ def convert_tensors(
 
 def train_model(
     model: SurrogateModel,
-    x_train: torch.Tensor,
-    y_train: torch.Tensor,
-    x_val: torch.Tensor,
-    y_val: torch.Tensor,
-    device: torch.device,
-    epochs: int = 200,
-    batch_size: int = 32,
-    lr: float = 1e-4,
-    patience: int = 10,
-    min_delta: float = 1e-4,
+    x_data: tuple[torch.Tensor, torch.Tensor],
+    y_data: tuple[torch.Tensor, torch.Tensor],
+    train_parameters: SurrogateTrainParameters,
 ) -> None:
     """Train the SurrogateModel with early stopping and learning rate scheduling.
 
     Args:
     ----
         model (SurrogateModel): The model to be trained.
-        x_train (torch.Tensor): Training input features.
-        y_train (torch.Tensor): Training target labels.
-        x_val (torch.Tensor): Validation input features.
-        y_val (torch.Tensor): Validation target labels.
-        device (torch.device): Device to which tensors will be moved.
-        epochs (int): Number of training epochs.
-        batch_size (int): Size of each training batch.
-        lr (float): Learning rate for the optimizer.
-        patience (int): Number of epochs with no improvement after which training will be stopped.
-        min_delta (float): Minimum change in the monitored quantity to qualify as an improvement.
+        x_data (tuple[torch.Tensor, torch.Tensor]): Input features and validation features.
+        y_data (tuple[torch.Tensor, torch.Tensor]): Target labels and validation labels.
+        train_parameters (SurrogateTrainParameters): Training parameters including device, epochs, batch size, learning rate, patience, min delta, log interval, and log all for first epochs.
 
     """
+    x_train, x_validation = x_data
+    y_train, y_validation = y_data
+
     loss_fn = combined_loss
-    optimizer = torch.optim.AdamW(model.parameters(), lr=lr)
-    scheduler = model.get_scheduler(optimizer, epochs)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=train_parameters.learning_rate)
+    scheduler = model.get_scheduler(optimizer, train_parameters.epochs)
 
     best_val_loss = float("inf")
     epochs_no_improve = 0
 
-    for epoch in range(epochs):
+    for epoch in range(train_parameters.epochs):
         model.train()
         total_loss = 0.0
         for batch_x, batch_y in model.create_dataloader(
             x_train,
             y_train,
-            batch_size=batch_size,
+            batch_size=train_parameters.batch_size,
         ):
             optimizer.zero_grad()
             logits = model(batch_x)
             loss = loss_fn(logits, batch_y)
             if torch.isnan(loss):
-                logging.error("Loss is NaN, skipping this batch.")
+                logger.error("Loss is NaN, skipping this batch.")
                 continue
             if torch.isinf(loss):
-                logging.error("Loss is Inf, skipping this batch.")
+                logger.error("Loss is Inf, skipping this batch.")
                 continue
             if not torch.isfinite(loss):
-                logging.error("Loss is not finite, skipping this batch.")
+                logger.error("Loss is not finite, skipping this batch.")
                 continue
             loss.backward()
             optimizer.step()
             total_loss += loss.item()
 
         avg_train_loss = total_loss / len(
-            model.create_dataloader(x_train, y_train, batch_size=batch_size),
+            model.create_dataloader(x_train, y_train, batch_size=train_parameters.batch_size),
         )
         model.train_losses.append(avg_train_loss)
 
@@ -144,43 +131,43 @@ def train_model(
 
         model.eval()
         with torch.no_grad():
-            val_logits = model(x_val)
-            val_loss = combined_loss(val_logits, y_val)
+            val_logits = model(x_validation)
+            val_loss = combined_loss(val_logits, y_validation)
         model.val_losses.append(val_loss)
         scheduler.step(val_loss)
         # Early stopping logic
-        if val_loss + min_delta < best_val_loss:
+        if val_loss + train_parameters.min_delta < best_val_loss:
             best_val_loss = float(val_loss)
             epochs_no_improve = 0
             best_model_state = model.state_dict()
-            logging.info(
+            logger.info(
                 f"Epoch {epoch + 1}: Validation loss improved to {val_loss:.4f}. Saving model state.",
             )
         else:
             epochs_no_improve += 1
 
         # Log every epoch for the first 10, then every 10 epochs
-        if epoch < 10 or (epoch + 1) % 10 == 0:
-            logging.info(
-                f"Epoch {epoch + 1}/{epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}",
+        if epoch < train_parameters.log_all_for_first_epochs or (epoch + 1) % train_parameters.log_interval == 0:
+            logger.info(
+                f"Epoch {epoch + 1}/{train_parameters.epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}",
             )
 
-        if epochs_no_improve >= patience:
-            logging.info(
-                f"Early stopping at epoch {epoch} (no improvement in {patience} epochs).",
+        if epochs_no_improve >= train_parameters.patience:
+            logger.info(
+                f"Early stopping at epoch {epoch} (no improvement in {train_parameters.patience} epochs).",
             )
             break
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
-        logging.info("Loaded best model state after training.")
+        logger.info("Loaded best model state after training.")
 
 
 def save_model_safely(model: SurrogateModel, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
-    if os.path.exists(path):
-        base_path, ext = os.path.splitext(path)
+    if Path.exists(path):
+        base_path, ext = Path.splitext(path)
         counter = 1
-        while os.path.exists(f"{base_path}_{counter}{ext}"):
+        while Path.exists(f"{base_path}_{counter}{ext}"):
             counter += 1
         path = Path(f"{base_path}_{counter}{ext}")
     model.save_model(path)
@@ -189,35 +176,36 @@ def save_model_safely(model: SurrogateModel, path: Path) -> Path:
 
 def evaluate_model(
     model: SurrogateModel,
-    x_val: torch.Tensor,
-    y_val: torch.Tensor,
+    x_validation: torch.Tensor,
+    y_validation: torch.Tensor,
 ) -> None:
     """Evaluate the model on the validation set and log the results."""
     model.eval()
     with torch.no_grad():
-        val_logits = model(x_val)
-        val_loss = combined_loss(val_logits, y_val).item()
+        validation_predictions = model(x_validation)
+        validation_loss = combined_loss(validation_predictions, y_validation).item()
 
     similarities = [
-        calculate_similarity(val_logits[i].cpu().numpy(), y_val[i].cpu().numpy())
-        for i in range(x_val.shape[0])
+        calculate_similarity(validation_predictions[i].cpu().numpy(), y_validation[i].cpu().numpy())
+        for i in range(x_validation.shape[0])
     ]
     average_similarity = np.mean(similarities)
-    logging.info(
-        f"Validation Loss: {val_loss:.4f}, Average Similarity: {average_similarity:.4f}",
+    logger.info(
+        f"Validation Loss: {validation_loss:.4f}, Average Similarity: {average_similarity:.4f}",
     )
 
 
 def main(
     data_file_path: Path,
     model_path: Path,
+    *,
     normalize: bool = True,
     random_state: int = 0,
 ) -> None:
     """Train and evaluate the surrogate model."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    logging.info(f"Loading data from {data_file_path}")
+    logger.info(f"Loading data from {data_file_path}")
     (
         x_train_np,
         x_val_np,
@@ -227,13 +215,13 @@ def main(
         y_test_np,
     ) = load_and_split_data(data_file_path, random_state=random_state)
 
-    logging.info("Sanitizing data...")
+    logger.info("Sanitizing data...")
     x_train_np, y_train_np = sanitize_data(x_train_np, y_train_np)
     x_val_np, y_val_np = sanitize_data(x_val_np, y_val_np)
     x_test_np, y_test_np = sanitize_data(x_test_np, y_test_np)
 
     if normalize:
-        logging.info("Normalizing data...")
+        logger.info("Normalizing data...")
         x_train_np, x_mean, x_std = normalize_data(x_train_np)
         x_val_np, _, _ = normalize_data(x_val_np, x_mean, x_std)
         x_test_np, _, _ = normalize_data(x_test_np, x_mean, x_std)
@@ -241,11 +229,11 @@ def main(
         y_val_np, _, _ = normalize_data(y_val_np, y_mean, y_std)
         y_test_np, _, _ = normalize_data(y_test_np, y_mean, y_std)
 
-        logging.info(
+        logger.info(
             f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}",
         )
     else:
-        logging.info("Skipping normalization.")
+        logger.info("Skipping normalization.")
 
     x_train_tensor = torch.tensor(x_train_np, dtype=torch.float32)
     x_val_tensor = torch.tensor(x_val_np, dtype=torch.float32)
@@ -254,7 +242,7 @@ def main(
     y_val_tensor = torch.tensor(y_val_np, dtype=torch.float32)
     y_test_tensor = torch.tensor(y_test_np, dtype=torch.float32)
 
-    logging.info("Preparing tensors...")
+    logger.info("Preparing tensors...")
     x_train, y_train = convert_tensors(x_train_tensor, y_train_tensor, device)
     if x_val_tensor is not None and y_val_tensor is not None:
         x_val, y_val = convert_tensors(x_val_tensor, y_val_tensor, device)
@@ -262,12 +250,14 @@ def main(
         x_test, y_test = convert_tensors(x_test_tensor, y_test_tensor, device)
 
     model = ReversedSurrogateModel().to(device)
-    logging.info(f"Model architecture:\n{model}")
+    logger.info(f"Model architecture:\n{model}")
 
-    logging.info(
+    logger.info(
         f"Training on {len(x_train)} samples, validating on {len(x_val) if x_val is not None else 0} samples.",
     )
-    train_model(model, x_train, y_train, x_val, y_val, device)
+    train_model(model, [x_train, x_val], [y_train, y_val], train_parameters=SurrogateTrainParameters(
+        device=device,
+    ))
 
     model_path = save_model_safely(model, model_path)
     if normalize:
@@ -278,23 +268,29 @@ def main(
             y_mean,
             y_std,
         )
-    logging.info(f"Model saved to {model_path}")
+    logger.info(f"Model saved to {model_path}")
 
     # model.plot_loss()
 
-    logging.info("Evaluating model on validation set.")
+    logger.info("Evaluating model on validation set.")
 
     evaluate_model(model, x_val, y_val)
-    logging.info("Training and evaluation complete.")
+    logger.info("Training and evaluation complete.")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,                      # Show INFO and above
+        format="%(asctime)s %(name)s %(levelname)s: %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
     for i in range(5, 10):
         main(data_file_path, model_path, normalize=True, random_state=i)
 
-    logging.info("All training runs completed.")
-    logging.info("Final model saved at: %s", model_path)
+    logger.info("All training runs completed.")
+    logger.info("Final model saved at: %s", model_path)
     # 4 and up are trained on all data

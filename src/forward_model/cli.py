@@ -48,13 +48,10 @@ from bone_remodeling.src.forward_model.density_visualizer import plot_density_py
 from bone_remodeling.src.forward_model.main import DensitySimulation
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def main() -> None:  # noqa: C901, PLR0912, PLR0915
     """Run the forward bone remodeling simulation.
 
     This function parses command line arguments and initializes the simulation.
@@ -195,13 +192,13 @@ def main() -> None:
     if args.very_very_verbose:
         set_log_level(LogLevel.TRACE)
         args.verbose = True
-        logging.info("Initializing force profile and parameters...")
+        logger.info("Initializing force profile and parameters...")
     elif args.very_verbose:
         set_log_level(LogLevel.INFO)
         args.verbose = True
-        logging.info("Initializing force profile and parameters...")
+        logger.info("Initializing force profile and parameters...")
     elif args.verbose:
-        logging.info("Initializing force profile and parameters...")
+        logger.info("Initializing force profile and parameters...")
         set_log_level(LogLevel.ERROR)
     else:
         set_log_level(LogLevel.ERROR)
@@ -212,8 +209,8 @@ def main() -> None:
         (3, max(args.n_rows, args.n_columns)),
     )
     if args.force:
-        for force in args.force:
-            try:
+        try:
+            for force in args.force:
                 side, location, magnitude = force.split(",")
                 side = side.strip().lower()
                 location = int(location.strip())
@@ -226,15 +223,15 @@ def main() -> None:
                 elif side == "left":
                     force_profile[2, location] = magnitude
                 else:
-                    logging.warning(
+                    logger.warning(
                         f"Invalid side '{side}' specified in force argument: {force}",
                     )
-            except ValueError:
-                logging.warning(
-                    f"Invalid force argument format: {force}. Expected format: side,location,magnitude",
-                )
+        except ValueError:
+            logger.warning(
+                f"Invalid force argument format: {args.force}. Expected format: side,location,magnitude",
+            )
     else:
-        logging.warning("No forces specified. Using default force profile.")
+        logger.warning("No forces specified. Using default force profile.")
         for i in range(max(args.n_rows, args.n_columns)):
             # Default force profile: 15 at the top
             if i < args.n_rows:
@@ -263,9 +260,9 @@ def main() -> None:
             setattr(simulation_parameters, key, value)
 
     if args.verbose:
-        logging.info("Parameters loaded: %s", simulation_parameters)
+        logger.info("Parameters loaded: %s", simulation_parameters)
 
-    logging.info("Running forward model simulation...")
+    logger.info("Running forward model simulation...")
     start_time = time.time()
 
     simulation = DensitySimulation(parameters=simulation_parameters)
@@ -274,13 +271,13 @@ def main() -> None:
     final_density = simulation.get_density()
     stop_time = time.time()
     elapsed_time = stop_time - start_time
-    logging.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+    logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
     # Log force profile and final density
     if args.verbose:
-        logging.info("Force Profile: %s", force_profile)
+        logger.info("Force Profile: %s", force_profile)
 
-    logging.info("Final Density: %s", final_density)
+    logger.info("Final Density: %s", final_density)
 
     # plot if enabled
     if args.plot:
