@@ -8,6 +8,7 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+
 def normalize_data(
     data: np.ndarray,
     mean: np.ndarray | None = None,

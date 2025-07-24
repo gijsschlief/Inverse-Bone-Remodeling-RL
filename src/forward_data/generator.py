@@ -236,14 +236,14 @@ if __name__ == "__main__":
         batch_seed=np.random.randint(0, 1_000_000),
     )
 
-    force_profiles = force_profile_generator.merger(
-        num_samples=40_000,
-        force_max=20.0,
-    )
-    # force_profiles = force_profile_generator.triangular(
-    #    num_samples=1_000,
+    # force_profiles = force_profile_generator.merger(
+    #    num_samples=40_000,
     #    force_max=20.0,
     # )
+    force_profiles = force_profile_generator.triangular(
+        num_samples=15_000,
+        force_max=20.0,
+    )
 
     logger.info("Running forward model simulations...")
 
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     start_time = time.time()
     _ = data_generator.generate_parallel(
         max_chunk_size=500,
-        force_profile_name="combined_third_order",
+        force_profile_name="triangular_third_order",
     )
     # _ = data_generator.generate_serial()
     stop_time = time.time()

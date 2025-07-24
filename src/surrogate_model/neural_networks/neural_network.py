@@ -9,6 +9,7 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+
 class SurrogateModel(torch.nn.Module):
     """Surrogate Neural Network Model for bone remodeling simulation."""
 

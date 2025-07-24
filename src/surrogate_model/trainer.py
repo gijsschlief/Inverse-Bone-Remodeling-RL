@@ -123,7 +123,9 @@ def train_model(
             total_loss += loss.item()
 
         avg_train_loss = total_loss / len(
-            model.create_dataloader(x_train, y_train, batch_size=train_parameters.batch_size),
+            model.create_dataloader(
+                x_train, y_train, batch_size=train_parameters.batch_size,
+            ),
         )
         model.train_losses.append(avg_train_loss)
 
@@ -147,7 +149,10 @@ def train_model(
             epochs_no_improve += 1
 
         # Log every epoch for the first 10, then every 10 epochs
-        if epoch < train_parameters.log_all_for_first_epochs or (epoch + 1) % train_parameters.log_interval == 0:
+        if (
+            epoch < train_parameters.log_all_for_first_epochs
+            or (epoch + 1) % train_parameters.log_interval == 0
+        ):
             logger.info(
                 f"Epoch {epoch + 1}/{train_parameters.epochs}, Train Loss: {avg_train_loss:.4f}, Validation Loss: {val_loss:.4f}",
             )
@@ -186,7 +191,9 @@ def evaluate_model(
         validation_loss = combined_loss(validation_predictions, y_validation).item()
 
     similarities = [
-        calculate_similarity(validation_predictions[i].cpu().numpy(), y_validation[i].cpu().numpy())
+        calculate_similarity(
+            validation_predictions[i].cpu().numpy(), y_validation[i].cpu().numpy(),
+        )
         for i in range(x_validation.shape[0])
     ]
     average_similarity = np.mean(similarities)
@@ -255,9 +262,14 @@ def main(
     logger.info(
         f"Training on {len(x_train)} samples, validating on {len(x_val) if x_val is not None else 0} samples.",
     )
-    train_model(model, [x_train, x_val], [y_train, y_val], train_parameters=SurrogateTrainParameters(
-        device=device,
-    ))
+    train_model(
+        model,
+        [x_train, x_val],
+        [y_train, y_val],
+        train_parameters=SurrogateTrainParameters(
+            device=device,
+        ),
+    )
 
     model_path = save_model_safely(model, model_path)
     if normalize:
@@ -280,7 +292,7 @@ def main(
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,                      # Show INFO and above
+        level=logging.INFO,  # Show INFO and above
         format="%(asctime)s %(name)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )

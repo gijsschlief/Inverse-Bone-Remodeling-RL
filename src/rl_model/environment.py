@@ -1,26 +1,15 @@
 """Training environment for reinforcement learning in bone remodeling simulation."""
 
 import logging
-from pathlib import Path
-from typing import cast
 
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 from gymnasium import Env, spaces
-from torch.nn import Module
 
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
+from bone_remodeling.src.rl_model.forward_pass import ForwardPass
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.src.surrogate_model.loader import load_surrogate_model
-from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,
-)
-from bone_remodeling.src.surrogate_model.normalizor import (
-    normalize_data,
-    unnormalize_data,
-)
 from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 
 logger = logging.getLogger(__name__)
@@ -33,38 +22,17 @@ class BoneRemodellingEnvironment(Env):
 
     def __init__(
         self,
-        surrogate_model_path: Path,
+        forwarder: type[ForwardPass],
         target_densities: np.ndarray,
         target_forces: np.ndarray,
         rl_parameters: RLParameters,
     ) -> None:
         """Initialize the environment with a surrogate model."""
         super().__init__()
+        self.forwarder = forwarder
+
         self.action_space: spaces.Box
         self.observation_space: spaces.Box
-
-        # Load the surrogate model and normalization parameters
-        surrogate_model_and_normalization_params = load_surrogate_model(
-            surrogate_model_path,
-            ReversedSurrogateModel,
-        )
-        assert (
-            surrogate_model_and_normalization_params is not None
-        ), f"Failed to load surrogate model from {surrogate_model_path}"
-
-        (
-            self.surrogate_model,
-            self.x_mean,
-            self.x_std,
-            self.y_mean,
-            self.y_std,
-        ) = surrogate_model_and_normalization_params
-        if self.surrogate_model is None:
-            raise ValueError(
-                f"Surrogate model could not be loaded from {surrogate_model_path}. Please check the file path and model type.",
-            )
-        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.surrogate_model.to(self.device).eval()
 
         self.target_densities = target_densities
         self.density_shape = target_densities[0].shape
@@ -208,7 +176,6 @@ class BoneRemodellingEnvironment(Env):
             actual_matrix=self.target_density,
             title=f"Observation (Target - Current), Reward: {self.reward:.4f}",
             axis=ax_obs,
-            color_bar=False,
         )
 
         self._render_fig.tight_layout()
@@ -243,7 +210,7 @@ class BoneRemodellingEnvironment(Env):
             peak_height=float(self.peak_magnitude),
         )
 
-        predicted_density = self._surrogate_model_forward()
+        predicted_density = self.forwarder.forward_pass(self.force_profile)
         reward = calculate_similarity(
             reference_matrix=self.target_density,
             comparison_matrix=predicted_density,
@@ -312,46 +279,3 @@ class BoneRemodellingEnvironment(Env):
                 profile[side, j] = peak_height
 
         return profile
-
-    def _surrogate_model_forward(self) -> np.ndarray:
-        """Forward pass through the surrogate model.
-
-        Args:
-        ----
-            force_profile (np.ndarray): The force profile applied to the bone.
-            return_shape (tuple): The shape to return the predicted density.
-
-        Returns:
-        -------
-            np.ndarray: The predicted density from the surrogate model.
-
-        """
-        # normalize
-        if self.x_mean is not None and self.x_std is not None:
-            force_profile, _, _ = normalize_data(
-                self.force_profile,
-                self.x_mean,
-                self.x_std,
-            )
-
-        # forward pass through the surrogate model
-        with torch.no_grad():
-            force_profile_tensor = torch.from_numpy(
-                force_profile.reshape(1, -1).astype(np.float32),
-            ).to(self.device)
-
-        assert (
-            force_profile_tensor is not None
-        ), "Force profile tensor is None after reshaping."
-        model = cast(Module, self.surrogate_model)
-        density_tensor = model(force_profile_tensor)
-        assert (
-            density_tensor is not None
-        ), "Density tensor is None after model forward pass."
-
-        # unnormalize
-        if self.y_mean is not None and self.y_std is not None:
-            density_tensor = unnormalize_data(density_tensor, self.y_mean, self.y_std)
-
-        surrogate_density: np.ndarray = density_tensor.detach().cpu().numpy()
-        return surrogate_density.reshape(self.density_shape)

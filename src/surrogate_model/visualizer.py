@@ -99,6 +99,7 @@ def plot_surrogate_model(
         logger.info("-" * 50)
     return figures
 
+
 @dataclass
 class PlottingParameters:
     """Parameters for plotting density matrices."""
@@ -106,6 +107,7 @@ class PlottingParameters:
     color_scale_min: float = -100
     color_scale_max: float = 100
     color_bar: bool = False
+
 
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
@@ -153,7 +155,11 @@ def plot_difference_matrix(
                 color=(
                     "black"
                     if abs(difference_matrix[i, j])
-                    < (plotting_parameters.color_scale_max - plotting_parameters.color_scale_min) / 4
+                    < (
+                        plotting_parameters.color_scale_max
+                        - plotting_parameters.color_scale_min
+                    )
+                    / 4
                     else "white"
                 ),
                 fontsize=8,

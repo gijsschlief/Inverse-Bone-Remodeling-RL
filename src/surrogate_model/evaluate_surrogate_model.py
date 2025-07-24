@@ -28,7 +28,10 @@ from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
 
 logger = logging.getLogger(__name__)
 
-def run_model_evaluation(model_path: Path, data_path: Path, model_class: type[SurrogateModel]) -> None:
+
+def run_model_evaluation(
+    model_path: Path, data_path: Path, model_class: type[SurrogateModel],
+) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model, x_mean, x_std, y_mean, y_std = _load_model(model_path, model_class)
 
@@ -101,13 +104,18 @@ def run_model_evaluation(model_path: Path, data_path: Path, model_class: type[Su
     )
     return
 
-def _load_model(model_path: Path, model_class: type[Module]) -> tuple[Module, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+
+def _load_model(
+    model_path: Path, model_class: type[Module],
+) -> tuple[Module, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     model_and_normalization_params = load_surrogate_model(
         model_path,
         model_class,
     )
     if model_and_normalization_params is None:
-        raise RuntimeError("Failed to load the surrogate model and normalization parameters.")
+        raise RuntimeError(
+            "Failed to load the surrogate model and normalization parameters.",
+        )
     model, x_mean, x_std, y_mean, y_std = model_and_normalization_params
     if model is None:
         raise RuntimeError("Failed to load the surrogate model.")
@@ -115,7 +123,13 @@ def _load_model(model_path: Path, model_class: type[Module]) -> tuple[Module, np
         raise RuntimeError("Normalization parameters are missing.")
     return model, x_mean, x_std, y_mean, y_std
 
-def plot_worst_prediction(true_matrices: np.ndarray, predicted_matrices: np.ndarray, force_profiles: np.ndarray, count: int = 1) -> None:
+
+def plot_worst_prediction(
+    true_matrices: np.ndarray,
+    predicted_matrices: np.ndarray,
+    force_profiles: np.ndarray,
+    count: int = 1,
+) -> None:
     """Find the samples with the largest differences and plot it.
 
     Args:
@@ -143,8 +157,9 @@ def plot_worst_prediction(true_matrices: np.ndarray, predicted_matrices: np.ndar
     )
 
 
-
 if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
-    run_model_evaluation(model_path=model_path, data_path=data_path, model_class=ReversedSurrogateModel)
+    run_model_evaluation(
+        model_path=model_path, data_path=data_path, model_class=ReversedSurrogateModel,
+    )

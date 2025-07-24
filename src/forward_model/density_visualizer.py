@@ -82,7 +82,10 @@ def plot_density_matrix(
 
         _build_right_arrows(right_forces, max_force, axis, height, width)
 
-def _build_up_arrows(top_forces: np.ndarray, max_force: float, axis: plt.Axes, width: int) -> None:
+
+def _build_up_arrows(
+    top_forces: np.ndarray, max_force: float, axis: plt.Axes, width: int,
+) -> None:
     """Top forces: draw downward arrows above row 0."""
     minimum_plotting_magnitude: float = 1e-3
     arrow_scale: float = 0.5
@@ -114,7 +117,10 @@ def _build_up_arrows(top_forces: np.ndarray, max_force: float, axis: plt.Axes, w
                     ec=force_color,
                 )
 
-def _build_left_arrows(left_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int) -> None:
+
+def _build_left_arrows(
+    left_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int,
+) -> None:
     """Left forces: draw rightward arrows left of column 0."""
     minimum_plotting_magnitude: float = 1e-3
     arrow_scale: float = 0.5
@@ -147,7 +153,9 @@ def _build_left_arrows(left_forces: np.ndarray, max_force: float, axis: plt.Axes
                 )
 
 
-def _build_right_arrows(right_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int, width: int) -> None:
+def _build_right_arrows(
+    right_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int, width: int,
+) -> None:
     """Right forces: draw leftward arrows right of last column."""
     minimum_plotting_magnitude: float = 1e-3
     arrow_scale: float = 0.5
@@ -273,10 +281,11 @@ def example_usage() -> None:
         save_data=False,
     )
 
-    plot_density_matrix(matrix=simulation_parameters.initial_density_field,
-                        force_profile=force_profile,
-                        title="Initial Density Field",
-                        axis=plt.gca(),
+    plot_density_matrix(
+        matrix=simulation_parameters.initial_density_field,
+        force_profile=force_profile,
+        title="Initial Density Field",
+        axis=plt.gca(),
     )
     plt.show()
 

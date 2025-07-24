@@ -23,8 +23,8 @@ _METHOD_FUNCS: dict[str, Callable[..., float]]
 
 
 def calculate_similarity(
-    ref: np.ndarray,
-    cmp: np.ndarray,
+    reference_matrix: np.ndarray,
+    comparison_matrix: np.ndarray,
     method: str = "mse",
     baseline: float = BASELINE_DEFAULT,
     threshold: float = THRESHOLD_DEFAULT,
@@ -33,8 +33,8 @@ def calculate_similarity(
 
     Args:
     ----
-        ref (np.ndarray): Reference matrix.
-        cmp (np.ndarray): Comparison matrix.
+        reference_matrix (np.ndarray): The reference matrix.
+        comparison_matrix (np.ndarray): The matrix to compare against the reference.
         method (str): One of SUPPORTED_METHODS.
         baseline (float): Baseline value for error normalization.
         threshold (float): Threshold value for binary overlap methods.
@@ -44,9 +44,9 @@ def calculate_similarity(
         float: Similarity or distance score normalized to [-1, 1] (except SSIM).
 
     """
-    _validate_inputs(ref, cmp, method, baseline, threshold)
+    _validate_inputs(reference_matrix, comparison_matrix, method, baseline, threshold)
     func = _METHOD_FUNCS[method]
-    return func(ref, cmp, baseline, threshold)
+    return func(reference_matrix, comparison_matrix, baseline, threshold)
 
 
 def _validate_inputs(

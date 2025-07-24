@@ -7,6 +7,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class SimulationParameters:
     """Simulation parameters used by the forward model.
@@ -108,7 +109,9 @@ class SimulationParameters:
             )
 
         sides_with_forces = 3
-        if self.force_profile.shape[0] != sides_with_forces or self.force_profile.shape[1] != np.max(
+        if self.force_profile.shape[0] != sides_with_forces or self.force_profile.shape[
+            1
+        ] != np.max(
             self.initial_density_field.shape,
         ):
             raise ValueError(

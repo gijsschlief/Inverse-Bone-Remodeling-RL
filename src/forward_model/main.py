@@ -48,6 +48,7 @@ from bone_remodeling.src.forward_model.stiffness_form_builder import (
 
 logger = logging.getLogger(__name__)
 
+
 class DensitySimulation:
     """Class for simulating bone density changes under mechanical loads using FEniCS.
 
@@ -165,7 +166,9 @@ class DensitySimulation:
 
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
 
-        self.density_updater = DensityUpdater(initial_density=self.current_density, simulation_parameters=parameters)
+        self.density_updater = DensityUpdater(
+            initial_density=self.current_density, simulation_parameters=parameters,
+        )
 
     def _initialize_fenics_functions(self) -> None:
         """Initialize reusable objects for the simulation."""

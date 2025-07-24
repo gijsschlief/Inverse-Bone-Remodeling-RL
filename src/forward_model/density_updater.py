@@ -32,12 +32,16 @@ class DensityUpdater:
         self.convergence_counter = np.zeros_like(self.density, dtype=int)
 
         self.dt = simulation_parameters.dt
-        self.remodeling_rate_coefficient = simulation_parameters.remodeling_rate_coefficient
+        self.remodeling_rate_coefficient = (
+            simulation_parameters.remodeling_rate_coefficient
+        )
         self.stimulus_threshold = simulation_parameters.stimulus_threshold
         self.min_density = simulation_parameters.min_density
         self.max_density = simulation_parameters.max_density
         self.convergence_tolerance = simulation_parameters.convergence_tolerance
-        self.convergence_tolerance_decay = simulation_parameters.convergence_tolerance_decay
+        self.convergence_tolerance_decay = (
+            simulation_parameters.convergence_tolerance_decay
+        )
         self.convergence_after_steps = simulation_parameters.convergence_after_steps
         self.convergence_steps_decay = simulation_parameters.convergence_steps_decay
 
