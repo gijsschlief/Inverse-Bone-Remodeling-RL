@@ -27,12 +27,13 @@ logger = logging.getLogger(__name__)
 def save_model_safely(model: PPO, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
     if Path.exists(path):
+        directory = path.parent
         base_path = path.stem
         ext = path.suffix
         counter = 1
-        while Path(f"{base_path}_{counter}{ext}").exists():
+        while Path(f"{directory}/{base_path}_{counter}{ext}").exists():
             counter += 1
-        path = Path(f"{base_path}_{counter}{ext}")
+        path = Path(f"{directory}/{base_path}_{counter}{ext}")
     model.save(path)
     return Path(path)
 
@@ -103,9 +104,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     )
 
     model.learn(
-        total_timesteps=1_000,
+        total_timesteps=100,
         callback=[
-            RenderCallback(render_freq=1),
+            RenderCallback(render_freq=999),
             RewardSavingCallback(
                 out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png",
             ),
