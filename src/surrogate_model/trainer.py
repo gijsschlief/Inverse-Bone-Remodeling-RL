@@ -124,7 +124,9 @@ def train_model(
 
         avg_train_loss = total_loss / len(
             model.create_dataloader(
-                x_train, y_train, batch_size=train_parameters.batch_size,
+                x_train,
+                y_train,
+                batch_size=train_parameters.batch_size,
             ),
         )
         model.train_losses.append(avg_train_loss)
@@ -192,7 +194,8 @@ def evaluate_model(
 
     similarities = [
         calculate_similarity(
-            validation_predictions[i].cpu().numpy(), y_validation[i].cpu().numpy(),
+            validation_predictions[i].cpu().numpy(),
+            y_validation[i].cpu().numpy(),
         )
         for i in range(x_validation.shape[0])
     ]

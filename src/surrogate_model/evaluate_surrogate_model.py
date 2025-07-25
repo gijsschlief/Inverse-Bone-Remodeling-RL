@@ -30,7 +30,9 @@ logger = logging.getLogger(__name__)
 
 
 def run_model_evaluation(
-    model_path: Path, data_path: Path, model_class: type[SurrogateModel],
+    model_path: Path,
+    data_path: Path,
+    model_class: type[SurrogateModel],
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model, x_mean, x_std, y_mean, y_std = _load_model(model_path, model_class)
@@ -106,7 +108,8 @@ def run_model_evaluation(
 
 
 def _load_model(
-    model_path: Path, model_class: type[Module],
+    model_path: Path,
+    model_class: type[Module],
 ) -> tuple[Module, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     model_and_normalization_params = load_surrogate_model(
         model_path,
@@ -161,5 +164,7 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
     run_model_evaluation(
-        model_path=model_path, data_path=data_path, model_class=ReversedSurrogateModel,
+        model_path=model_path,
+        data_path=data_path,
+        model_class=ReversedSurrogateModel,
     )

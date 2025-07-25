@@ -1,23 +1,26 @@
 """Run a reinforcement learning environment for bone remodeling."""
 
 import logging
+from functools import partial
 from pathlib import Path
 
 import numpy as np
 from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import (
-    EnsembleForwarder,  # noqa: F401
-    FenicsForwarder,  # noqa: F401
-    SurrogateForwarder,  # noqa: F401
+    EnsembleForwarder,
+    FenicsForwarder,
+    ForwardPass,
+    SurrogateForwarder,
 )
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_saving_callback import RewardSavingCallback
 from bone_remodeling.src.surrogate_model.loader import SurrogateModelLoader
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,  # noqa: F401
+    ReversedSurrogateModel,
 )
 from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
 
@@ -38,6 +41,24 @@ def save_model_safely(model: PPO, path: Path) -> Path:
     return Path(path)
 
 
+def _build_environment(
+    train_forces: np.ndarray,
+    train_densities: np.ndarray,
+    rl_parameters: RLParameters,
+    forwarder: type[ForwardPass],
+    seed: int,
+) -> BoneRemodellingEnvironment:
+    """Build a bone remodeling environment for reinforcement learning."""
+    environment = BoneRemodellingEnvironment(
+        forwarder=forwarder,
+        target_densities=train_densities,
+        target_forces=train_forces,
+        rl_parameters=rl_parameters,
+    )
+    environment.reset(seed=seed)
+    return environment
+
+
 def find_latest_agent(path: Path) -> Path:
     """Find the latest agent file in the specified directory."""
     directory = path.parent
@@ -48,8 +69,39 @@ def find_latest_agent(path: Path) -> Path:
     # Check for existing files and increment the counter until a unique name is found
     while Path(f"{directory}/{base_path}_{counter}{ext}").exists():
         counter += 1
+    if counter == 1:
+        # If no files exist, return the original path
+        return path
 
     return Path(f"{directory}/{base_path}_{counter - 1}{ext}")
+
+
+def initialize_new_model(
+    environment: BoneRemodellingEnvironment, rl_parameters: RLParameters,
+) -> PPO:
+    """Initialize a new PPO model with the given environment.
+
+    Args:
+    ----
+        environment (BoneRemodellingEnvironment): The RL environment to use.
+        rl_parameters (RLParameters): The parameters for the RL agent.
+
+    Returns:
+    -------
+        PPO: A new PPO model instance.
+
+    """
+    logger.info("Initializing a new PPO model.")
+    return PPO(
+        policy="MlpPolicy",
+        env=environment,
+        verbose=1,
+        n_steps=rl_parameters.n_steps,
+        batch_size=rl_parameters.batch_size,
+        ent_coef=rl_parameters.ent_coef,
+        learning_rate=rl_parameters.learning_rate,
+        seed=rl_parameters.seed,
+    )
 
 
 def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -> None:
@@ -79,52 +131,83 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     rl_parameters = RLParameters()
 
-    #forwarder = SurrogateForwarder(surrogate_model_path=surrogate_path, density_shape=train_densities[0].shape, model_class=ReversedSurrogateModel)
-    #forwarder = FenicsForwarder(force_profile=train_forces[0], initial_density_field=np.ones(train_densities[0].shape) * 0.8)
-    forwarder = EnsembleForwarder(model_paths=surrogate_path, model_class=ReversedSurrogateModel, model_loader=SurrogateModelLoader)
-
-    remodeling_environment = BoneRemodellingEnvironment(
-        forwarder=forwarder,
-        target_densities=train_densities,
-        target_forces=train_forces,
-        rl_parameters=rl_parameters,
+    forwarder_surrogate = SurrogateForwarder(  # noqa: F841
+        surrogate_model_path=Path(
+            "/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth",
+        ),
+        density_shape=train_densities[0].shape,
+        model_class=ReversedSurrogateModel,
+    )
+    forwarder_fenics = FenicsForwarder(  # noqa: F841
+        force_profile=train_forces[0],
+        initial_density_field=np.ones(train_densities[0].shape) * 0.8,
+    )
+    forwarder_ensemble = EnsembleForwarder(
+        model_paths=surrogate_path,
+        model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader,
     )
 
-    logger.info("Environment created,loading agent if it exists.")
+    number_of_environments: int = 4
+    base_seed = np.random.randint(0, 1000)
+
+    make_environment = partial(
+        _build_environment,
+        train_forces=train_forces,
+        train_densities=train_densities,
+        rl_parameters=rl_parameters,
+        forwarder=forwarder_ensemble,
+    )
+
+    environment_functions = [
+        partial(make_environment, seed=base_seed + i)
+        for i in range(number_of_environments)
+    ]
+    vectorized_environment = SubprocVecEnv(environment_functions)
+
+    logger.info("Environment functions created, loading agent if it exists.")
     if agent_path.is_dir():
-        model = PPO("MlpPolicy", remodeling_environment, verbose=1)
+        model = initialize_new_model(vectorized_environment, rl_parameters)
         latest_agent_path = None
     else:
         latest_agent_path = find_latest_agent(agent_path)
-        model = PPO.load(latest_agent_path, env=remodeling_environment)
-        model.set_env(remodeling_environment)
+        try:
+            model = PPO.load(latest_agent_path, env=vectorized_environment)
+            model.set_env(vectorized_environment)
+        except FileNotFoundError:
+            logger.warning(
+                f"Agent file {latest_agent_path} not found. Starting with a new model.",
+            )
+            model = initialize_new_model(vectorized_environment, rl_parameters)
+        model.set_env(vectorized_environment)
 
     logger.info(
         f"Starting training with agent at {latest_agent_path if latest_agent_path is not None else 'new model'}.",
     )
 
-    model.learn(
-        total_timesteps=100,
-        callback=[
-            RenderCallback(render_freq=999),
-            RewardSavingCallback(
-                out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_special.png",
-            ),
-        ],
-    )
-    logger.info("Training complete.")
-
-    saved_path = save_model_safely(model, agent_path)
-    logger.info(f"Model saved to {saved_path}")
+    try:
+        model.learn(
+            total_timesteps=2_000_000,
+            callback=[
+                RenderCallback(render_freq=1, environment_index=0),
+                RewardSavingCallback(
+                    out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
+                ),
+            ],
+        )
+        logger.info("Training complete.")
+        saved_path = save_model_safely(model, agent_path)
+        logger.info(f"Model saved to {saved_path}")
+    finally:
+        vectorized_environment.close()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/agents.zip")
+    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/discrete_agents.zip")
     DATA_PATH = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_1000_samples_0720_1430.json",
+        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json",
     )
-    SURROGATE_PATH = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth")
     SURROGATE_PATHS = [
         Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
         Path("/home/gijs/Desktop/Thesis/data/models/trained_model_5.pth"),

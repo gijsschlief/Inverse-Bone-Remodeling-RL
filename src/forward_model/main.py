@@ -167,7 +167,8 @@ class DensitySimulation:
         self.current_density = self.initial_density_field[self.mesh_i, self.mesh_j]
 
         self.density_updater = DensityUpdater(
-            initial_density=self.current_density, simulation_parameters=parameters,
+            initial_density=self.current_density,
+            simulation_parameters=parameters,
         )
 
     def _initialize_fenics_functions(self) -> None:

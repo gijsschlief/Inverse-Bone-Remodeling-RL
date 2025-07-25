@@ -74,7 +74,11 @@ def predict_with_ensemble(
     x_means, x_stds = x_normalizations
     y_means, y_stds = y_normalizations
     for model, x_mean, x_std, y_mean, y_std in zip(
-        models, x_means, x_stds, y_means, y_stds,
+        models,
+        x_means,
+        x_stds,
+        y_means,
+        y_stds,
     ):
         prediction = surrogate_model_forward(model, (x_mean, x_std), (y_mean, y_std), x)
         predictions.append(prediction)
@@ -193,7 +197,9 @@ def main(
 
     # Load models
     models, x_means, x_stds, y_means, y_stds = load_ensemble_models(
-        model_paths, model_class, model_loader,
+        model_paths,
+        model_class,
+        model_loader,
     )
 
     # Make predictions on test set
@@ -204,10 +210,16 @@ def main(
         k = np.random.randint(0, len(x_test_np))
         logger.info(f"Predicting for test sample {k}")
         mean_pred, std_pred = predict_with_ensemble(
-            models, x_test_np[k], x_normalizations, y_normalizations,
+            models,
+            x_test_np[k],
+            x_normalizations,
+            y_normalizations,
         )
         plot_ensemble(
-            mean_pred.squeeze(), std_pred.squeeze(), y_test_np[k], x_test_np[k],
+            mean_pred.squeeze(),
+            std_pred.squeeze(),
+            y_test_np[k],
+            x_test_np[k],
         )
 
 

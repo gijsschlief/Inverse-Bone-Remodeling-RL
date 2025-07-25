@@ -91,7 +91,8 @@ class SurrogateForwarder(ForwardPass):
         self.density_shape = density_shape
 
     def _normalize_data(
-        self, force_profile: np.ndarray,
+        self,
+        force_profile: np.ndarray,
     ) -> np.ndarray:
         """Normalize the force profile data.
 
@@ -111,7 +112,8 @@ class SurrogateForwarder(ForwardPass):
         )[0]
 
     def _unnormalize_data(
-        self, density: Tensor,
+        self,
+        density: Tensor,
     ) -> Tensor:
         """Unnormalize the density data.
 
@@ -166,7 +168,9 @@ class EnsembleForwarder(ForwardPass):
     ) -> None:
         """Initialize the EnsembleModel with a list of surrogate models."""
         models, x_means, x_stds, y_means, y_stds = load_ensemble_models(
-            model_paths, model_class, model_loader,
+            model_paths,
+            model_class,
+            model_loader,
         )
         self.models = models
         self.x_means = x_means
@@ -198,11 +202,14 @@ class FenicsForwarder(ForwardPass):
     """Forward model for predicting bone density based on force profile."""
 
     def __init__(
-        self, force_profile: np.ndarray, initial_density_field: np.ndarray,
+        self,
+        force_profile: np.ndarray,
+        initial_density_field: np.ndarray,
     ) -> None:
         """Initialize the ForwardModel in fenics."""
         simulation_parameters = SimulationParameters(
-            force_profile=force_profile, initial_density_field=initial_density_field,
+            force_profile=force_profile,
+            initial_density_field=initial_density_field,
         )
         self.density_simulation = DensitySimulation(parameters=simulation_parameters)
 

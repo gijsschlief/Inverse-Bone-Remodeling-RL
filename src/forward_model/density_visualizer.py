@@ -84,7 +84,10 @@ def plot_density_matrix(
 
 
 def _build_up_arrows(
-    top_forces: np.ndarray, max_force: float, axis: plt.Axes, width: int,
+    top_forces: np.ndarray,
+    max_force: float,
+    axis: plt.Axes,
+    width: int,
 ) -> None:
     """Top forces: draw downward arrows above row 0."""
     minimum_plotting_magnitude: float = 1e-3
@@ -119,7 +122,10 @@ def _build_up_arrows(
 
 
 def _build_left_arrows(
-    left_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int,
+    left_forces: np.ndarray,
+    max_force: float,
+    axis: plt.Axes,
+    height: int,
 ) -> None:
     """Left forces: draw rightward arrows left of column 0."""
     minimum_plotting_magnitude: float = 1e-3
@@ -154,7 +160,11 @@ def _build_left_arrows(
 
 
 def _build_right_arrows(
-    right_forces: np.ndarray, max_force: float, axis: plt.Axes, height: int, width: int,
+    right_forces: np.ndarray,
+    max_force: float,
+    axis: plt.Axes,
+    height: int,
+    width: int,
 ) -> None:
     """Right forces: draw leftward arrows right of last column."""
     minimum_plotting_magnitude: float = 1e-3

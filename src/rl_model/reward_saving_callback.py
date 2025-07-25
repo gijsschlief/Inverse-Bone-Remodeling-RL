@@ -33,7 +33,6 @@ class RewardSavingCallback(BaseCallback):
         """Plot and save the figure."""
         plt.figure(figsize=(8, 4))
         plt.plot(self.episode_rewards)
-        plt.ylim(-1, 10)
         plt.xlabel("Timestep")
         plt.ylabel("Reward")
         plt.title("Episode Reward over Training")
