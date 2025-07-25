@@ -31,4 +31,4 @@ class RenderCallback(BaseCallback):
             sub_environment = vectorized_environment
 
         sub_environment.render(mode="human")
-        return True
+        return False #ignore plotting for now: True
