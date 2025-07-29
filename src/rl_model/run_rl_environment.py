@@ -151,7 +151,8 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     )
 
     number_of_environments: int = 10
-    base_seed = np.random.randint(0, 1000)
+    base_seed = 0
+    logger.info(f"Using base_seed: {base_seed} for environment seeding.")
 
     make_environment = partial(
         _build_environment,
@@ -192,7 +193,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
             total_timesteps=1_000_000,
             callback=[
                 RenderCallback(
-                    render_freq=1, environment_index=0, rl_parameters=rl_parameters
+                    render_freq=999, environment_index=0, rl_parameters=rl_parameters,
                 ),
                 RewardSavingCallback(
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
