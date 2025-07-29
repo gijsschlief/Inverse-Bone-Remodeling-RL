@@ -28,6 +28,9 @@ class RLParameters:
     batch_size: int = 64
     ent_coef: float = 0.01
     learning_rate: float = 3e-4
+    learning_rate_decay: float = 0.5
     seed: int = 42
     verbose: int = 1
     device: str = "cpu"
+    patience: int = 10
+    patience_threshold: float = 0.01

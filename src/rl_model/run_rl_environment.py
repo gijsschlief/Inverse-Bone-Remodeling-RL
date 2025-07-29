@@ -18,6 +18,10 @@ from bone_remodeling.src.rl_model.forward_pass import (
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_saving_callback import RewardSavingCallback
+from bone_remodeling.src.rl_model.validation_callback import ValidationCallback
+from bone_remodeling.src.rl_model.validation_environment_builder import (
+    ValidationEnvironmentBuilder,
+)
 from bone_remodeling.src.surrogate_model.loader import SurrogateModelLoader
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
@@ -123,10 +127,10 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     """
     (
         train_forces,
-        _,
+        validation_forces,
         _,
         train_densities,
-        _,
+        validation_densities,
         _,
     ) = load_and_split_data(data_path, random_state=0)
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
@@ -140,7 +144,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         density_shape=train_densities[0].shape,
         model_class=ReversedSurrogateModel,
     )
-    forwarder_fenics = FenicsForwarder(  # noqa: F841
+    forwarder_fenics = FenicsForwarder(
         force_profile=train_forces[0],
         initial_density_field=np.ones(train_densities[0].shape) * 0.8,
     )
@@ -149,6 +153,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         model_class=ReversedSurrogateModel,
         model_loader=SurrogateModelLoader,
     )
+    validation_environment_builder = ValidationEnvironmentBuilder(forwarder_ensemble, rl_parameters)
 
     number_of_environments: int = 10
     base_seed = 0
@@ -190,13 +195,16 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=1_000_000,
+            total_timesteps=10_000,
             callback=[
                 RenderCallback(
                     render_freq=999, environment_index=0, rl_parameters=rl_parameters,
                 ),
                 RewardSavingCallback(
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
+                ),
+                ValidationCallback(
+                    validation_data=(validation_forces[:10], validation_densities[:10]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=1_000,
                 ),
             ],
         )

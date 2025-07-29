@@ -37,7 +37,7 @@ class RenderCallback(BaseCallback):
         self.max_steps = rl_parameters.max_steps
 
     def _on_step(self) -> bool:
-        if self.n_calls % self.render_freq == 0:
+        if self.num_timesteps % self.render_freq == 0:
             get_data = self.training_env.get_attr("get_data_for_visualization")[
                 self.environment_index
             ]
