@@ -2,15 +2,12 @@
 
 import logging
 
-import matplotlib.pyplot as plt
 import numpy as np
 from gymnasium import Env, spaces
 
-from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
 from bone_remodeling.src.rl_model.forward_pass import ForwardPass
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
-from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -39,7 +36,6 @@ class BoneRemodellingEnvironment(Env):
         self._profile_length = np.max(self.density_shape)
 
         self.max_steps = rl_parameters.max_steps
-        self.render_mode = rl_parameters.render_mode
         self.density_constraint = rl_parameters.density_constraint
         self.force_boundary = rl_parameters.force_boundary
 
@@ -130,58 +126,6 @@ class BoneRemodellingEnvironment(Env):
         )
         info: dict = {options}
         return episode_observation, info
-
-    def render(self, mode: str = "human") -> None:
-        """Visualize target, current prediction, and the observation fed to the agent."""
-        if mode != "human":
-            raise NotImplementedError(f"Render mode '{mode}' is not supported.")
-        if self.last_predicted_density is None or self.last_predicted_density.size == 0:
-            logger.warning("No density data to render.")
-            return
-
-        # On first call, create 3 grid
-        if not hasattr(self, "_render_initialized"):
-            self._render_fig, self._render_axes = plt.subplots(1, 3, figsize=(18, 6))
-            self._render_fig.suptitle("Bone Remodeling Environment", fontsize=16)
-            plt.ion()
-            self._render_initialized = True
-            self._last_sample_idx = None
-
-        ax_current, ax_target, ax_obs = self._render_axes
-
-        # Redraw target density if the sample index has changed
-        if self._last_sample_idx != self.current_sample_index:
-            ax_target.clear()
-            plot_density_matrix(
-                self.target_density,
-                force_profile=self.target_force,
-                title=f"Target Density (Sample {self.current_sample_index})",
-                axis=ax_target,
-            )
-            self._last_sample_idx = self.current_sample_index
-
-        # 1) Current / predicted density
-        ax_current.clear()
-        plot_density_matrix(
-            self.last_predicted_density,
-            force_profile=self.force_profile,
-            title=f"Current Density: Step {self.current_step} / {self.max_steps}",
-            axis=ax_current,
-        )
-
-        # 2) Observation (what the policy actually sees)
-        ax_obs.clear()
-        plot_difference_matrix(
-            predicted_matrix=self.last_predicted_density,
-            actual_matrix=self.target_density,
-            title=f"Observation (Target - Current), Reward: {self.reward:.4f}",
-            axis=ax_obs,
-        )
-
-        self._render_fig.tight_layout()
-        self._render_fig.canvas.draw()
-        self._render_fig.canvas.flush_events()
-        plt.pause(0.001)
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Perform a step in the environment.
@@ -279,3 +223,17 @@ class BoneRemodellingEnvironment(Env):
                 profile[side, j] = peak_height
 
         return profile
+
+    def get_data_for_visualization(self) -> tuple[int, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, int]:
+        """Pass data needed for rendering the environment to the callback function."""
+        sample_information = (
+            self.current_sample_index,
+            self.target_force,
+            self.target_density,
+        )
+        estimate_information = (
+            self.current_step,
+            self.force_profile,
+            self.last_predicted_density,
+        )
+        return sample_information, estimate_information, self.reward

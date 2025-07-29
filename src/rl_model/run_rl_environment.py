@@ -95,7 +95,7 @@ def initialize_new_model(
     return PPO(
         policy="MlpPolicy",
         env=environment,
-        verbose=1,
+        verbose=rl_parameters.verbose,
         n_steps=rl_parameters.n_steps,
         batch_size=rl_parameters.batch_size,
         ent_coef=rl_parameters.ent_coef,
@@ -148,7 +148,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     #    model_loader=SurrogateModelLoader,
     #)
 
-    number_of_environments: int = 2
+    number_of_environments: int = 4
     base_seed = np.random.randint(0, 1000)
 
     make_environment = partial(
@@ -187,9 +187,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=2_000_000,
+            total_timesteps=100_000,
             callback=[
-                RenderCallback(render_freq=1_000_000, environment_index=0),
+                RenderCallback(render_freq=1, environment_index=0),
                 RewardSavingCallback(
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),

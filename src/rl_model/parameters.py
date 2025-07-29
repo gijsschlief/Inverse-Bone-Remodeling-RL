@@ -24,9 +24,9 @@ class RLParameters:
     max_steps: int = 50
     force_boundary: float = 30
     density_constraint: float = 1.73
-    render_mode: str = "human"
     n_steps: int = 2048
     batch_size: int = 64
     ent_coef: float = 0.01
     learning_rate: float = 3e-4
     seed: int = 42
+    verbose: int = 0
