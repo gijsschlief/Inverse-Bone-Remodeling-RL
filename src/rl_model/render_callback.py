@@ -16,7 +16,12 @@ logger = logging.getLogger(__name__)
 class RenderCallback(BaseCallback):
     """Callback to render the environment at specified intervals."""
 
-    def __init__(self, render_freq: int = 10, environment_index: int = 0, rl_parameters: RLParameters = RLParameters()) -> None:
+    def __init__(
+        self,
+        render_freq: int = 10,
+        environment_index: int = 0,
+        rl_parameters: RLParameters = RLParameters(),
+    ) -> None:
         """Initialize the render callback.
 
         Args:
@@ -33,7 +38,9 @@ class RenderCallback(BaseCallback):
 
     def _on_step(self) -> bool:
         if self.n_calls % self.render_freq == 0:
-            get_data = self.training_env.get_attr("get_data_for_visualization")[self.environment_index]
+            get_data = self.training_env.get_attr("get_data_for_visualization")[
+                self.environment_index
+            ]
             sample_information, estimate_information, reward = get_data()
             self.render(
                 sample_information,
@@ -43,7 +50,12 @@ class RenderCallback(BaseCallback):
             return True
         return True
 
-    def render(self, sample_information: tuple[int, np.ndarray, np.ndarray], estimate_information: tuple[int, np.ndarray, np.ndarray], reward: float) -> None:
+    def render(
+        self,
+        sample_information: tuple[int, np.ndarray, np.ndarray],
+        estimate_information: tuple[int, np.ndarray, np.ndarray],
+        reward: float,
+    ) -> None:
         """Visualize target, current prediction, and the observation fed to the agent."""
         current_sample_index, target_force, target_density = sample_information
         current_step, force_profile, last_predicted_density = estimate_information

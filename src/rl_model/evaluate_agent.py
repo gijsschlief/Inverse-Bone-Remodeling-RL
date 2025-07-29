@@ -7,7 +7,7 @@ from gymnasium import Env
 from stable_baselines3 import PPO
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
-from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
+from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.splitter import splitting
@@ -102,7 +102,7 @@ def main() -> None:
 
     all_results = []
     for i in range(10):
-        agent_evaluation_environment = BoneRemodellingEnvironment(
+        agent_evaluation_environment = BoneRemodelingEnvironment(
             surrogate_model_path=Path(
                 "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
             ),

@@ -8,7 +8,7 @@ import numpy as np
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv
 
-from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
+from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import (
     EnsembleForwarder,
     FenicsForwarder,
@@ -47,9 +47,9 @@ def _build_environment(
     rl_parameters: RLParameters,
     forwarder: type[ForwardPass],
     seed: int,
-) -> BoneRemodellingEnvironment:
+) -> BoneRemodelingEnvironment:
     """Build a bone remodeling environment for reinforcement learning."""
-    environment = BoneRemodellingEnvironment(
+    environment = BoneRemodelingEnvironment(
         forwarder=forwarder,
         target_densities=train_densities,
         target_forces=train_forces,
@@ -77,13 +77,14 @@ def find_latest_agent(path: Path) -> Path:
 
 
 def initialize_new_model(
-    environment: BoneRemodellingEnvironment, rl_parameters: RLParameters,
+    environment: BoneRemodelingEnvironment,
+    rl_parameters: RLParameters,
 ) -> PPO:
     """Initialize a new PPO model with the given environment.
 
     Args:
     ----
-        environment (BoneRemodellingEnvironment): The RL environment to use.
+        environment (BoneRemodelingEnvironment): The RL environment to use.
         rl_parameters (RLParameters): The parameters for the RL agent.
 
     Returns:
@@ -132,22 +133,22 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     rl_parameters = RLParameters()
 
-    forwarder_surrogate = SurrogateForwarder(
+    forwarder_surrogate = SurrogateForwarder(  # noqa: F841
         surrogate_model_path=Path(
-            "/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth",
+            "/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth",
         ),
         density_shape=train_densities[0].shape,
         model_class=ReversedSurrogateModel,
     )
-    #forwarder_fenics = FenicsForwarder(
-    #    force_profile=train_forces[0],
-    #    initial_density_field=np.ones(train_densities[0].shape) * 0.8,
-    #)
-    #forwarder_ensemble = EnsembleForwarder(
-    #    model_paths=surrogate_path,
-    #    model_class=ReversedSurrogateModel,
-    #    model_loader=SurrogateModelLoader,
-    #)
+    forwarder_fenics = FenicsForwarder(  # noqa: F841
+        force_profile=train_forces[0],
+        initial_density_field=np.ones(train_densities[0].shape) * 0.8,
+    )
+    forwarder_ensemble = EnsembleForwarder(
+        model_paths=surrogate_path,
+        model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader,
+    )
 
     number_of_environments: int = 10
     base_seed = np.random.randint(0, 1000)
@@ -157,7 +158,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         train_forces=train_forces,
         train_densities=train_densities,
         rl_parameters=rl_parameters,
-        forwarder=forwarder_surrogate,
+        forwarder=forwarder_ensemble,
     )
 
     environment_functions = [
@@ -190,7 +191,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         model.learn(
             total_timesteps=1_000_000,
             callback=[
-                RenderCallback(render_freq=999, environment_index=0, rl_parameters=rl_parameters),
+                RenderCallback(
+                    render_freq=1, environment_index=0, rl_parameters=rl_parameters
+                ),
                 RewardSavingCallback(
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),

@@ -12,7 +12,7 @@ from torch.utils.data import DataLoader, TensorDataset
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
-from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
+from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.validate_pretrained_agent import (
     validate_pretrained_agent,
 )
@@ -28,7 +28,7 @@ def main() -> None:
     if result is not None:
         _, target_forces, target_densities = result
 
-    remodeling_environment = BoneRemodellingEnvironment(
+    remodeling_environment = BoneRemodelingEnvironment(
         surrogate_model_path=Path(
             "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
         ),

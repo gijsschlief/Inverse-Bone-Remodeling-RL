@@ -12,7 +12,7 @@ from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 logger = logging.getLogger(__name__)
 
 
-class BoneRemodellingEnvironment(Env):
+class BoneRemodelingEnvironment(Env):
     """Gym Environment for reinforcement learning in bone remodeling simulation."""
 
     def __init__(
@@ -85,7 +85,7 @@ class BoneRemodellingEnvironment(Env):
         self,
         *,
         seed: int | None = None,
-        options: dict | None = None,
+        options: dict | None = None,  # noqa: ARG002
     ) -> tuple[np.ndarray, dict]:
         """Start a new episode.
 
@@ -102,6 +102,7 @@ class BoneRemodellingEnvironment(Env):
 
         """
         super().reset(seed=seed)
+        np.random.seed(seed)
         self.current_step = 0
         self.reward = 0.0
         self.peak_magnitude = np.float32(0.0)
@@ -225,7 +226,9 @@ class BoneRemodellingEnvironment(Env):
 
         return profile
 
-    def get_data_for_visualization(self) -> tuple[int, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, int]:
+    def get_data_for_visualization(
+        self,
+    ) -> tuple[int, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, int]:
         """Pass data needed for rendering the environment to the callback function."""
         sample_information = (
             self.current_sample_index,
