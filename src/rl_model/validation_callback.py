@@ -56,17 +56,17 @@ class ValidationCallback(BaseCallback):
             observation, _ = validation_environment.reset()
             for _ in range(self.rl_parameters.max_steps - 1):
                 action, _ = self.model.predict(observation, deterministic=True)
-                observation, _, done, _ = validation_environment.step(action)
+                observation, _, done, _, _ = validation_environment.step(action)
                 if done:
                     break
 
-            # 2) final action
-            final_action, _ = self.model.predict(observation, deterministic=True)
+            # 2) final force profile
+            final_force_profile = self.model.get_data_for_visualization()[1][1]
 
-            # 3) true FEniCS solve of that final action
-            true_density = self.fenics_forwarder.forward_pass(final_action)
+            # 4) true FEniCS solve of the final force profile
+            true_density = self.fenics_forwarder.forward_pass(final_force_profile)
 
-            # 4) compute SSIM vs target
+            # 5) compute SSIM vs target
             score = calculate_similarity(
                 reference_matrix=target,
                 comparison_matrix=true_density,
