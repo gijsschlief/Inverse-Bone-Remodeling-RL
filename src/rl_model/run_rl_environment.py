@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv
 
 from bone_remodeling.src.rl_model.environment import BoneRemodellingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import (
@@ -101,6 +101,7 @@ def initialize_new_model(
         ent_coef=rl_parameters.ent_coef,
         learning_rate=rl_parameters.learning_rate,
         seed=rl_parameters.seed,
+        device=rl_parameters.device,
     )
 
 
@@ -148,7 +149,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     #    model_loader=SurrogateModelLoader,
     #)
 
-    number_of_environments: int = 4
+    number_of_environments: int = 10
     base_seed = np.random.randint(0, 1000)
 
     make_environment = partial(
@@ -187,9 +188,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=100_000,
+            total_timesteps=1_000_000,
             callback=[
-                RenderCallback(render_freq=1, environment_index=0),
+                RenderCallback(render_freq=999, environment_index=0, rl_parameters=rl_parameters),
                 RewardSavingCallback(
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),

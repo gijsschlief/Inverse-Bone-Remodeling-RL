@@ -7,8 +7,8 @@ import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
-from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 from bone_remodeling.src.rl_model.parameters import RLParameters
+from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ class RenderCallback(BaseCallback):
                 reward,
             )
             return True
-        return None
+        return True
 
     def render(self, sample_information: tuple[int, np.ndarray, np.ndarray], estimate_information: tuple[int, np.ndarray, np.ndarray], reward: float) -> None:
         """Visualize target, current prediction, and the observation fed to the agent."""

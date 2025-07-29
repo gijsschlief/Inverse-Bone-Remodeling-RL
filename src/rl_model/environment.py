@@ -15,8 +15,6 @@ logger = logging.getLogger(__name__)
 class BoneRemodellingEnvironment(Env):
     """Gym Environment for reinforcement learning in bone remodeling simulation."""
 
-    metadata = {"render.modes": ["human"]}  # noqa: RUF012
-
     def __init__(
         self,
         forwarder: type[ForwardPass],
@@ -124,7 +122,10 @@ class BoneRemodellingEnvironment(Env):
         episode_observation = np.vstack(
             [difference, np.zeros(self.force_profile.shape, dtype=np.float32)],
         )
-        info: dict = {options}
+        info: dict = {}
+        info["sample_index"] = self.current_sample_index
+        info["target_density"] = self.target_density
+        info["target_force"] = self.target_force
         return episode_observation, info
 
     def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
