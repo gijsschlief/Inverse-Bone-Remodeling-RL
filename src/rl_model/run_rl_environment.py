@@ -195,7 +195,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=10_000,
+            total_timesteps=1_000_000,
             callback=[
                 RenderCallback(
                     render_freq=999, environment_index=0, rl_parameters=rl_parameters,
@@ -204,7 +204,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),
                 ValidationCallback(
-                    validation_data=(validation_forces[:10], validation_densities[:10]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=1_000,
+                    validation_data=(validation_forces[:10], validation_densities[:10]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=100_000,
                 ),
             ],
         )
@@ -217,6 +217,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
+
     AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/discrete_agents.zip")
     DATA_PATH = Path(
         "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json",

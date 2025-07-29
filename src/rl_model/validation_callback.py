@@ -32,7 +32,7 @@ class ValidationCallback(BaseCallback):
         self.validation_forces, self.validation_densities = validation_data
         self.validation_frequency = validation_frequency
         self.rl_parameters = rl_parameters
-        self.best_ssim = 0.0
+        self.best_ssim = -np.inf
         self.patience_counter = 0
 
 
@@ -43,7 +43,9 @@ class ValidationCallback(BaseCallback):
         mean_ssim = self._ssim_calculation()
 
         if self._detect_plateau(mean_ssim):
-            self._learning_rate_reducer()
+            learning_rate_reduced = self._learning_rate_reducer()
+            if not learning_rate_reduced:
+                return False
 
         logger.info(f"[Val @ {self.num_timesteps}] mean final SSIM = {mean_ssim:.4f}")
         return True
@@ -60,13 +62,10 @@ class ValidationCallback(BaseCallback):
                 if done:
                     break
 
-            # 2) final force profile
-            final_force_profile = self.model.get_data_for_visualization()[1][1]
+            # 2) true FEniCS solve of the final force profile
+            true_density = self.fenics_forwarder.forward_pass(validation_environment.force_profile)
 
-            # 4) true FEniCS solve of the final force profile
-            true_density = self.fenics_forwarder.forward_pass(final_force_profile)
-
-            # 5) compute SSIM vs target
+            # 3) compute SSIM vs target
             score = calculate_similarity(
                 reference_matrix=target,
                 comparison_matrix=true_density,
@@ -78,9 +77,6 @@ class ValidationCallback(BaseCallback):
         return float(np.mean(ssim_scores))
 
     def _detect_plateau(self, last_ssim: float) -> bool:
-        if self.n_calls < self.validation_frequency * 2:
-            return False
-
         if last_ssim < self.best_ssim * self.rl_parameters.patience_threshold:
             self.patience_counter += 1
             if self.patience_counter >= self.rl_parameters.patience:
@@ -93,11 +89,19 @@ class ValidationCallback(BaseCallback):
 
         return False
 
-    def _learning_rate_reducer(self) -> None:
+    def _learning_rate_reducer(self) -> bool:
         """Reduce learning rate if plateau is detected."""
-        self.patience_counter = 0
-        new_lr = self.model.learning_rate * self.rl_parameters.learning_rate_decay
-        logger.info(f"Reducing learning rate from {self.model.learning_rate} to {new_lr}.")
-        self.model.learning_rate = new_lr
-        self.model.optimizer.param_groups[0]['lr'] = new_lr
-        self.best_ssim = 0.0
+        opt = self.model.policy.optimizer
+        old_learning_rate = opt.param_groups[0]['lr']
+        new_learning_rate = old_learning_rate * self.rl_parameters.learning_rate_decay
+
+
+        if new_learning_rate <= self.rl_parameters.minimum_learning_rate:
+            logger.warning("LR is already at minimum, RL simulation has converged!")
+            return False
+
+        for parameter_group in opt.param_groups:
+            parameter_group['lr'] = new_learning_rate
+
+        logger.warning(f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}")
+        return True

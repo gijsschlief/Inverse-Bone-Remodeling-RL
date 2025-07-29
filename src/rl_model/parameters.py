@@ -29,6 +29,7 @@ class RLParameters:
     ent_coef: float = 0.01
     learning_rate: float = 3e-4
     learning_rate_decay: float = 0.5
+    minimum_learning_rate: float = 3e-6
     seed: int = 42
     verbose: int = 1
     device: str = "cpu"
