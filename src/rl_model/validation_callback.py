@@ -41,14 +41,9 @@ class ValidationCallback(BaseCallback):
             return True
 
         mean_ssim = self._ssim_calculation()
-
-        if self._detect_plateau(mean_ssim):
-            learning_rate_reduced = self._learning_rate_reducer()
-            if not learning_rate_reduced:
-                return False
-
         logger.info(f"[Val @ {self.num_timesteps}] mean final SSIM = {mean_ssim:.4f}")
-        return True
+
+        return self._detect_plateau(mean_ssim)
 
     def _ssim_calculation(self) -> float:
         ssim_scores = []
@@ -77,16 +72,25 @@ class ValidationCallback(BaseCallback):
         return float(np.mean(ssim_scores))
 
     def _detect_plateau(self, last_ssim: float) -> bool:
-        if last_ssim < self.best_ssim * self.rl_parameters.patience_threshold:
-            self.patience_counter += 1
-            if self.patience_counter >= self.rl_parameters.patience:
-                logger.warning(f"[Val @ {self.num_timesteps}] Validation plateau detected, reducing learning rate.")
-                self.best_ssim = last_ssim
-                self.patience_counter = 0
-                return True
-        else:
+        if last_ssim > self.best_ssim:
+            self.best_ssim = last_ssim
             self.patience_counter = 0
+            logger.info(f"[New best SSIM: {self.best_ssim:.4f}")
+            return True
 
+        # If the SSIM is not improving, increase patience counter, reduce learning rate or stop training
+        # increase patience counter
+        if self.patience_counter < self.rl_parameters.patience:
+            self.patience_counter += 1
+            logger.warning(f"SSIM did not improve, patience counter: {self.patience_counter}, best SSIM: {self.best_ssim:.4f}")
+            return True
+
+        # reduce learning rate if patience is exceeded
+        if self.patience_counter >= self.rl_parameters.patience:
+            logger.warning(f"[SSIM did not improve, best SSIM: {self.best_ssim:.4f}] Validation plateau detected, reducing learning rate.")
+            self.best_ssim = -np.inf
+            self.patience_counter = 0
+            return self._learning_rate_reducer()
         return False
 
     def _learning_rate_reducer(self) -> bool:

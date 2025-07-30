@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import (
@@ -172,6 +172,12 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         for i in range(number_of_environments)
     ]
     vectorized_environment = SubprocVecEnv(environment_functions)
+    vectorized_environment = VecNormalize(
+        vectorized_environment,
+        norm_obs=False,
+        norm_reward=True,
+        clip_reward=10.0,
+    )
 
     logger.info("Environment functions created, loading agent if it exists.")
     if agent_path.is_dir():
@@ -195,7 +201,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=1_000_000,
+            total_timesteps=10_000_000,
             callback=[
                 RenderCallback(
                     render_freq=999, environment_index=0, rl_parameters=rl_parameters,
@@ -204,7 +210,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),
                 ValidationCallback(
-                    validation_data=(validation_forces[:10], validation_densities[:10]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=100_000,
+                    validation_data=(validation_forces[:100], validation_densities[:100]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=100_000,
                 ),
             ],
         )
