@@ -210,7 +210,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),
                 ValidationCallback(
-                    validation_data=(validation_forces[:100], validation_densities[:100]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=100_000,
+                    validation_data=(validation_forces[:40], validation_densities[:40]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=100_000,
                 ),
             ],
         )

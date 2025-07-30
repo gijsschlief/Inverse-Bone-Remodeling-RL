@@ -241,11 +241,10 @@ class DensitySimulation:
 
     def run(self) -> None:
         """Run the full simulation loop."""
-        for time in range(self.time_steps):
+        for _ in range(self.time_steps):
             self.step()
 
             if self.density_updater:
-                logger.info(f"Simulation converged in {time} steps")
                 break
 
     def reset(self) -> None:

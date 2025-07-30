@@ -33,4 +33,4 @@ class RLParameters:
     seed: int = 42
     verbose: int = 1
     device: str = "cpu"
-    patience: int = 4
+    patience: int = 5
