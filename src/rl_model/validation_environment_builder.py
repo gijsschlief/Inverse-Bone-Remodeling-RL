@@ -11,9 +11,10 @@ from bone_remodeling.src.rl_model.parameters import RLParameters
 class ValidationEnvironmentBuilder:
     """Build a model of the rl agent that runs the validation cycle."""
 
-    def __init__(self,
+    def __init__(
+        self,
         surrogate_forwarder: ForwardPass,
-        rl_parameters: RLParameters  = RLParameters(),
+        rl_parameters: RLParameters = RLParameters(),
     ) -> None:
         """Initialize the validation environment builder."""
         self.surrogate_forwarder = surrogate_forwarder

@@ -30,6 +30,9 @@ from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
 
 logger = logging.getLogger(__name__)
 
+# Container for the current learning rate, used to modify it during training.
+current_learning_rate = {"value": RLParameters().learning_rate}
+
 
 def save_model_safely(model: PPO, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
@@ -61,6 +64,11 @@ def _build_environment(
     )
     environment.reset(seed=seed)
     return environment
+
+
+def learning_rate_container(progress_remaining: float) -> float:  # noqa: ARG001
+    """Container for the learning rate, used to modify it during training."""
+    return current_learning_rate["value"]
 
 
 def find_latest_agent(path: Path) -> Path:
@@ -104,7 +112,7 @@ def initialize_new_model(
         n_steps=rl_parameters.n_steps,
         batch_size=rl_parameters.batch_size,
         ent_coef=rl_parameters.ent_coef,
-        learning_rate=rl_parameters.learning_rate,
+        learning_rate=learning_rate_container,
         seed=rl_parameters.seed,
         device=rl_parameters.device,
     )
@@ -153,7 +161,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         model_class=ReversedSurrogateModel,
         model_loader=SurrogateModelLoader,
     )
-    validation_environment_builder = ValidationEnvironmentBuilder(forwarder_ensemble, rl_parameters)
+    validation_environment_builder = ValidationEnvironmentBuilder(
+        forwarder_ensemble, rl_parameters
+    )
 
     number_of_environments: int = 10
     base_seed = 0
@@ -204,13 +214,20 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
             total_timesteps=10_000_000,
             callback=[
                 RenderCallback(
-                    render_freq=999, environment_index=0, rl_parameters=rl_parameters,
+                    render_freq=999,
+                    environment_index=0,
+                    rl_parameters=rl_parameters,
                 ),
                 RewardSavingCallback(
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),
                 ValidationCallback(
-                    validation_data=(validation_forces[:40], validation_densities[:40]), validation_environment_builder=validation_environment_builder, final_forwarder=forwarder_fenics, rl_parameters=rl_parameters, validation_frequency=100_000,
+                    learning_rate_container=current_learning_rate,
+                    validation_data=(validation_forces[:40], validation_densities[:40]),
+                    validation_environment_builder=validation_environment_builder,
+                    final_forwarder=forwarder_fenics,
+                    rl_parameters=rl_parameters,
+                    validation_frequency=200_000,
                 ),
             ],
         )

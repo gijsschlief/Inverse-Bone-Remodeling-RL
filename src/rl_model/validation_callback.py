@@ -16,25 +16,30 @@ from bone_remodeling.src.rl_model.validation_environment_builder import (
 
 logger = logging.getLogger(__name__)
 
+
 class ValidationCallback(BaseCallback):
     """Validate agent based on 10 forward passes with the final one using the fenics model."""
 
-    def __init__(self,
-                validation_data: tuple[np.ndarray, np.ndarray],
-                validation_environment_builder: ValidationEnvironmentBuilder,
-                final_forwarder: ForwardPass,
-                validation_frequency: int = 100_000,
-                rl_parameters: RLParameters = RLParameters()) -> None:
+    def __init__(
+        self,
+        learning_rate_container: dict[str, float],
+        validation_data: tuple[np.ndarray, np.ndarray],
+        validation_environment_builder: ValidationEnvironmentBuilder,
+        final_forwarder: ForwardPass,
+        validation_frequency: int = 100_000,
+        rl_parameters: RLParameters = RLParameters(),
+    ) -> None:
         """Initialize the validation callback."""
         super().__init__(rl_parameters.verbose)
+        self.learning_rate_container = learning_rate_container
         self.validation_environment_builder = validation_environment_builder
         self.fenics_forwarder = final_forwarder
         self.validation_forces, self.validation_densities = validation_data
         self.validation_frequency = validation_frequency
         self.rl_parameters = rl_parameters
+
         self.best_ssim = -np.inf
         self.patience_counter = 0
-
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.validation_frequency != 0:
@@ -58,7 +63,9 @@ class ValidationCallback(BaseCallback):
                     break
 
             # 2) true FEniCS solve of the final force profile
-            true_density = self.fenics_forwarder.forward_pass(validation_environment.force_profile)
+            true_density = self.fenics_forwarder.forward_pass(
+                validation_environment.force_profile
+            )
 
             # 3) compute SSIM vs target
             score = calculate_similarity(
@@ -82,12 +89,16 @@ class ValidationCallback(BaseCallback):
         # increase patience counter
         if self.patience_counter < self.rl_parameters.patience:
             self.patience_counter += 1
-            logger.warning(f"SSIM did not improve, patience counter: {self.patience_counter}, best SSIM: {self.best_ssim:.4f}")
+            logger.warning(
+                f"SSIM did not improve, patience counter: {self.patience_counter}, best SSIM: {self.best_ssim:.4f}"
+            )
             return True
 
         # reduce learning rate if patience is exceeded
         if self.patience_counter >= self.rl_parameters.patience:
-            logger.warning(f"[SSIM did not improve, best SSIM: {self.best_ssim:.4f}] Validation plateau detected, reducing learning rate.")
+            logger.warning(
+                f"[SSIM did not improve, best SSIM: {self.best_ssim:.4f}] Validation plateau detected, reducing learning rate."
+            )
             self.best_ssim = -np.inf
             self.patience_counter = 0
             return self._learning_rate_reducer()
@@ -95,17 +106,16 @@ class ValidationCallback(BaseCallback):
 
     def _learning_rate_reducer(self) -> bool:
         """Reduce learning rate if plateau is detected."""
-        opt = self.model.policy.optimizer
-        old_learning_rate = opt.param_groups[0]['lr']
+        old_learning_rate = self.learning_rate_container["value"]
         new_learning_rate = old_learning_rate * self.rl_parameters.learning_rate_decay
-
 
         if new_learning_rate <= self.rl_parameters.minimum_learning_rate:
             logger.warning("LR is already at minimum, RL simulation has converged!")
             return False
 
-        for parameter_group in opt.param_groups:
-            parameter_group['lr'] = new_learning_rate
+        self.learning_rate_container["value"] = new_learning_rate
 
-        logger.warning(f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}")
+        logger.warning(
+            f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}"
+        )
         return True
