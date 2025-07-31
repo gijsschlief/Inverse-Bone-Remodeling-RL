@@ -36,6 +36,7 @@ class BoneRemodelingEnvironment(Env):
         self.max_steps = rl_parameters.max_steps
         self.density_constraint = rl_parameters.density_constraint
         self.force_boundary = rl_parameters.force_boundary
+        self.location_dead_zone = rl_parameters.location_dead_zone
 
         self.force_shape = (3, self._profile_length)
         self.force_profile = np.zeros(
@@ -143,8 +144,12 @@ class BoneRemodelingEnvironment(Env):
         """
         peak_action, location_action = action
         self.peak_magnitude = self.peak_magnitude + np.float32(peak_action)
+        if abs(location_action) < self.location_dead_zone:
+            move_peak = np.int8(0)
+        else:
+            move_peak = np.int8(np.sign(location_action))
         self.peak_location = np.mod(
-            self.peak_location + np.int8(np.round(location_action)),
+            self.peak_location + move_peak,
             self._profile_length * 3,
         )
 

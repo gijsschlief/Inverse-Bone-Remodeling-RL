@@ -34,3 +34,4 @@ class RLParameters:
     verbose: int = 1
     device: str = "cpu"
     patience: int = 5
+    location_dead_zone: float = 0.1
