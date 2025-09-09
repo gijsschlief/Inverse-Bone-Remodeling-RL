@@ -118,7 +118,7 @@ def animate_density_pyvista(
 
     # Initialize the Plotter
     plotter = pv.Plotter(off_screen=True)
-    plotter.open_gif(output_directory)
+    plotter.open_gif(output_directory.as_posix())
 
     for step, filename in enumerate(file_list):
         grid = pv.read(filename)
@@ -148,7 +148,7 @@ def main() -> None:
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=55,
+        batch_seed=10,
     )
     force_profile = force_profile_generator.merger(
         num_samples=1,

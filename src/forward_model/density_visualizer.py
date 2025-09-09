@@ -237,10 +237,24 @@ def plot_density_pyvista(
 
     """
     try:
-        reader = pv.get_reader(directory)
+        # ensure we pass a string path to PyVista
+        reader = pv.get_reader(str(directory))
         reader.set_active_time_point(0)
-        grid = reader.read()[0]
-        scalar_field_name = grid.array_names[0]
+        data = reader.read()
+        grid = data[0]
+
+        # Safely discover a scalar array name (avoid grid.array_names usage)
+        point_keys = list(grid.point_data.keys()) if hasattr(grid, "point_data") else []
+        cell_keys = list(grid.cell_data.keys()) if hasattr(grid, "cell_data") else []
+
+        if point_keys:
+            scalar_field_name = point_keys[0]
+        elif cell_keys:
+            scalar_field_name = cell_keys[0]
+        else:
+            logger.warning("No point or cell scalar arrays found in file; cannot plot.")
+            return
+
         clim = (simulation_parameters.min_density, simulation_parameters.max_density)
 
         plotter = pv.Plotter()

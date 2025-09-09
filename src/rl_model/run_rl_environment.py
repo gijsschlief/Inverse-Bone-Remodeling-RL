@@ -45,6 +45,7 @@ def save_model_safely(model: PPO, path: Path) -> Path:
             counter += 1
         path = Path(f"{directory}/{base_path}_{counter}{ext}")
     model.save(path)
+    #TODO: ALSO SAVE THE NORMALIZATION PARAMETERS!
     return Path(path)
 
 
@@ -162,7 +163,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         model_loader=SurrogateModelLoader,
     )
     validation_environment_builder = ValidationEnvironmentBuilder(
-        forwarder_ensemble, rl_parameters
+        forwarder_ensemble, rl_parameters,
     )
 
     number_of_environments: int = 10
