@@ -44,17 +44,20 @@ def plot_density_matrix(
     axis.set_ylabel("Rows")
 
     # Annotate matrix values
-    for i in range(matrix.shape[0]):
-        for j in range(matrix.shape[1]):
-            axis.text(
-                j,
-                i,
-                f"{matrix[i, j]:.2f}",
-                ha="center",
-                va="center",
-                color="white",
-                fontsize=8,
-            )
+    # Only annotate if the matrix is not too large
+    max_annotate_size = 10
+    if matrix.shape[0] <= max_annotate_size and matrix.shape[1] <= max_annotate_size:
+        for i in range(matrix.shape[0]):
+            for j in range(matrix.shape[1]):
+                axis.text(
+                    j,
+                    i,
+                    f"{matrix[i, j]:.2f}",
+                    ha="center",
+                    va="center",
+                    color="white",
+                    fontsize=8,
+                )
 
     # Plot force arrows if force_profile is provided
     if force_profile is not None:

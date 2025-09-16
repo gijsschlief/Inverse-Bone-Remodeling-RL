@@ -161,7 +161,26 @@ def main() -> None:
         save_data=True,
     )
 
-    simulation = DensitySimulation(parameters)
+    # Alternative profile for Weinans model validation ----
+    validation_force_maginitude = 5
+    n_points = 40
+    scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
+
+    validation_force_profile = np.array([
+        scale_factors * validation_force_maginitude,
+        np.zeros(n_points),
+        np.zeros(n_points),
+    ])
+
+    validation_parameters = SimulationParameters(
+        force_profile=validation_force_profile,
+        initial_density_field=np.ones((n_points, n_points)) * 0.8,
+        save_data=True,
+    )
+    # To run change parameters to validation_parameters ----
+
+
+    simulation = DensitySimulation(validation_parameters)
 
     animate_density_matplotlib(
         simulation=simulation,
