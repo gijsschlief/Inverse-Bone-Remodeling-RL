@@ -162,8 +162,8 @@ def main() -> None:
     )
 
     # Alternative profile for Weinans model validation ----
-    validation_force_maginitude = 5
-    n_points = 40
+    validation_force_maginitude = -5
+    n_points = 10
     scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
 
     validation_force_profile = np.array([
@@ -179,8 +179,21 @@ def main() -> None:
     )
     # To run change parameters to validation_parameters ----
 
+    # Check the moment theory about the pillar.
+    moment_force_profile = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 5],
+                                      [0, 0, 0, 0, 0, 0, 0, 0, 0, -5],
+                                     ])
 
-    simulation = DensitySimulation(validation_parameters)
+    moment_parameters = SimulationParameters(
+        force_profile=moment_force_profile,
+        initial_density_field=np.ones((10, 10)) * 0.8,
+        save_data=True,
+    )
+    # To run change parameters to moment_parameters ----
+
+
+    simulation = DensitySimulation(moment_parameters)
 
     animate_density_matplotlib(
         simulation=simulation,

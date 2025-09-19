@@ -70,7 +70,7 @@ def plot_density_matrix(
         max_force = np.max(np.abs(force_profile))
 
         _build_up_arrows(
-            top_forces,
+            -top_forces, # invert to match plotting direction
             max_force,
             axis,
             width,
