@@ -69,8 +69,8 @@ class SimulationParameters:
 
     # material parameters
     poisson_ratio: float = 0.3
-    elastic_modulus_scale: float = 100.0
-    modulus_exponent: float = 2.0
+    elastic_modulus_scale: float = 3790.0 #100.0 new parameters match validation significantly better
+    modulus_exponent: float = 3.0 #2.0
 
     # remodeling parameters
     remodeling_rate_coefficient: float = 1.0
