@@ -12,6 +12,15 @@ from bone_remodeling.src.inverse_model.inverse_neural_network import (
 from bone_remodeling.src.inverse_model.train_parameters import (
     InverseTrainParameters,
 )
+from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.ensemble import (
+    load_ensemble_models,
+    predict_with_ensemble,
+)
+from bone_remodeling.src.surrogate_model.loader import SurrogateModelLoader
+from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
+    ReversedSurrogateModel,
+)
 from bone_remodeling.src.surrogate_model.normalizor import (
     normalize_data,
     save_normalization_params,
@@ -182,36 +191,71 @@ def combined_loss(predictions: torch.Tensor, targets: torch.Tensor) -> torch.Ten
     """Compute the combined loss (currently MSE)."""
     return torch.nn.functional.mse_loss(predictions, targets)
 
-def calculate_similarity(pred: np.ndarray, target: np.ndarray) -> float:
-    """Calculate similarity between prediction and target arrays."""
-    # Example: cosine similarity
-    pred_flat = pred.flatten()
-    target_flat = target.flatten()
-    if np.linalg.norm(pred_flat) == 0 or np.linalg.norm(target_flat) == 0:
-        return 0.0
-    return np.dot(pred_flat, target_flat) / (np.linalg.norm(pred_flat) * np.linalg.norm(target_flat))
-
 def evaluate_model(
     model: InverseModel,
     x_validation: torch.Tensor,
     y_validation: torch.Tensor,
 ) -> None:
-    """Evaluate the model on the validation set and log the results."""
+    """Evaluate the inverse model by comparing original vs. reconstructed density profiles.
+
+    The process:
+    1. Predict force parameters from density (inverse model).
+    2. Reconstruct force profiles from parameters.
+    3. Run the ensemble surrogate model to predict densities from forces.
+    4. Compare reconstructed densities with original densities using SSIM.
+    """
     model.eval()
     with torch.no_grad():
         validation_predictions = model(x_validation)
         validation_loss = combined_loss(validation_predictions, y_validation).item()
 
-    similarities = [
-        calculate_similarity(
-            validation_predictions[i].cpu().numpy(),
-            y_validation[i].cpu().numpy(),
+    # Convert predicted parameters → 3×10 force profiles
+    validation_predictions = validation_predictions.cpu().numpy()
+    reconstructed_forces = np.array([
+        params_to_force_profile(
+            int(pred[0]),  # peak location
+            int(pred[1]),  # peak side
+            float(pred[2]) # peak height
         )
-        for i in range(x_validation.shape[0])
+        for pred in validation_predictions
+    ])
+
+    # Load the trained forward ensemble models (force → density)
+    model_paths = [
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_5.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_7.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_9.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_10.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_11.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_12.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_13.pth"),
     ]
-    average_similarity = np.mean(similarities)
+    ensemble_models, x_means, x_stds, y_means, y_stds = load_ensemble_models(model_paths, model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader)
+
+    # Predict densities from the estimated force profiles
+    predicted_densities, _ = predict_with_ensemble(ensemble_models, reconstructed_forces, [x_means, x_stds], [y_means, y_stds])
+    if isinstance(predicted_densities, torch.Tensor):
+        predicted_densities = predicted_densities.cpu().numpy()
+
+    # Compare reconstructed vs. true densities
+    true_densities = x_validation.cpu().numpy()
+    ssim_scores = []
+    for i in range(len(true_densities)):
+        ssim_score = calculate_similarity(
+                reference_matrix=true_densities[i],
+                comparison_matrix=predicted_densities[i],
+                method="ssim",
+                baseline=0.1,
+                threshold=0.5)
+        ssim_scores.append(ssim_score)
+
+    average_similarity = float(np.mean(ssim_scores))
     logger.info(
-        f"Validation Loss: {validation_loss:.4f}, Average Similarity: {average_similarity:.4f}",
+        f"Validation Loss: {validation_loss:.4f} | Average SSIM (density reconstruction): {average_similarity:.4f}"
     )
 
 def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]:
@@ -224,6 +268,32 @@ def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]
     peak_location = int(np.argmax(force_profile[peak_side]))
 
     return peak_location, peak_side, peak_height
+
+
+def params_to_force_profile(
+    peak_location: int,
+    peak_side: int,
+    peak_height: float,
+    length: int = 10,
+) -> np.ndarray:
+    """Convert peak location, peak side, and peak height back into a triangular 3xN force profile."""
+    peak_side = min(peak_side, 2)
+    if not (0 <= peak_side < 3):
+        raise ValueError("Peak side must be 0, 1, or 2")
+    if not (0 <= peak_location < length):
+        raise ValueError(f"Peak location must be between 0 and {length - 1}")
+
+    force_profile = np.zeros((3, length), dtype=np.float32)
+
+    for j in range(length):
+        if j < peak_location:
+            force_profile[peak_side, j] = peak_height * (j / peak_location)
+        elif j > peak_location:
+            force_profile[peak_side, j] = peak_height * ((length - 1 - j) / (length - 1 - peak_location))
+        else:
+            force_profile[peak_side, j] = peak_height
+
+    return force_profile
 
 def main(
     data_file_path: Path,
@@ -335,7 +405,7 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json")
 
-    main(data_file_path, model_path, normalize=True, random_state=1)
+    main(data_file_path, model_path, normalize=False, random_state=1)
 
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)
