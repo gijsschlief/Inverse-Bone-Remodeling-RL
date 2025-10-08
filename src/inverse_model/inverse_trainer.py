@@ -6,11 +6,11 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from bone_remodeling.src.inverse_surrogate_model.inverse_neural_network import (
-    InverseSurrogateModel,
+from bone_remodeling.src.inverse_model.inverse_neural_network import (
+    InverseModel,
 )
-from bone_remodeling.src.inverse_surrogate_model.train_parameters import (
-    InverseSurrogateTrainParameters,
+from bone_remodeling.src.inverse_model.train_parameters import (
+    InverseTrainParameters,
 )
 from bone_remodeling.src.surrogate_model.normalizor import (
     normalize_data,
@@ -31,7 +31,7 @@ def convert_tensors(
 
     Args:
     ----
-        x_data (np.ndarray or torch.Tensor): Input features (N, 10, 10).
+        x_data (np.ndarray or torch.Tensor): Input features (N, int, int, float).
         y_data (np.ndarray or torch.Tensor): Target labels (N, 3, 10).
         device (torch.device): Device to which tensors will be moved.
 
@@ -55,32 +55,31 @@ def convert_tensors(
     # Handle y
     if isinstance(y_data, torch.Tensor):
         y_tensor = (
-            y_data.clone().detach().to(torch.float32).reshape(num_samples, 3, 10)
+            y_data.clone().detach().to(torch.float32).reshape(num_samples, 3)
         )
     else:
         y_tensor = torch.tensor(y_data, dtype=torch.float32).reshape(
             num_samples,
             3,
-            10,
         )
 
     return x_tensor.to(device), y_tensor.to(device)
 
 
 def train_model(
-    model: InverseSurrogateModel,
+    model: InverseModel,
     x_data: tuple[torch.Tensor, torch.Tensor],
     y_data: tuple[torch.Tensor, torch.Tensor],
-    train_parameters: InverseSurrogateTrainParameters,
+    train_parameters: InverseTrainParameters,
 ) -> None:
-    """Train the InverseSurrogateModel with early stopping and learning rate scheduling.
+    """Train the InverseModel with early stopping and learning rate scheduling.
 
     Args:
     ----
-        model (InverseSurrogateModel): The model to be trained.
+        model (InverseModel): The model to be trained.
         x_data (tuple[torch.Tensor, torch.Tensor]): Input features and validation features.
         y_data (tuple[torch.Tensor, torch.Tensor]): Target labels and validation labels.
-        train_parameters (SurrogateTrainParameters): Training parameters including device, epochs, batch size, learning rate, patience, min delta, log interval, and log all for first epochs.
+        train_parameters (InverseTrainParameters): Training parameters including device, epochs, batch size, learning rate, patience, min delta, log interval, and log all for first epochs.
 
     """
     x_train, x_validation = x_data
@@ -164,20 +163,36 @@ def train_model(
         logger.info("Loaded best model state after training.")
 
 
-def save_model_safely(model: InverseSurrogateModel, path: Path) -> Path:
+def save_model_safely(model: InverseModel, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
-    if Path.exists(path):
-        base_path, ext = Path.splitext(path)
+    if path.exists():
+        base_path = path.stem
+        ext = path.suffix
         counter = 1
-        while Path.exists(f"{base_path}_{counter}{ext}"):
+        new_path = path.with_name(f"{base_path}_{counter}{ext}")
+        while new_path.exists():
             counter += 1
-        path = Path(f"{base_path}_{counter}{ext}")
+            new_path = path.with_name(f"{base_path}_{counter}{ext}")
+        path = new_path
     model.save_model(path)
-    return Path(path)
+    return path
 
+
+def combined_loss(predictions: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+    """Compute the combined loss (currently MSE)."""
+    return torch.nn.functional.mse_loss(predictions, targets)
+
+def calculate_similarity(pred: np.ndarray, target: np.ndarray) -> float:
+    """Calculate similarity between prediction and target arrays."""
+    # Example: cosine similarity
+    pred_flat = pred.flatten()
+    target_flat = target.flatten()
+    if np.linalg.norm(pred_flat) == 0 or np.linalg.norm(target_flat) == 0:
+        return 0.0
+    return np.dot(pred_flat, target_flat) / (np.linalg.norm(pred_flat) * np.linalg.norm(target_flat))
 
 def evaluate_model(
-    model: InverseSurrogateModel,
+    model: InverseModel,
     x_validation: torch.Tensor,
     y_validation: torch.Tensor,
 ) -> None:
@@ -199,6 +214,16 @@ def evaluate_model(
         f"Validation Loss: {validation_loss:.4f}, Average Similarity: {average_similarity:.4f}",
     )
 
+def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]:
+    """Convert a 3xN force profile into peak location, peak side, and peak height."""
+    if force_profile.shape[0] != 3:
+        raise ValueError("Force profile must have shape (3, N)")
+
+    peak_side = int(np.argmax(np.max(force_profile, axis=1)))
+    peak_height = float(np.max(force_profile[peak_side]))
+    peak_location = int(np.argmax(force_profile[peak_side]))
+
+    return peak_location, peak_side, peak_height
 
 def main(
     data_file_path: Path,
@@ -225,27 +250,39 @@ def main(
     x_val_np, y_val_np = sanitize_data(x_val_np, y_val_np)
     x_test_np, y_test_np = sanitize_data(x_test_np, y_test_np)
 
+    # Turn the force profiles into 3 datapoints: peak location, peak side, peak height
+    x_train_np = np.array(
+        [force_profile_to_params(fp.reshape(3, -1)) for fp in x_train_np],
+        dtype=np.float32,
+    )
+    x_val_np = np.array(
+        [force_profile_to_params(fp.reshape(3, -1)) for fp in x_val_np],
+        dtype=np.float32,
+    )
+    x_test_np = np.array(
+        [force_profile_to_params(fp.reshape(3, -1)) for fp in x_test_np],
+        dtype=np.float32,
+    )
+
     if normalize:
         logger.info("Normalizing data...")
-        x_train_np, x_mean, x_std = normalize_data(x_train_np)
-        x_val_np, _, _ = normalize_data(x_val_np, x_mean, x_std)
-        x_test_np, _, _ = normalize_data(x_test_np, x_mean, x_std)
         y_train_np, y_mean, y_std = normalize_data(y_train_np)
         y_val_np, _, _ = normalize_data(y_val_np, y_mean, y_std)
         y_test_np, _, _ = normalize_data(y_test_np, y_mean, y_std)
 
         logger.info(
-            f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}",
+            f"Normalization parameters: y_mean={y_mean}, y_std={y_std}",
         )
     else:
         logger.info("Skipping normalization.")
 
-    x_train_tensor = torch.tensor(x_train_np, dtype=torch.float32)
-    x_val_tensor = torch.tensor(x_val_np, dtype=torch.float32)
-    x_test_tensor = torch.tensor(x_test_np, dtype=torch.float32)
-    y_train_tensor = torch.tensor(y_train_np, dtype=torch.float32)
-    y_val_tensor = torch.tensor(y_val_np, dtype=torch.float32)
-    y_test_tensor = torch.tensor(y_test_np, dtype=torch.float32)
+    # TURN THE NAMES AROUND
+    y_train_tensor = torch.tensor(x_train_np, dtype=torch.float32)
+    y_val_tensor = torch.tensor(x_val_np, dtype=torch.float32)
+    y_test_tensor = torch.tensor(x_test_np, dtype=torch.float32)
+    x_train_tensor = torch.tensor(y_train_np, dtype=torch.float32)
+    x_val_tensor = torch.tensor(y_val_np, dtype=torch.float32)
+    x_test_tensor = torch.tensor(y_test_np, dtype=torch.float32)
 
     logger.info("Preparing tensors...")
     x_train, y_train = convert_tensors(x_train_tensor, y_train_tensor, device)
@@ -254,7 +291,7 @@ def main(
     if x_test_tensor is not None and y_test_tensor is not None:
         x_test, y_test = convert_tensors(x_test_tensor, y_test_tensor, device)
 
-    model = InverseSurrogateModel().to(device)
+    model = InverseModel().to(device)
     logger.info(f"Model architecture:\n{model}")
 
     logger.info(
@@ -262,9 +299,9 @@ def main(
     )
     train_model(
         model,
-        [x_train, x_val],
-        [y_train, y_val],
-        train_parameters=InverseSurrogateTrainParameters(
+        (x_train, x_val),
+        (y_train, y_val),
+        train_parameters=InverseTrainParameters(
             device=device,
         ),
     )
@@ -273,10 +310,10 @@ def main(
     if normalize:
         save_normalization_params(
             model_path.with_suffix(".npz"),
-            x_mean,
-            x_std,
             y_mean,
             y_std,
+            0,
+            0,
         )
     logger.info(f"Model saved to {model_path}")
 
@@ -298,8 +335,7 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json")
 
-    for i in range(5, 10):
-        main(data_file_path, model_path, normalize=True, random_state=i)
+    main(data_file_path, model_path, normalize=True, random_state=1)
 
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)

@@ -1,4 +1,4 @@
-"""Neural Network Surrogate Model for Bone Remodeling Simulation."""
+"""Neural Network Inverse Model for Bone Remodeling Simulation."""
 
 import logging
 from pathlib import Path
@@ -10,12 +10,15 @@ import torch
 logger = logging.getLogger(__name__)
 
 
-class SurrogateModel(torch.nn.Module):
-    """Surrogate Neural Network Model for bone remodeling simulation."""
+class InverseModel(torch.nn.Module):
+    """Inverse Neural Network Model for bone remodeling simulation."""
 
     def __init__(self) -> None:
-        """Initialize the InverseSurrogateModel."""
+        """Initialize the InverseModel."""
         super().__init__()
+
+        self.train_losses: list[float] = []
+        self.val_losses: list[float] = []
 
         self.conv_block = torch.nn.Sequential(
             torch.nn.Conv2d(1, 32, kernel_size=3, padding=1),
@@ -42,7 +45,7 @@ class SurrogateModel(torch.nn.Module):
             torch.nn.Linear(1024, 512),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.3),
-            torch.nn.Linear(512, 30),
+            torch.nn.Linear(512, 3),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -50,8 +53,8 @@ class SurrogateModel(torch.nn.Module):
         x = x.unsqueeze(1)  # (N, 10, 10) → (N, 1, 10, 10)
         x = self.conv_block(x)  # → (N, 128, 10, 10)
         x = self.global_pool(x)  # → (N, 128, 10, 10)
-        x = self.fc(x)  # → (N, 30)
-        return x.view(-1, 3, 10)  # → (N, 3, 10)
+        x = self.fc(x)  # → (N, 3, 1)
+        return x.view(-1, 3)  # → (N, 3)
 
     def save_model(self, file_path: Path) -> None:
         """Save the model state to a file."""
@@ -64,7 +67,7 @@ class SurrogateModel(torch.nn.Module):
 
     def __str__(self) -> str:
         """Return a string representation of the model."""
-        return f"LargeSurrogateModel(\n  {self.input_fc}\n  {self.conv_block}\n)"
+        return f"LargeSurrogateModel(\n  {self.fc}\n  {self.conv_block}\n)"
 
     def __repr__(self) -> str:
         """Return a string representation of the model."""
@@ -76,7 +79,7 @@ class SurrogateModel(torch.nn.Module):
 
     def __len__(self) -> int:
         """Return the number of layers in the model."""
-        return len(list(self.input_fc)) + len(list(self.conv_block))
+        return len(list(self.fc)) + len(list(self.conv_block))
 
     def plot_loss(self) -> None:
         """Plot the training and validation loss history."""
