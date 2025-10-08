@@ -163,7 +163,7 @@ def main() -> None:
 
     # Alternative profile for Weinans model validation ----
     validation_force_maginitude = -25 # -5 for previous parameters
-    n_points = 40
+    n_points = 100
     scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
 
     validation_force_profile = np.array([
