@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from bone_remodeling.src.inverse_surrogate_model.inverse_nn import (
+from bone_remodeling.src.inverse_surrogate_model.inverse_neural_network import (
     InverseSurrogateModel,
 )
 from bone_remodeling.src.inverse_surrogate_model.train_parameters import (
@@ -296,7 +296,7 @@ if __name__ == "__main__":
     )
 
     model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
-    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
+    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json")
 
     for i in range(5, 10):
         main(data_file_path, model_path, normalize=True, random_state=i)
