@@ -3,10 +3,12 @@
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from bone_remodeling.src.inverse_model.inverse_neural_network import (
+from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
+from bone_remodeling.src.inverse_model.inverse_neural_network_simple import (
     InverseModel,
 )
 from bone_remodeling.src.inverse_model.train_parameters import (
@@ -213,9 +215,9 @@ def evaluate_model(
     validation_predictions = validation_predictions.cpu().numpy()
     reconstructed_forces = np.array([
         params_to_force_profile(
-            int(pred[0]),  # peak location
-            int(pred[1]),  # peak side
-            float(pred[2]) # peak height
+            int(np.clip(pred[0], 0, 9)),
+            int(np.clip(np.round(pred[1]), 0, 2)),
+            float(np.clip(pred[2], 0.0, 1.0))
         )
         for pred in validation_predictions
     ])
@@ -243,6 +245,17 @@ def evaluate_model(
 
     # Compare reconstructed vs. true densities
     true_densities = x_validation.cpu().numpy()
+    true_forces = y_validation.cpu().numpy()
+    true_force_profiles = np.array([
+            params_to_force_profile(
+                int(np.clip(true_force_data[0], 0, 9)),
+                int(np.clip(np.round(true_force_data[1]), 0, 2)),
+                float(np.clip(true_force_data[2], 0.0, 1.0))
+            )
+            for true_force_data in true_forces
+        ])
+
+
     ssim_scores = []
     for i in range(len(true_densities)):
         ssim_score = calculate_similarity(
@@ -257,6 +270,26 @@ def evaluate_model(
     logger.info(
         f"Validation Loss: {validation_loss:.4f} | Average SSIM (density reconstruction): {average_similarity:.4f}"
     )
+
+    # === Show sample visualizations ===
+    for i in range(10):
+        fig, axes = plt.subplots(1, 2)
+        idx = np.random.choice(len(true_densities))
+        fig.suptitle(f"Inverse Model Evaluation Samples (Original vs. Prediction) {idx}")
+        plot_density_matrix(
+            true_densities[idx],
+            force_profile=true_force_profiles[idx],
+            axis=axes[0],
+            title="Original data",
+        )
+        plot_density_matrix(
+            predicted_densities[idx],
+            force_profile=reconstructed_forces[idx],
+            axis=axes[1],
+            title="Prediction",
+        )
+        plt.tight_layout()
+        plt.show()
 
 def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]:
     """Convert a 3xN force profile into peak location, peak side, and peak height."""
@@ -286,13 +319,12 @@ def params_to_force_profile(
     force_profile = np.zeros((3, length), dtype=np.float32)
 
     for j in range(length):
-        if j < peak_location:
+        if j < peak_location and peak_location > 0:
             force_profile[peak_side, j] = peak_height * (j / peak_location)
-        elif j > peak_location:
+        elif j > peak_location and peak_location < length - 1:
             force_profile[peak_side, j] = peak_height * ((length - 1 - j) / (length - 1 - peak_location))
         else:
             force_profile[peak_side, j] = peak_height
-
     return force_profile
 
 def main(
