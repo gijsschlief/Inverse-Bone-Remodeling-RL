@@ -82,7 +82,8 @@ def evaluate_agent(
 def main() -> None:
     """Evaluate the RL agent."""
     directory_path = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_profiles_1000_samples_0708_1457.json",
+#        "/home/gijs/Desktop/Thesis/data/old_raw/training_triangular_profiles_1000_samples_0708_1457.json",
+        "/home/gijs/Desktop/Thesis/data/raw_triangular/training_triangular_third_order_1000_samples_0720_1430.json",
     )
     result = forward_data_reader(directory_path)
     if result is not None:
@@ -94,7 +95,7 @@ def main() -> None:
         random_state=0,
     )
 
-    model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/trained_agent.zip")
+    model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/discrete_agents")
 
     rl_parameters = RLParameters(
         max_steps=1,
@@ -103,8 +104,8 @@ def main() -> None:
     all_results = []
     for i in range(10):
         agent_evaluation_environment = BoneRemodelingEnvironment(
-            surrogate_model_path=Path(
-                "/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth",
+            forwarder=Path(
+                "/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth",
             ),
             target_densities=test_density_profiles[i],
             target_forces=test_forces[i],

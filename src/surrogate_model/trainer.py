@@ -171,12 +171,16 @@ def train_model(
 
 def save_model_safely(model: SurrogateModel, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
-    if Path.exists(path):
-        base_path, ext = Path.splitext(path)
-        counter = 1
-        while Path.exists(f"{base_path}_{counter}{ext}"):
-            counter += 1
-        path = Path(f"{base_path}_{counter}{ext}")
+    try:
+        if Path.exists(path):
+            base_path, ext = Path.splitext(path) # FIX LATER
+            counter = 1
+            while Path.exists(Path(f"{base_path}_{counter}{ext}")):
+                counter += 1
+            path = Path(f"{base_path}_{counter}{ext}")
+    except Exception:
+        logger.info("Error checking for existing file, proceeding to save model.")
+        pass
     model.save_model(path)
     return Path(path)
 
@@ -285,7 +289,7 @@ def main(
         )
     logger.info(f"Model saved to {model_path}")
 
-    # model.plot_loss()
+    model.plot_loss()
 
     logger.info("Evaluating model on validation set.")
 

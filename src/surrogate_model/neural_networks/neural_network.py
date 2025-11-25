@@ -91,7 +91,8 @@ class SurrogateModel(torch.nn.Module):
         plt.figure(figsize=(10, 5))
         plt.plot(self.train_losses, label="Train Loss")
         if self.val_losses:
-            plt.plot(self.val_losses, label="Validation Loss")
+            float_val_losses = [loss.item() for loss in self.val_losses]
+            plt.plot(float_val_losses, label="Validation Loss")
         plt.xlabel("Epoch")
         plt.ylabel("Loss")
         plt.yscale("log")

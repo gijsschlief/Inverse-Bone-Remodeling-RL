@@ -215,7 +215,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
             total_timesteps=10_000_000,
             callback=[
                 RenderCallback(
-                    render_freq=999,
+                    render_freq=1,
                     environment_index=0,
                     rl_parameters=rl_parameters,
                 ),
@@ -242,9 +242,9 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/discrete_agents.zip")
+    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/ensemble_agent_10mil.zip")
     DATA_PATH = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json",
+        "/home/gijs/Desktop/Thesis/data/raw_triangular/training_triangular_third_order_15000_samples_0724_0629.json",
     )
     SURROGATE_PATHS = [
         Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
