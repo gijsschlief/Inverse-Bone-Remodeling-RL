@@ -1,0 +1,184 @@
+"""
+Parameter sweep tool for scientifically selecting convergence constants
+for the forward bone remodeling model.
+
+This implements:
+1. A high-quality reference run with very strict tolerances.
+2. A sweep over multiple tolerance combinations.
+3. L2 error vs. reference + runtime measurement.
+4. CSV output + optional Pareto plot.
+
+Author: ChatGPT (2025)
+"""
+
+import time
+import csv
+import itertools
+from pathlib import Path
+from dataclasses import replace
+
+import numpy as np
+from fenics import set_log_level, LogLevel  # type: ignore
+
+from bone_remodeling.src.forward_model.main import DensitySimulation  # type: ignore
+from bone_remodeling.src.forward_model.parameters import SimulationParameters  # type: ignore
+from bone_remodeling.src.forward_data.force_profile_generator import ForceProfileGenerator  # type: ignore
+
+
+set_log_level(LogLevel.ERROR)
+
+
+# ----------------------------------------------------------------------
+# Utility functions
+# ----------------------------------------------------------------------
+
+def run_simulation(params: SimulationParameters) -> np.ndarray:
+    """Run a simulation once and return the final density field."""
+    sim = DensitySimulation(parameters=params)
+    sim.reset()
+    sim.update_force_profile(params.force_profile)
+    sim.run()
+    return sim.get_density()
+
+
+def compute_l2_error(a: np.ndarray, b: np.ndarray) -> float:
+    """Compute relative L2 error."""
+    return np.linalg.norm(a - b) / np.linalg.norm(b)
+
+
+# ----------------------------------------------------------------------
+# Reference simulation
+# ----------------------------------------------------------------------
+
+def run_reference_simulation(base_params: SimulationParameters) -> np.ndarray:
+    """
+    Run a very tight simulation to get a high-quality reference solution.
+    """
+    print("\n=== Running reference simulation (high-quality baseline) ===\n")
+
+    ref_params = replace(
+        base_params,
+        convergence_tolerance=1e-9,
+        convergence_tolerance_decay=1.0,
+        convergence_after_steps=20,
+        convergence_steps_decay=1.0,
+        boundary_tolerance=1e-12,
+    )
+
+    t0 = time.time()
+    rho_ref = run_simulation(ref_params)
+    t1 = time.time()
+
+    print(f"Reference simulation runtime: {t1 - t0:.2f}s")
+
+    return rho_ref
+
+
+# ----------------------------------------------------------------------
+# Parameter sweep
+# ----------------------------------------------------------------------
+
+def parameter_grid():
+    """
+    Yield dictionaries of possible parameter combinations to test.
+    Modify here to change sweep ranges.
+    """
+    tol0_options = [1e-8, 1e-7, 1e-6, 1e-5]
+    decay_tol_options = [0.98, 1.0, 1.05, 1.09]
+
+    ct0_options = [1, 3, 5, 10, 20]
+    ct_decay_options = [0.90, 0.96, 1.00]
+
+    boundary_options = [1e-12, 1e-14]
+
+    for tol0, tol_decay, ct0, ct_decay, btol in itertools.product(
+        tol0_options, decay_tol_options, ct0_options, ct_decay_options, boundary_options
+    ):
+        yield dict(
+            convergence_tolerance=tol0,
+            convergence_tolerance_decay=tol_decay,
+            convergence_after_steps=ct0,
+            convergence_steps_decay=ct_decay,
+            boundary_tolerance=btol,
+        )
+
+
+def run_parameter_sweep(base_params: SimulationParameters, rho_ref: np.ndarray, output_csv: Path):
+    """
+    Run the full parameter sweep and save results to CSV.
+    """
+    print("\n=== Starting parameter sweep ===\n")
+
+    with output_csv.open("w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow([
+            "tol0", "tol_decay", "C0", "C_decay", "boundary_tol",
+            "runtime_s", "l2_error"
+        ])
+
+        for combo in parameter_grid():
+            print(f"Testing params: {combo}")
+
+            params = replace(base_params, **combo)
+
+            t0 = time.time()
+            try:
+                rho_sim = run_simulation(params)
+                runtime = time.time() - t0
+                l2err = compute_l2_error(rho_sim, rho_ref)
+            except Exception as e:
+                print(f"Simulation failed: {str(e)}")
+                runtime = np.nan
+                l2err = np.nan
+
+            writer.writerow([
+                combo["convergence_tolerance"],
+                combo["convergence_tolerance_decay"],
+                combo["convergence_after_steps"],
+                combo["convergence_steps_decay"],
+                combo["boundary_tolerance"],
+                runtime,
+                l2err,
+            ])
+
+            print(f"  → runtime={runtime:.2f}s, L2 error={l2err:.3e}")
+
+    print(f"\nSweep complete. Results written to: {output_csv}")
+
+
+# ----------------------------------------------------------------------
+# Main
+# ----------------------------------------------------------------------
+
+if __name__ == "__main__":
+
+    #
+    # Define a representative load case (same as you use in your data generator)
+    #
+    initial_density = np.full((10, 10), 0.8)
+    force_profile_generator = ForceProfileGenerator(
+        profile_length=10,
+        batch_seed=np.random.randint(0, 1_000_000),
+    )
+
+    test_force_profile = force_profile_generator.triangular(
+        num_samples=1,
+        force_max=20.0,
+    )[0]
+
+    base_params = SimulationParameters(
+        force_profile=test_force_profile,
+        initial_density_field=initial_density,
+    )
+
+    output_csv = Path("parameter_sweep_results.csv")
+
+    #
+    # 1) High-quality reference
+    #
+    rho_ref = run_reference_simulation(base_params)
+
+    #
+    # 2) Full parameter sweep
+    #
+    run_parameter_sweep(base_params, rho_ref, output_csv)
