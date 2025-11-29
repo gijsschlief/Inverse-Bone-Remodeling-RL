@@ -16,7 +16,9 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
@@ -61,13 +63,11 @@ def run_reference_simulation(initial_simulation_parameters: SimulationParameters
 
 def parameter_grid() -> Generator[Any, Any, Any]:
     """Yield dictionaries of possible parameter combinations to test. Modify here to change sweep ranges."""
-    tol0_options = [1e-8, 1e-7, 1e-6, 1e-5]
-    decay_tol_options = [0.98, 1.0, 1.05, 1.09]
-
-    ct0_options = [1, 3, 5, 10, 20]
-    ct_decay_options = [0.90, 0.96, 1.00]
-
-    boundary_options = [1e-12, 1e-14]
+    tol0_options = [1e-9, 3e-9, 1e-8, 3e-8, 1e-7, 3e-7, 1e-6, 3e-6]
+    decay_tol_options = [1.00, 1.01, 1.02, 1.03, 1.05]
+    ct0_options = [1, 3, 5, 7, 10, 15]
+    ct_decay_options = [1.0, 0.99, 0.98, 0.97]
+    boundary_options = [1e-12]
 
     for tol0, tol_decay, ct0, ct_decay, btol in itertools.product(
         tol0_options, decay_tol_options, ct0_options, ct_decay_options, boundary_options
@@ -88,7 +88,7 @@ def run_parameter_sweep(base_params: SimulationParameters, reference_density: np
         writer = csv.writer(f)
         writer.writerow([
             "tol0", "tol_decay", "C0", "C_decay", "boundary_tol",
-            "runtime_s", "l2_error"
+            "runtime_s", "l2_error",
         ])
 
         for combo in parameter_grid():
@@ -101,7 +101,7 @@ def run_parameter_sweep(base_params: SimulationParameters, reference_density: np
                 rho_sim = run_simulation(params)
                 runtime = time.time() - t0
                 l2err = compute_l2_error(rho_sim, reference_density)
-            except SyntaxError as e:
+            except Exception as e:
                 logger.error(f"Simulation failed: {e!s}")
                 runtime = np.nan
                 l2err = np.nan
@@ -118,18 +118,51 @@ def run_parameter_sweep(base_params: SimulationParameters, reference_density: np
             logger.info(f"  → runtime={runtime:.2f}s, L2 error={l2err:.3e}")
     logger.info(f"\nSweep complete. Results written to: {output_csv}")
 
-def main() -> None:
+def datasweep() -> None:
     """Define a representative loadcase and run a parameter sweep."""
     initial_density = np.full((10, 10), 0.8)
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
         batch_seed=np.random.randint(0, 1_000_000))
-    test_force_profile = force_profile_generator.triangular(num_samples=1, force_max=20.0)[0]
+    test_force_profile = force_profile_generator.merger(num_samples=3, force_max=20.0)[0]
 
     simulation_base_parameters = SimulationParameters(force_profile=test_force_profile, initial_density_field=initial_density)
     output_csv = Path("parameter_sweep_results.csv")
     density_reference = run_reference_simulation(simulation_base_parameters)
     run_parameter_sweep(simulation_base_parameters, density_reference, output_csv)
 
+def pareto_plot() -> None:
+    """Generate a Pareto plot from the CSV results."""
+    df = pd.read_csv("parameter_sweep_results.csv")
+
+    # Remove failed runs
+    df = df.dropna(subset=["runtime_s", "l2_error"])
+
+    pareto = []
+    for _i, row_i in df.iterrows():
+        dominated = False
+        for _j, row_j in df.iterrows():
+            if (
+                (row_j["runtime_s"] <= row_i["runtime_s"]) and
+                (row_j["l2_error"] <= row_i["l2_error"]) and
+                ((row_j["runtime_s"] < row_i["runtime_s"]) or
+                (row_j["l2_error"] < row_i["l2_error"]))
+            ):
+                dominated = True
+                break
+        if not dominated:
+            pareto.append(row_i)
+
+    pareto_df = pd.DataFrame(pareto)
+    logger.info(f"Pareto-optimal points:\n{pareto_df}")
+    plt.scatter(df["runtime_s"], df["l2_error"], s=10)
+    plt.xlabel("Runtime (s)")
+    plt.ylabel("Relative L2 error")
+    plt.yscale("log")
+    plt.title("Parameter sweep — Runtime vs Error")
+    plt.scatter(pareto_df["runtime_s"], pareto_df["l2_error"], color="red", s=30)
+    plt.show()
+
 if __name__ == "__main__":
-    main()
+    datasweep()
+    pareto_plot()
