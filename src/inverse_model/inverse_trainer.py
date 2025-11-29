@@ -217,7 +217,7 @@ def evaluate_model(
         params_to_force_profile(
             int(np.clip(pred[0], 0, 9)),
             int(np.clip(np.round(pred[1]), 0, 2)),
-            float(np.clip(pred[2], 0.0, 1.0))
+            float(np.clip(pred[2], 0.0, 1.0)),
         )
         for pred in validation_predictions
     ])
@@ -250,7 +250,7 @@ def evaluate_model(
             params_to_force_profile(
                 int(np.clip(true_force_data[0], 0, 9)),
                 int(np.clip(np.round(true_force_data[1]), 0, 2)),
-                float(np.clip(true_force_data[2], 0.0, 1.0))
+                float(np.clip(true_force_data[2], 0.0, 1.0)),
             )
             for true_force_data in true_forces
         ])
@@ -268,7 +268,7 @@ def evaluate_model(
 
     average_similarity = float(np.mean(ssim_scores))
     logger.info(
-        f"Validation Loss: {validation_loss:.4f} | Average SSIM (density reconstruction): {average_similarity:.4f}"
+        f"Validation Loss: {validation_loss:.4f} | Average SSIM (density reconstruction): {average_similarity:.4f}",
     )
 
     # === Show sample visualizations ===

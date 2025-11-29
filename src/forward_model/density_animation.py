@@ -172,7 +172,7 @@ def main() -> None:
         np.zeros(n_points),
     ])
 
-    validation_parameters = SimulationParameters(
+    validation_parameters = SimulationParameters(  # noqa: F841
         force_profile=validation_force_profile,
         initial_density_field=np.ones((n_points, n_points)) * 0.8,
         save_data=True,
@@ -185,7 +185,7 @@ def main() -> None:
                                       [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                                      ])
 
-    moment_parameters = SimulationParameters(
+    moment_parameters = SimulationParameters(  # noqa: F841
         force_profile=moment_force_profile,
         initial_density_field=np.ones((10, 10)) * 0.8,
         save_data=True,
@@ -193,7 +193,7 @@ def main() -> None:
     # To run change parameters to moment_parameters ----
 
 
-    simulation = DensitySimulation(validation_parameters)
+    simulation = DensitySimulation(parameters)
 
     animate_density_matplotlib(
         simulation=simulation,

@@ -64,7 +64,7 @@ class ValidationCallback(BaseCallback):
 
             # 2) true FEniCS solve of the final force profile
             true_density = self.fenics_forwarder.forward_pass(
-                validation_environment.force_profile
+                validation_environment.force_profile,
             )
 
             # 3) compute SSIM vs target
@@ -90,14 +90,14 @@ class ValidationCallback(BaseCallback):
         if self.patience_counter < self.rl_parameters.patience:
             self.patience_counter += 1
             logger.warning(
-                f"SSIM did not improve, patience counter: {self.patience_counter}, best SSIM: {self.best_ssim:.4f}"
+                f"SSIM did not improve, patience counter: {self.patience_counter}, best SSIM: {self.best_ssim:.4f}",
             )
             return True
 
         # reduce learning rate if patience is exceeded
         if self.patience_counter >= self.rl_parameters.patience:
             logger.warning(
-                f"[SSIM did not improve, best SSIM: {self.best_ssim:.4f}] Validation plateau detected, reducing learning rate."
+                f"[SSIM did not improve, best SSIM: {self.best_ssim:.4f}] Validation plateau detected, reducing learning rate.",
             )
             self.best_ssim = -np.inf
             self.patience_counter = 0
@@ -116,6 +116,6 @@ class ValidationCallback(BaseCallback):
         self.learning_rate_container["value"] = new_learning_rate
 
         logger.warning(
-            f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}"
+            f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}",
         )
         return True

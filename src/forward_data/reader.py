@@ -19,10 +19,9 @@ from pathlib import Path
 from typing import Any, Union
 
 import numpy as np
-import scipy
 
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def forward_data_reader(  # noqa: PLR0911
     file_path: Union[Path, str, Sequence[Union[str, Path]]],
@@ -206,46 +205,37 @@ def _convert_forward_data_to_numpy(
 
 ################################ ADDITIONAL CODE FOR DIVERSITY METRICS ################################
 
-def compute_diversity_metrics(force_profiles, dataset_name="Dataset"):
+def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
     """Compute simple dataset diversity metrics for biomechanical force profiles.
 
     Assumes `force_profiles` is shape (n_samples, n_nodes) or (n_samples, n_features).
     """
-    import numpy as np
-    from scipy.stats import entropy
+    from scipy.stats import entropy  # noqa: PLC0415
 
-    # 1️⃣ Coverage fraction (fraction of nodes ever loaded)
+    # Coverage fraction (fraction of nodes ever loaded)
     nonzero_counts = np.count_nonzero(force_profiles, axis=0)
     coverage_fraction = np.count_nonzero(nonzero_counts) / force_profiles.shape[1]
 
-    # 2️⃣ Shannon entropy of location distribution (normalized)
+    # Shannon entropy of location distribution (normalized)
     # Average absolute load per node, normalised to sum 1
     node_loads = np.abs(force_profiles).sum(axis=0)
-    p = node_loads / node_loads.sum()
-    H = entropy(p)  # bits of information
-    Hmax = np.log(len(p))
-    normalized_entropy = H / Hmax
+    normalized_node_loads = node_loads / node_loads.sum()
+    location_entropy = entropy(normalized_node_loads)  # bits of information
+    max_entropy = np.log(len(normalized_node_loads))
+    normalized_entropy = location_entropy / max_entropy
 
-    # 3️⃣ Mean pairwise L2 distance (sampled for efficiency)
+    # Mean pairwise L2 distance (sampled for efficiency)
     n_samples = min(2000, force_profiles.shape[0])
-    idx = np.random.choice(force_profiles.shape[0], n_samples, replace=False)
-    sampled = force_profiles[idx]
-    diff = sampled[:, None, :] - sampled[None, :, :]
-    l2 = np.linalg.norm(diff, axis=-1)
+    sample_indices = np.random.choice(force_profiles.shape[0], n_samples, replace=False)
+    sampled = force_profiles[sample_indices]
+    pairwise_differences = sampled[:, None, :] - sampled[None, :, :]
+    l2 = np.linalg.norm(pairwise_differences, axis=-1)
     mean_pairwise_distance = np.mean(l2[np.triu_indices_from(l2, k=1)])
 
-    # 4️⃣ Force energy variance
+    # Force energy variance
     energies = np.sum(force_profiles**2, axis=1)
     energy_mean = np.mean(energies)
     energy_var = np.var(energies)
-
-
-    # Print results neatly
-    print(f"\n--- Diversity Metrics for {dataset_name} ---")
-    print(f"Coverage fraction:        {coverage_fraction:.2f}")
-    print(f"Location entropy (H/Hmax): {normalized_entropy:.2f}")
-    print(f"Mean pairwise L2 distance: {mean_pairwise_distance:.3f}")
-    print(f"Energy mean ± var:         {energy_mean:.3f} ± {energy_var:.3f}")
 
     return {
         "coverage_fraction": coverage_fraction,
@@ -269,8 +259,11 @@ if __name__ == "__main__":
         logger.error("Failed to load data: forward_data_reader returned None.")
 
     # Add a plot that visualizes the distribution of the output densities
-    from bone_remodeling.src.forward_model.density_visualizer import plot_density_matrix  # type: ignore
     import matplotlib.pyplot as plt
+
+    from bone_remodeling.src.forward_model.density_visualizer import (
+        plot_density_matrix,  # type: ignore
+    )
     avg_output_densities = output_densities.mean(axis=0)
     avg_force_profiles = force_profiles.mean(axis=0)
     std_force_profiles = force_profiles.std(axis=0)
@@ -286,7 +279,10 @@ if __name__ == "__main__":
 
     directory_path_triangular = Path("/home/gijs/Desktop/Thesis/data/raw_triangular/")
     result_triangular = forward_data_reader(directory_path_triangular)
-    _, force_profiles_triangular, output_densities_triangular = result_triangular
+    try:
+        _, force_profiles_triangular, output_densities_triangular = result_triangular
+    except TypeError:
+        logger.error("Failed to load data from triangular dataset: forward_data_reader returned None.")
 
     force_profile_energy = np.zeros(force_profiles.shape[0])
     force_profile_flat = np.zeros((force_profiles.shape[0], force_profiles.shape[1]*force_profiles.shape[2]))
@@ -326,15 +322,13 @@ if __name__ == "__main__":
     plt.xlabel("Force Profile Energy Value")
     plt.ylabel("Frequency")
     plt.legend(["Dataset Supervised Learning", "Dataset RL"])
-
     plt.show()
 
 
-    metrics_supervised = compute_diversity_metrics(force_profiles_flat, "Supervised Learning Dataset")
-    metrics_rl = compute_diversity_metrics(force_profiles_flat_triangular, "RL Dataset")
+    metrics_supervised = compute_diversity_metrics(force_profile_flat)
+    metrics_rl = compute_diversity_metrics(force_profile_flat_triangular)
 
-    # Optional: print a small comparison table
-    print("Metric | Supervised | RL")
-    print("--------------------------------------")
-    for key in metrics_supervised.keys():
-        print(f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}")
+    logger.info("Metric | Supervised | RL")
+    logger.info("--------------------------------------")
+    for key in metrics_supervised:
+        logger.info(f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}")

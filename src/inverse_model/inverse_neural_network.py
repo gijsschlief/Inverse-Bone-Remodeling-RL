@@ -23,11 +23,11 @@ class InverseModel(torch.nn.Module):
         # === Coordinate channels: encode (x, y) position ===
         self.register_buffer(
             "coord_x",
-            torch.linspace(-1, 1, 10).repeat(10, 1).unsqueeze(0).unsqueeze(0)
+            torch.linspace(-1, 1, 10).repeat(10, 1).unsqueeze(0).unsqueeze(0),
         )
         self.register_buffer(
             "coord_y",
-            torch.linspace(-1, 1, 10).repeat(10, 1).t().unsqueeze(0).unsqueeze(0)
+            torch.linspace(-1, 1, 10).repeat(10, 1).t().unsqueeze(0).unsqueeze(0),
         )
 
         # === Encoder ===
