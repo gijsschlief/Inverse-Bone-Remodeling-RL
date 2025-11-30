@@ -77,7 +77,7 @@ class SimulationParameters:
     stimulus_threshold: float = 0.25
     min_density: float = 0.01
     max_density: float = 1.74
-    convergence_tolerance: float = 1e-6
+    convergence_tolerance: float = 1e-9
     convergence_tolerance_decay: float = 1.09
     convergence_after_steps: int = 20
     convergence_steps_decay: float = 0.96
