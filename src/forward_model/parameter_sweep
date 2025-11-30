@@ -79,10 +79,17 @@ def run_reference_simulation(initial_simulation_parameters: SimulationParameters
 
 def parameter_grid() -> Generator[Any, Any, Any]:
     """Yield dictionaries of possible parameter combinations to test. Modify here to change sweep ranges."""
-    decay_tol_options = [1.01, 1.03, 1.05, 1.07, 1.1]
-    ct0_options = [1, 3, 5, 10, 15]
-    ct_decay_options = [0.99, 0.97, 0.95, 0.93, 0.9]
-    time_steps_options = [50, 100, 200, 300, 400]
+    # Coarse sweep options
+#    decay_tol_options = [1.01, 1.03, 1.05, 1.07, 1.1]
+#    ct0_options = [1, 3, 5, 10, 15]
+#    ct_decay_options = [0.99, 0.97, 0.95, 0.93, 0.9]
+#    time_steps_options = [50, 100, 200, 300, 400]
+
+    # Fine sweep options
+    decay_tol_options = [1.001, 1.005, 1.01, 1.02, 1.03, 1.04, 1.05, 1.06, 1.07]
+    ct0_options = [1, 2, 3, 4, 5, 6, 7, 8]
+    ct_decay_options = [0.999, 0.995, 0.99, 0.98, 0.97]
+    time_steps_options = [200]
 
     for tol_decay, ct0, ct_decay, tsteps in itertools.product(
         decay_tol_options, ct0_options, ct_decay_options, time_steps_options,
@@ -148,12 +155,14 @@ def datasweep() -> None:
 
     simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], initial_density_field=initial_density)
     output_csv = Path("parameter_sweep_results.csv")
+    output_csv = Path("parameter_sweep_results_fine.csv")
     density_references = run_reference_simulation(simulation_base_parameters, force_profiles)
     run_parameter_sweep(simulation_base_parameters, force_profiles, density_references, output_csv)
 
 def pareto_plot() -> None:
     """Generate a Pareto plot from the CSV results."""
     df = pd.read_csv("parameter_sweep_results.csv")
+    df = pd.read_csv("parameter_sweep_results_fine.csv")
 
     # Remove failed runs
     df = df.dropna(subset=["runtime_s", "l2_error"])
@@ -179,6 +188,7 @@ def pareto_plot() -> None:
     plt.scatter(df["runtime_s"], df["l2_error"], s=10)
     plt.xlabel("Runtime (s)")
     plt.ylabel("Relative L2 error")
+    plt.yscale("log")
     plt.title("Parameter sweep — Runtime vs Error")
     plt.scatter(pareto_df["runtime_s"], pareto_df["l2_error"], color="red", s=30)
     plt.show()
