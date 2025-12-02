@@ -204,7 +204,7 @@ def main() -> None:
     animate_density_pyvista(
         simulation=simulation,
         output_directory=Path(
-            "/home/gijs/Desktop/Thesis/data/animations/0_density_animation_pyvista.gif",
+            "/home/gijs/Desktop/Thesis/data/animations/direct_convergence.gif",
         ),
         file_pattern="/home/gijs/Desktop/Thesis/data/animations/density_animation",
     )

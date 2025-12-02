@@ -57,9 +57,9 @@ class DensityUpdater:
             self.tolerance_decayed * self.convergence_tolerance_decay
         )
 
-    def _update_active_cells(self, delta: np.ndarray) -> None:
+    def _update_active_cells(self, delta_rho: np.ndarray) -> None:
         """Check which cells are still active based on changes in density."""
-        cells_converged = np.abs(delta) < self.tolerance_decayed
+        cells_converged = delta_rho < self.tolerance_decayed
         self.convergence_counter[self.active_cells & cells_converged] += 1
         self.convergence_counter[self.active_cells & ~cells_converged] = 0
 
@@ -78,8 +78,7 @@ class DensityUpdater:
             np.ndarray: Updated density array.
 
         """
-        self._decay()
-
+        old_density = self.density.copy()
         stimulus = np.zeros_like(self.density)
         stimulus[self.active_cells] = (
             strain_energy_density[self.active_cells] / self.density[self.active_cells]
@@ -92,7 +91,10 @@ class DensityUpdater:
         )
         np.clip(self.density, self.min_density, self.max_density, out=self.density)
 
-        self._update_active_cells(delta)
+        delta_rho = np.abs(self.density - old_density)
+        self._update_active_cells(delta_rho)
+
+        self._decay()
         return self.density
 
     def __bool__(self) -> bool:
