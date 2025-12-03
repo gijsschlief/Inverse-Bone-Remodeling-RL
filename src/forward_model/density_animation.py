@@ -159,6 +159,7 @@ def main() -> None:
         force_profile=force_profile,
         initial_density_field=np.ones((10, 10)) * 0.8,
         save_data=True,
+        time_steps=50,
     )
 
     # Alternative profile for Weinans model validation ----
