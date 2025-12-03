@@ -181,7 +181,7 @@ class ForceProfileGenerator:
             profiles[i] *= scaling_factor
         return profiles
 
-    def _log_uniform_sampling(self, low: float = 1e-2, high: float = 5e4, size: int = 1, rng: np.random.Generator = np.random.default_rng()) -> np.ndarray:
+    def _log_uniform_sampling(self, low: float = 1e2, high: float = 5e4, size: int = 1, rng: np.random.Generator = np.random.default_rng()) -> np.ndarray:
         """Sample from a log-uniform distribution between low and high."""
         log_low = np.log(low)
         log_high = np.log(high)

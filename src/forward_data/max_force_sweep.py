@@ -32,13 +32,17 @@ def matrix_saturation(density: np.ndarray, max_density: float = 1.74) -> int:
     """Calculate the saturation level of the density matrix."""
     return np.sum(density >= max_density)
 
+def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> int:
+    """Calculate the level of undersaturation of the density matrix."""
+    return np.sum(density <= min_density)
+
 def generate_force_batches(force_max_values: list[float], batch_size: int = 20) -> list[np.ndarray]:
     """Generate batches of force profiles for given max force values."""
     gen = ForceProfileGenerator(profile_length=10, batch_seed=42)
     batches = []
 
-    for fmax in force_max_values:
-        profiles = gen.merger(num_samples=batch_size, scaling=fmax)
+    for _ in force_max_values:
+        profiles = gen.merger(num_samples=batch_size)
         batches.append(profiles)
 
     return batches
@@ -48,11 +52,9 @@ def run_sweep() -> None:
     initial_density = np.full((10, 10), 0.8)
 
     logger.info("Generating force profiles...")
+    generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
+    force_profiles = generator.merger(num_samples=500)
 
-    # Generate a set of force profiles for the sweep that increase in maximum force
-    force_max_values = np.linspace(200, 500.0, num=20)
-    force_profile_batches = generate_force_batches(force_max_values, batch_size=20)
-    force_profiles = np.vstack(force_profile_batches)
     logger.info("Running forward model simulations...")
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
@@ -92,16 +94,20 @@ def analyse_sweep() -> None:
     _, force_profiles, densities = data
 
     saturations = []
+    undersaturations = []
     energies = []
 
     for force_profile, final_density in zip(force_profiles, densities):
         energy = force_profile_energy(force_profile)
         saturation = matrix_saturation(final_density)
+        undersaturation = matrix_undersaturation(final_density)
         energies.append(energy)
         saturations.append(saturation)
+        undersaturations.append(undersaturation)
 
     energies = np.array(energies)
     saturations = np.array(saturations)
+    undersaturations = np.array(undersaturations)
 
     # Sort by energy
     idx = np.argsort(energies)
@@ -119,7 +125,7 @@ def analyse_sweep() -> None:
             bin_centers.append((bins[i] + bins[i + 1]) / 2)
             bin_means.append(np.mean(y[mask]))
 
-    plt.figure(figsize=(8, 6))
+    plt.figure(num=1,figsize=(8, 6))
     plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
     plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
 
@@ -128,10 +134,41 @@ def analyse_sweep() -> None:
     plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
 
     plt.xlabel("Force Profile Energy")
-    plt.ylabel("Matrix Saturation")
+    plt.ylabel("Matrix Oversaturation")
     plt.xscale("log")
     plt.xlim(left=1)
-    plt.title("Energy vs Matrix Saturation")
+    plt.title("Energy vs Matrix Oversaturation")
+    plt.grid(visible=True)
+    plt.legend()
+
+    # THE SAME BUT FOR UNDERSATURATION
+
+    y = undersaturations[idx]
+    N_bins: int = 20
+    bins = np.logspace(np.log10(1), np.log10(10e8), N_bins + 1)
+
+    bin_centers = []
+    bin_means = []
+
+    for i in range(N_bins):
+        mask = (x >= bins[i]) & (x < bins[i + 1])
+        if np.any(mask):
+            bin_centers.append((bins[i] + bins[i + 1]) / 2)
+            bin_means.append(np.mean(y[mask]))
+
+    plt.figure(num=2,figsize=(8, 6))
+    plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
+    plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
+
+    # Add vertical line at saturation threshold
+    saturation_threshold = 1e2  # Example threshold value
+    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
+
+    plt.xlabel("Force Profile Energy")
+    plt.ylabel("Matrix Undersaturation")
+    plt.xscale("log")
+    plt.xlim(left=1)
+    plt.title("Energy vs Matrix Undersaturation")
     plt.grid(visible=True)
     plt.legend()
     plt.show()

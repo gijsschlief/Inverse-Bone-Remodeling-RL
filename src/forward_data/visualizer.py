@@ -136,7 +136,7 @@ def main() -> None:
         return
 
     old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_new_test_100_samples_1203_2030.json",
+        file_path="/home/gijs/Desktop/Thesis/data/raw/training_new_test_100_samples_1203_2101.json",
     )
     if old_data is None:
         logger.error("Failed to load the forward model data.")
