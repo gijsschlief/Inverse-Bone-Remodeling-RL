@@ -22,12 +22,15 @@ from bone_remodeling.src.forward_model.parameters import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-def shannon_energy_entropy(density: np.ndarray, eps: float = 1e-12) -> float:
+def shannon_energy_entropy(density: np.ndarray) -> float:
     """Shannon entropy of the energy-normalised density field."""
     e = density.ravel() ** 2
-    p = e / (e.sum() + eps)
-    p = p[p > eps]      # remove zeros
+    p = e / e.sum()
     return -np.sum(p * np.log(p))
+
+def matrix_saturation(density: np.ndarray, max_density: float = 1.74) -> int:
+    """Calculate the saturation level of the density matrix."""
+    return np.sum(density >= max_density)
 
 def generate_force_batches(force_max_values: list[float], batch_size: int = 20) -> list[np.ndarray]:
     """Generate batches of force profiles for given max force values."""
@@ -35,7 +38,7 @@ def generate_force_batches(force_max_values: list[float], batch_size: int = 20) 
     batches = []
 
     for fmax in force_max_values:
-        profiles = gen.merger(num_samples=batch_size, force_max=fmax)
+        profiles = gen.merger(num_samples=batch_size, scaling=fmax)
         batches.append(profiles)
 
     return batches
@@ -47,7 +50,7 @@ def run_sweep() -> None:
     logger.info("Generating force profiles...")
 
     # Generate a set of force profiles for the sweep that increase in maximum force
-    force_max_values = np.linspace(0.0, 100.0, num=100)
+    force_max_values = np.linspace(200, 500.0, num=20)
     force_profile_batches = generate_force_batches(force_max_values, batch_size=20)
     force_profiles = np.vstack(force_profile_batches)
     logger.info("Running forward model simulations...")
@@ -60,7 +63,7 @@ def run_sweep() -> None:
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
-        output_dir="/home/gijs/Desktop/Thesis/data/raw",
+        output_dir="/home/gijs/Desktop/Thesis/data/sweeps",
         simulation_parameters=simulation_parameters,
     )
     start_time = time.time()
@@ -73,10 +76,14 @@ def run_sweep() -> None:
     elapsed_time = stop_time - start_time
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
+def force_profile_energy(force_profile: np.ndarray) -> float:
+    """Calculate the energy of a force profile using the sum of all values squared."""
+    return np.sum(force_profile ** 2)
+
 def analyse_sweep() -> None:
     """Analyse the results of the max force sweep simulations."""
     data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/training_force_sweep_10_samples_1203_1403.json",
+        file_path="/home/gijs/Desktop/Thesis/data/sweeps/",
     )
 
     if data is None:
@@ -84,28 +91,51 @@ def analyse_sweep() -> None:
         return
     _, force_profiles, densities = data
 
-    entropies = []
-    max_forces = []
+    saturations = []
+    energies = []
 
     for force_profile, final_density in zip(force_profiles, densities):
-        max_force = np.max(force_profile)
-        entropy = shannon_energy_entropy(final_density)
+        energy = force_profile_energy(force_profile)
+        saturation = matrix_saturation(final_density)
+        energies.append(energy)
+        saturations.append(saturation)
 
-        max_forces.append(max_force)
-        entropies.append(entropy)
+    energies = np.array(energies)
+    saturations = np.array(saturations)
 
-    plot_results(max_forces, entropies)
+    # Sort by energy
+    idx = np.argsort(energies)
+    x = energies[idx]
+    y = saturations[idx]
+    N_bins: int = 20
+    bins = np.logspace(np.log10(1), np.log10(10e8), N_bins + 1)
 
-def plot_results(max_forces: list[float], entropies: list[float]) -> None:
-    """Plot the max forces against the entropies."""
+    bin_centers = []
+    bin_means = []
+
+    for i in range(N_bins):
+        mask = (x >= bins[i]) & (x < bins[i + 1])
+        if np.any(mask):
+            bin_centers.append((bins[i] + bins[i + 1]) / 2)
+            bin_means.append(np.mean(y[mask]))
+
     plt.figure(figsize=(8, 6))
-    plt.scatter(max_forces, entropies, marker='o')
-    plt.xlabel('Maximum Force')
-    plt.ylabel('Shannon Energy Entropy')
-    plt.title('Max Force vs Shannon Energy Entropy')
+    plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
+    plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
+
+    # Add vertical line at saturation threshold
+    saturation_threshold = 5e4  # Example threshold value
+    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
+
+    plt.xlabel("Force Profile Energy")
+    plt.ylabel("Matrix Saturation")
+    plt.xscale("log")
+    plt.xlim(left=1)
+    plt.title("Energy vs Matrix Saturation")
     plt.grid(visible=True)
+    plt.legend()
     plt.show()
 
 if __name__ == "__main__":
-    run_sweep()
+    #run_sweep()
     analyse_sweep()

@@ -150,7 +150,7 @@ def datasweep() -> None:
         profile_length=10,
         batch_seed=12345,
     )
-    force_profiles = force_profile_generator.merger(num_samples=20, force_max=20.0)
+    force_profiles = force_profile_generator.merger(num_samples=20, scaling=20.0)
 
     simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], initial_density_field=initial_density)
     output_csv = Path("parameter_sweep_results_final.csv")
@@ -207,7 +207,7 @@ def performance_comparison(num_samples: int = 100) -> None:
         profile_length=profile_length,
         batch_seed=12345,
     )
-    force_profiles = force_profile_generator.merger(num_samples=num_samples, force_max=20.0)
+    force_profiles = force_profile_generator.merger(num_samples=num_samples, scaling=20.0)
 
     simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], initial_density_field=initial_density)
 

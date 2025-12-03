@@ -125,7 +125,7 @@ def main() -> None:
     )
     force_profile = force_profile_generator.merger(
         num_samples=args.num_samples,
-        force_max=args.force_max,
+        scaling=args.force_max,
     )
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))

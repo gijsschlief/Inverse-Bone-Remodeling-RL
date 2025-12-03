@@ -152,7 +152,7 @@ def main() -> None:
     )
     force_profile = force_profile_generator.merger(
         num_samples=1,
-        force_max=20,
+        scaling=20,
     ).squeeze()
 
     parameters = SimulationParameters(
