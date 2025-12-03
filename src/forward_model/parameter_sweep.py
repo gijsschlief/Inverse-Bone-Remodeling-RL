@@ -72,23 +72,11 @@ def run_reference_simulation(initial_simulation_parameters: SimulationParameters
 
 def parameter_grid() -> Generator[Any, Any, Any]:
     """Yield dictionaries of possible parameter combinations to test. Modify here to change sweep ranges."""
-    # Coarse sweep options
-    #decay_tol_options = [1.01, 1.03, 1.05, 1.07, 1.1]
-    #ct0_options = [1, 3, 5, 10, 15]
-    #ct_decay_options = [0.99, 0.97, 0.95, 0.93, 0.9]
-    #time_steps_options = [50, 100, 200, 300, 400]
-
-    # Fine sweep options
-    #decay_tol_options = [1.04, 1.06, 1.08]
-    #ct0_options = [5, 10, 15, 20]
-    #ct_decay_options = [0.98, 0.96, 0.94]
-    #time_steps_options = [200]
-
     # SINGLE LARGE SWEEP
     decay_tol_options = [1, 1.02, 1.04, 1.06, 1.08]
     ct0_options = [1, 5, 10]
     ct_decay_options = [1, 0.98, 0.96, 0.94]
-    time_steps_options = [50, 75, 100, 150, 200, 300]
+    time_steps_options = [50, 100, 150, 200, 250]
 
     for tol_decay, ct0, ct_decay, tsteps in itertools.product(
         decay_tol_options, ct0_options, ct_decay_options, time_steps_options,
@@ -150,7 +138,7 @@ def datasweep() -> None:
         profile_length=10,
         batch_seed=12345,
     )
-    force_profiles = force_profile_generator.merger(num_samples=20, scaling=20.0)
+    force_profiles = force_profile_generator.merger(num_samples=20, scaling=10.0)
 
     simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], initial_density_field=initial_density)
     output_csv = Path("parameter_sweep_results_final.csv")
@@ -159,11 +147,7 @@ def datasweep() -> None:
 
 def pareto_plot() -> None:
     """Generate a Pareto plot from the CSV results."""
-    #df_coarse = pd.read_csv("parameter_sweep_results.csv")
-    #df2 = pd.read_csv("parameter_sweep_results_fine2.csv")
-    #df3 = pd.read_csv("parameter_sweep_results_fine3.csv")
-    #df = pd.concat([df2, df3], ignore_index=True)
-    df = pd.read_csv("parameter_sweep_results_final.csv")
+    df = pd.read_csv("parameter_sweep_results_final2.csv")
 
     # Remove failed runs
     df = df.dropna(subset=["runtime_s", "l2_error"])
@@ -190,7 +174,6 @@ def pareto_plot() -> None:
     plt.xlabel("Runtime (s)")
     plt.ylabel("Relative L2 error")
     plt.ylim(bottom=0)
-#    plt.title("Parameter coarse sweep — Runtime vs Error")
     plt.title("Parameter sweep — Runtime vs Error")
     plt.scatter(pareto_df["runtime_s"], pareto_df["l2_error"], color="red", s=30, label="Pareto front")
     # orinal model
@@ -261,6 +244,6 @@ def performance_comparison(num_samples: int = 100) -> None:
         logger.info(f"  → Example profile: {density[0]}")
 
 if __name__ == "__main__":
-    #datasweep()
+    datasweep()
     pareto_plot()
     #performance_comparison(num_samples=5)
