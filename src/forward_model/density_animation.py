@@ -148,7 +148,7 @@ def main() -> None:
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=10,
+        batch_seed=11,
     )
     force_profile = force_profile_generator.merger(
         num_samples=1,
@@ -159,7 +159,6 @@ def main() -> None:
         force_profile=force_profile,
         initial_density_field=np.ones((10, 10)) * 0.8,
         save_data=True,
-        time_steps=50,
     )
 
     # Alternative profile for Weinans model validation ----

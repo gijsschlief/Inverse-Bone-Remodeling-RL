@@ -229,6 +229,7 @@ if __name__ == "__main__":
 
     initial_density = np.full((10, 10), 0.8)
 
+    logger.setLevel(logging.INFO)
     logger.info("Generating force profiles...")
 
     force_profile_generator = ForceProfileGenerator(

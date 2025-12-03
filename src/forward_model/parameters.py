@@ -79,6 +79,7 @@ class SimulationParameters:
     max_density: float = 1.74
 
     # convergence parameters
+    maximum_delta: float = 0.02
     convergence_tolerance: float = 1e-9
     convergence_tolerance_decay: float = 1.06
     convergence_after_steps: int = 10

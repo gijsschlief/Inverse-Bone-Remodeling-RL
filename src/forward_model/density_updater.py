@@ -30,6 +30,7 @@ class DensityUpdater:
         self.density = self._initial_density.copy()
         self.active_cells = np.ones_like(self.density, dtype=bool)
         self.convergence_counter = np.zeros_like(self.density, dtype=int)
+        self.maximum_delta = simulation_parameters.maximum_delta
 
         self.dt = simulation_parameters.dt
         self.remodeling_rate_coefficient = (
@@ -85,6 +86,7 @@ class DensityUpdater:
         )
 
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
+        delta = np.clip(delta, -self.maximum_delta, self.maximum_delta) # Limit density changes per timestep to avoid instability
 
         self.density[self.active_cells] = (
             self.density[self.active_cells] + self.dt * delta[self.active_cells]
