@@ -143,7 +143,7 @@ class ForceProfileGenerator:
                     if j < start_position or j >= end_position:
                         profiles[i, side, j] = 0
                     elif j == start_position:
-                        profiles[i, side, j] = height
+                        profiles[i, side, j] = -height
                     else:
                         profiles[i, side, j] = height / (end_position - start_position) * (j - end_position)
         return profiles
@@ -203,13 +203,15 @@ if __name__ == "__main__":
 
     generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
     force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
-    #force_profiles = generator.triangular(num_samples=100_000)
+    #force_profiles = generator.ramp(num_samples=100_000)
     force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
 
     # Find empty profiles
     empty_profiles = np.where(force_profile_energy == 0)[0]
     if len(empty_profiles) > 0:
         logger.warning(f"Found {len(empty_profiles)} empty force profiles at indices: {empty_profiles}")
+
+    logger.info(f"Generated profiles like: {force_profiles[0]} and {force_profiles[1]}")
 
     plt.figure(1)
     plt.subplot(2, 2, 1)

@@ -64,7 +64,7 @@ class SimulationParameters:
 
     force_profile: np.ndarray  # shape (3,n)
     initial_density_field: np.ndarray  # shape (n,n)
-    time_steps: int = 200
+    time_steps: int = 250
     dt: float = 1.0
 
     # material parameters
@@ -83,7 +83,7 @@ class SimulationParameters:
     convergence_tolerance: float = 1e-9
     convergence_tolerance_decay: float = 1.06
     convergence_after_steps: int = 10
-    convergence_steps_decay: float = 0.96
+    convergence_steps_decay: float = 1
     boundary_tolerance: float = 1e-14
 
     # I/O parameters

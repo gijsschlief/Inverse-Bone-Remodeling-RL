@@ -147,7 +147,9 @@ def datasweep() -> None:
 
 def pareto_plot() -> None:
     """Generate a Pareto plot from the CSV results."""
-    df = pd.read_csv("/home/gijs/Desktop/Thesis/data/sweeps/parameter_sweep_results_final2.csv")
+    df1 = pd.read_csv("/home/gijs/Desktop/Thesis/data/sweeps/parameter_sweep_results_final2.csv")
+    df2 = pd.read_csv("/home/gijs/Desktop/Thesis/data/sweeps/parameter_sweep_results_final3.csv")
+    df = pd.concat([df1, df2], ignore_index=True)
 
     # Remove failed runs
     df = df.dropna(subset=["runtime_s", "l2_error"])
@@ -168,6 +170,7 @@ def pareto_plot() -> None:
         if not dominated:
             pareto.append(row_i)
 
+    pareto = sorted(pareto, key=lambda x: x["runtime_s"])
     pareto_df = pd.DataFrame(pareto)
     logger.info(f"Pareto-optimal points on sweep:\n{pareto_df}")
     plt.scatter(df["runtime_s"], df["l2_error"], s=10)
@@ -177,10 +180,10 @@ def pareto_plot() -> None:
     plt.title("Parameter sweep — Runtime vs Error")
     plt.scatter(pareto_df["runtime_s"], pareto_df["l2_error"], color="red", s=30, label="Pareto front")
     # orinal model
-    plt.scatter(26.849085807800293,0.0651156455770048, color="black", marker="x", s=100, label="Original model t = 100")
+    plt.scatter(26.849, 0.065, color="black", marker="x", s=100, label="Original model t = 100")
 
     # Chosen optimum
-    plt.scatter(52.925055, 0.005134, color="red", marker="x", s=100, label="Chosen optimum t = 200")
+    plt.scatter(58.871966, 0.002908, color="red", marker="x", s=100, label="Chosen optimum t = 250")
     plt.grid(visible=True)
     plt.legend()
     plt.show()

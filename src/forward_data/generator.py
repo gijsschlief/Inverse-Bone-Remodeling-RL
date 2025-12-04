@@ -234,11 +234,11 @@ if __name__ == "__main__":
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=np.random.randint(0, 1_000_000),
+        batch_seed=1,
     )
 
     force_profiles = force_profile_generator.merger(
-        num_samples=100,
+        num_samples=10_000,
     )
     #force_profiles = force_profile_generator.triangular(
     #    num_samples=15_000,
