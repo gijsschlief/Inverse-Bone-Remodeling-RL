@@ -76,7 +76,7 @@ def parameter_grid() -> Generator[Any, Any, Any]:
     decay_tol_options = [1, 1.02, 1.04, 1.06, 1.08]
     ct0_options = [1, 5, 10]
     ct_decay_options = [1, 0.98, 0.96, 0.94]
-    time_steps_options = [50, 100, 150, 200, 250]
+    time_steps_options = [50, 100, 150, 200, 250, 300]
 
     for tol_decay, ct0, ct_decay, tsteps in itertools.product(
         decay_tol_options, ct0_options, ct_decay_options, time_steps_options,
@@ -147,7 +147,7 @@ def datasweep() -> None:
 
 def pareto_plot() -> None:
     """Generate a Pareto plot from the CSV results."""
-    df = pd.read_csv("parameter_sweep_results_final2.csv")
+    df = pd.read_csv("/home/gijs/Desktop/Thesis/data/sweeps/parameter_sweep_results_final2.csv")
 
     # Remove failed runs
     df = df.dropna(subset=["runtime_s", "l2_error"])
@@ -173,11 +173,15 @@ def pareto_plot() -> None:
     plt.scatter(df["runtime_s"], df["l2_error"], s=10)
     plt.xlabel("Runtime (s)")
     plt.ylabel("Relative L2 error")
-    plt.ylim(bottom=0)
+    plt.yscale("log")
     plt.title("Parameter sweep — Runtime vs Error")
     plt.scatter(pareto_df["runtime_s"], pareto_df["l2_error"], color="red", s=30, label="Pareto front")
     # orinal model
-    plt.scatter(25.637903213500977, 0.29143212031682786, color="green", marker="x", s=50, label="Original model")
+    plt.scatter(26.849085807800293,0.0651156455770048, color="black", marker="x", s=100, label="Original model t = 100")
+
+    # Chosen optimum
+    plt.scatter(52.925055, 0.005134, color="red", marker="x", s=100, label="Chosen optimum t = 200")
+    plt.grid(visible=True)
     plt.legend()
     plt.show()
 
@@ -244,6 +248,6 @@ def performance_comparison(num_samples: int = 100) -> None:
         logger.info(f"  → Example profile: {density[0]}")
 
 if __name__ == "__main__":
-    datasweep()
+    #datasweep()
     pareto_plot()
     #performance_comparison(num_samples=5)
