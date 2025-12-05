@@ -277,7 +277,7 @@ if __name__ == "__main__":
     )
     plt.show()
 
-    directory_path_triangular = Path("/home/gijs/Desktop/Thesis/data/raw_triangular/")
+    directory_path_triangular = Path("/home/gijs/Desktop/Thesis/data/raw/first_triangular/")
     result_triangular = forward_data_reader(directory_path_triangular)
     try:
         _, force_profiles_triangular, output_densities_triangular = result_triangular

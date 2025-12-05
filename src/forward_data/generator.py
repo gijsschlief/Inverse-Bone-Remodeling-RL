@@ -234,11 +234,11 @@ if __name__ == "__main__":
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=1,
+        batch_seed=2,
     )
 
     force_profiles = force_profile_generator.merger(
-        num_samples=10_000,
+        num_samples=40_000,
     )
     #force_profiles = force_profile_generator.triangular(
     #    num_samples=15_000,
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     start_time = time.time()
     _ = data_generator.generate_parallel(
         max_chunk_size=500,
-        force_profile_name="new_test",
+        force_profile_name="final_run",
     )
     # _ = data_generator.generate_serial()
     stop_time = time.time()
