@@ -181,6 +181,22 @@ class ForceProfileGenerator:
             profiles[i] *= scaling_factor
         return profiles
 
+    def triangular_only(self, num_samples: int) -> np.ndarray:
+        """Generate merged force profiles from different shapes."""
+        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
+        for i in range(num_samples):
+            profiles[i] += self.triangular(1, 1)[0]
+
+            # Compute energy (L2 norm squared) and scale toward log uniform distribution
+            target_energy = self._log_uniform_sampling()
+            actual_energy = np.sum(np.square(profiles[i,0,:])) + np.sum(np.square(profiles[i,1,:])) + np.sum(np.square(profiles[i,2,:]))
+            if actual_energy == 0:
+                logger.warning(f"Sample {i} has zero energy; skipping scaling. {profiles[i]}")
+                continue
+            scaling_factor = np.sqrt(target_energy / actual_energy)
+            profiles[i] *= scaling_factor
+        return profiles
+
     def _log_uniform_sampling(self, low: float = 1e2, high: float = 5e4, size: int = 1, rng: np.random.Generator = np.random.default_rng()) -> np.ndarray:
         """Sample from a log-uniform distribution between low and high."""
         log_low = np.log(low)
@@ -202,8 +218,8 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
 
     generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
-    force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
-    #force_profiles = generator.ramp(num_samples=100_000)
+    #force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
+    force_profiles = generator.triangular_only(num_samples=100_000)
     force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
 
     # Find empty profiles
