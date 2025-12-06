@@ -234,15 +234,15 @@ if __name__ == "__main__":
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=1,
+        batch_seed=3,
     )
 
-    #force_profiles = force_profile_generator.merger(
-    #    num_samples=40_000,
-    #)
-    force_profiles = force_profile_generator.triangular_only(
-        num_samples=100,
+    force_profiles = force_profile_generator.merger(
+        num_samples=50_000,
     )
+    #force_profiles = force_profile_generator.triangular_only(
+    #    num_samples=100,
+    #)
 
     logger.info("Running forward model simulations...")
 
