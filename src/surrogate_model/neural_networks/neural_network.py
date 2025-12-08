@@ -128,6 +128,7 @@ class SurrogateModel(torch.nn.Module):
             mode="min",
             factor=train_parameters.factor_lr_scheduler,
             patience=train_parameters.patience_lr_scheduler,
+            cooldown=train_parameters.cooldown_lr_scheduler,
         )
 
     @staticmethod

@@ -1,6 +1,7 @@
 """Trainer script for the SurrogateModel."""
 
 import logging
+import time
 from pathlib import Path
 
 import numpy as np
@@ -97,6 +98,7 @@ def train_model(
 
     best_val_loss = float("inf")
     epochs_no_improve = 0
+    start_time = time.time()
 
     for epoch in range(train_parameters.epochs):
         model.train()
@@ -167,7 +169,9 @@ def train_model(
     if best_model_state is not None:
         model.load_state_dict(best_model_state)
         logger.info("Loaded best model state after training.")
-
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    logger.info(f"Training completed in {elapsed_time:.2f} seconds.")
 
 def save_model_safely(model: SurrogateModel, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
