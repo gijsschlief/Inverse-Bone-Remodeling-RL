@@ -109,21 +109,20 @@ class SurrogateModel(torch.nn.Module):
     @staticmethod
     def get_scheduler(
         optimizer: torch.optim.Optimizer,
-        epochs: int,  # noqa: ARG004
+        train_parameters: SurrogateTrainParameters,
     ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
         """Get a learning rate scheduler for the surrogate model.
 
         Args:
         ----
             optimizer (torch.optim.Optimizer): The optimizer to schedule.
-            epochs (int): The total number of training epochs.
+            train_parameters (SurrogateTrainParameters): Training parameters including device, epochs, batch size, learning rate, patience, min delta, log interval, and log all for first epochs.
 
         Returns:
         -------
             torch.optim.lr_scheduler.ReduceLROnPlateau: The learning rate scheduler.
 
         """
-        train_parameters = SurrogateTrainParameters()
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",

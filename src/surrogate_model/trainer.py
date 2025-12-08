@@ -93,7 +93,7 @@ def train_model(
 
     loss_fn = combined_loss
     optimizer = torch.optim.AdamW(model.parameters(), lr=train_parameters.learning_rate)
-    scheduler = model.get_scheduler(optimizer, train_parameters.epochs)
+    scheduler = model.get_scheduler(optimizer, train_parameters)
 
     best_val_loss = float("inf")
     epochs_no_improve = 0
