@@ -10,9 +10,11 @@ class SurrogateTrainParameters:
     """Parameters for training the surrogate model."""
 
     device: torch.device
-    epochs: int = 200
+    epochs: int = 1_000
     batch_size: int = 32
     learning_rate: float = 1e-4
+    patience_lr_scheduler: int = 10
+    factor_lr_scheduler: float = 0.5
     patience: int = 20
     min_delta: float = 1e-4
     log_interval: int = 10

@@ -7,6 +7,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+from bone_remodeling.src.surrogate_model.train_parameters import (
+    SurrogateTrainParameters,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -119,11 +123,12 @@ class SurrogateModel(torch.nn.Module):
             torch.optim.lr_scheduler.ReduceLROnPlateau: The learning rate scheduler.
 
         """
+        train_parameters = SurrogateTrainParameters()
         return torch.optim.lr_scheduler.ReduceLROnPlateau(
             optimizer,
             mode="min",
-            factor=0.5,
-            patience=10,
+            factor=train_parameters.factor_lr_scheduler,
+            patience=train_parameters.patience_lr_scheduler,
         )
 
     @staticmethod
