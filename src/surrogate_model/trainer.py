@@ -294,6 +294,10 @@ def main(
     logger.info("Evaluating model on validation set.")
 
     evaluate_model(model, x_val, y_val)
+
+    logger.info("Evaluating model on test set.")
+    evaluate_model(model, x_test, y_test)
+
     logger.info("Training and evaluation complete.")
 
 
@@ -307,9 +311,8 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
-    for i in range(5, 10):
-        main(data_file_path, model_path, normalize=True, random_state=i)
+    #for i in range(1, 10): # USE FOR ENSEMBLE TRAINING
+    main(data_file_path, model_path, normalize=True, random_state=1)
 
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)
-    # 4 and up are trained on all data
