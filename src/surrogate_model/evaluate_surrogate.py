@@ -33,6 +33,7 @@ def run_model_evaluation(
     model_path: Path,
     data_path: Path,
     model_class: type[SurrogateModel],
+    random_state: int = 0,
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     model, x_mean, x_std, y_mean, y_std = _load_model(model_path, model_class)
@@ -54,7 +55,7 @@ def run_model_evaluation(
     x_train, x_val, x_test, y_train, y_val, y_test = splitting(
         force_profiles,
         final_output_densities,
-        random_state=0,
+        random_state=random_state,
     )
     if x_val is None or y_val is None:
         logger.error("Failed to split the data into validation sets.")
@@ -167,4 +168,5 @@ if __name__ == "__main__":
         model_path=model_path,
         data_path=data_path,
         model_class=ReversedSurrogateModel,
+        random_state=1, # VERY IMPORTANT IT IS THE SAME AS THE MODEL TO PREVENT LEAKAGE!
     )
