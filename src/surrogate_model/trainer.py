@@ -1,4 +1,4 @@
-"""Trainer script for the SurrogateModel."""
+"""Trainer script for the SurrogateModel. Note that SSIMS are calculated on normalized data here and thus lower than the true values."""
 
 import logging
 import time
@@ -99,6 +99,8 @@ def train_model(
     best_val_loss = float("inf")
     epochs_no_improve = 0
     start_time = time.time()
+    best_model_state = None
+    batch_count = len(model.create_dataloader(x_train, y_train, batch_size=train_parameters.batch_size))
 
     for epoch in range(train_parameters.epochs):
         model.train()
@@ -124,16 +126,8 @@ def train_model(
             optimizer.step()
             total_loss += loss.item()
 
-        avg_train_loss = total_loss / len(
-            model.create_dataloader(
-                x_train,
-                y_train,
-                batch_size=train_parameters.batch_size,
-            ),
-        )
+        avg_train_loss = total_loss / batch_count
         model.train_losses.append(avg_train_loss)
-
-        best_model_state = None
 
         model.eval()
         with torch.no_grad():
@@ -141,6 +135,7 @@ def train_model(
             val_loss = combined_loss(val_logits, y_validation)
         model.val_losses.append(val_loss)
         scheduler.step(val_loss)
+
         # Early stopping logic
         if val_loss + train_parameters.min_delta < best_val_loss:
             best_val_loss = float(val_loss)
@@ -176,18 +171,18 @@ def train_model(
 def save_model_safely(model: SurrogateModel, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
     try:
-        if Path.exists(path):
-            base_path, ext = Path.splitext(path) # FIX LATER
+        if path.exists():
+            base_path = path.with_suffix("")
+            ext = path.suffix
             counter = 1
-            while Path.exists(Path(f"{base_path}_{counter}{ext}")):
+            while Path(f"{base_path}_{counter}{ext}").exists():
                 counter += 1
             path = Path(f"{base_path}_{counter}{ext}")
-    except Exception:
-        logger.info("Error checking for existing file, proceeding to save model.")
+    except Exception as e:
+        logger.warning(f"Safely saving model failed ({e}), overwriting existing file.")
         pass
     model.save_model(path)
     return Path(path)
-
 
 def evaluate_model(
     model: SurrogateModel,
@@ -212,13 +207,47 @@ def evaluate_model(
         f"Validation Loss: {validation_loss:.4f}, Average Similarity: {average_similarity:.4f}",
     )
 
+def rescramble_for_ensemble(
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    x_val: np.ndarray,
+    y_val: np.ndarray,
+    random_state: int = np.random.randint(0, 1_000_000),
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Rescramble training and validation data for ensemble training.
+
+    Args:
+    ----
+        x_train (np.ndarray): Training input features.
+        y_train (np.ndarray): Training target labels.
+        x_val (np.ndarray): Validation input features.
+        y_val (np.ndarray): Validation target labels.
+        random_state (int): Random seed for reproducibility.
+
+    Returns:
+    -------
+        tuple[np.ndarray, np.ndarray]: Rescrambled training input features and target labels.
+
+    """
+    np.random.seed(random_state)
+    x_train_and_val = np.concatenate((x_train, x_val), axis=0)
+    y_train_and_val = np.concatenate((y_train, y_val), axis=0)
+    perm = np.random.permutation(x_train_and_val.shape[0])
+    x_train_and_val = x_train_and_val[perm]
+    y_train_and_val = y_train_and_val[perm]
+    split_index = x_train.shape[0]
+    x_train_rescrambled = x_train_and_val[:split_index]
+    y_train_rescrambled = y_train_and_val[:split_index]
+    x_val_rescrambled = x_train_and_val[split_index:]
+    y_val_rescrambled = y_train_and_val[split_index:]
+    return x_train_rescrambled, y_train_rescrambled, x_val_rescrambled, y_val_rescrambled
 
 def main(
     data_file_path: Path,
     model_path: Path,
     *,
     normalize: bool = True,
-    random_state: int = 0,
+    random_state: int = 1,
 ) -> None:
     """Train and evaluate the surrogate model."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -231,7 +260,15 @@ def main(
         y_train_np,
         y_val_np,
         y_test_np,
-    ) = load_and_split_data(data_file_path, random_state=random_state)
+    ) = load_and_split_data(data_file_path, random_state=1) # KEEP FIXED FOR ENSEMBLE TRAINING
+
+    x_train_np, y_train_np, x_val_np, y_val_np = rescramble_for_ensemble(
+        x_train_np,
+        y_train_np,
+        x_val_np,
+        y_val_np,
+        random_state=random_state,
+    )
 
     logger.info("Sanitizing data...")
     x_train_np, y_train_np = sanitize_data(x_train_np, y_train_np)
@@ -295,11 +332,11 @@ def main(
 
     model.plot_loss()
 
-    logger.info("Evaluating model on validation set.")
+    logger.info("Evaluating model normalised on validation set.")
 
     evaluate_model(model, x_val, y_val)
 
-    logger.info("Evaluating model on test set.")
+    logger.info("Evaluating model normalised on test set.")
     evaluate_model(model, x_test, y_test)
 
     logger.info("Training and evaluation complete.")
@@ -307,7 +344,7 @@ def main(
 
 if __name__ == "__main__":
     logging.basicConfig(
-        level=logging.INFO,  # Show INFO and above
+        level=logging.INFO,
         format="%(asctime)s %(name)s %(levelname)s: %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
     )
@@ -315,8 +352,8 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
-    #for i in range(1, 10): # USE FOR ENSEMBLE TRAINING
-    main(data_file_path, model_path, normalize=True, random_state=1)
+    for i in range(1, 5): # USE FOR ENSEMBLE TRAINING
+        main(data_file_path, model_path, normalize=True, random_state=i)
 
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)

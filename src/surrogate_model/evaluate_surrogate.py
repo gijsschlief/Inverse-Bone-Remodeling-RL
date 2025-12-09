@@ -96,7 +96,7 @@ def run_model_evaluation(
         method="ssim",
     )
 
-    logger.info(f"The average similarity = {average_similarity}")
+    logger.info(f"The average similarity (unnormalized) = {average_similarity}")
 
     plot_surrogate_model(
         predicted_matrices=predicted_matrices,
@@ -132,7 +132,7 @@ def plot_worst_prediction(
     true_matrices: np.ndarray,
     predicted_matrices: np.ndarray,
     force_profiles: np.ndarray,
-    count: int = 1,
+    count: int = 3,
 ) -> None:
     """Find the samples with the largest differences and plot it.
 
@@ -162,7 +162,7 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
     run_model_evaluation(
         model_path=model_path,
