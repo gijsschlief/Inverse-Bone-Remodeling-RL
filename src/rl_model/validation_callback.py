@@ -8,6 +8,7 @@ from stable_baselines3.common.callbacks import BaseCallback
 from bone_remodeling.src.rl_model.forward_pass import (
     ForwardPass,
 )
+from bone_remodeling.src.rl_model.metrics import MetricsContainer
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.rl_model.validation_environment_builder import (
@@ -22,6 +23,7 @@ class ValidationCallback(BaseCallback):
 
     def __init__(
         self,
+        metrics: MetricsContainer,
         learning_rate_container: dict[str, float],
         validation_data: tuple[np.ndarray, np.ndarray],
         validation_environment_builder: ValidationEnvironmentBuilder,
@@ -31,6 +33,7 @@ class ValidationCallback(BaseCallback):
     ) -> None:
         """Initialize the validation callback."""
         super().__init__(rl_parameters.verbose)
+        self.metrics = metrics
         self.learning_rate_container = learning_rate_container
         self.validation_environment_builder = validation_environment_builder
         self.fenics_forwarder = final_forwarder
@@ -48,6 +51,8 @@ class ValidationCallback(BaseCallback):
         mean_ssim = self._ssim_calculation()
         logger.info(f"[Val @ {self.num_timesteps}] mean final SSIM = {mean_ssim:.4f}")
 
+        self.metrics.validation_steps.append(self.num_timesteps)
+        self.metrics.validation_ssim.append(mean_ssim)
         return self._detect_plateau(mean_ssim)
 
     def _ssim_calculation(self) -> float:

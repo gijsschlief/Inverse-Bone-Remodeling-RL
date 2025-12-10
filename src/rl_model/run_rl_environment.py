@@ -15,6 +15,7 @@ from bone_remodeling.src.rl_model.forward_pass import (
     ForwardPass,
     SurrogateForwarder,
 )
+from bone_remodeling.src.rl_model.metrics import MetricsContainer
 from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_saving_callback import RewardSavingCallback
@@ -143,6 +144,7 @@ def main(run_parameters: RunConfiguration) -> None:
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
     rl_parameters = RLParameters()
+    metrics = MetricsContainer()
 
     forwarder_surrogate = SurrogateForwarder(  # noqa: F841
         surrogate_model_path=run_parameters.surrogate_path,
@@ -217,9 +219,11 @@ def main(run_parameters: RunConfiguration) -> None:
                     rl_parameters=rl_parameters,
                 ),
                 RewardSavingCallback(
+                    metrics=metrics,
                     out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
                 ),
                 ValidationCallback(
+                    metrics=metrics,
                     learning_rate_container=current_learning_rate,
                     validation_data=(validation_forces[:run_parameters.validation_size], validation_densities[:run_parameters.validation_size]),
                     validation_environment_builder=validation_environment_builder,
