@@ -65,7 +65,7 @@ class RunConfiguration:
     validation_size: int = 40
     number_of_environments: int = 10
     random_state: int = 0
-    reward_plot_path: Path = field(default_factory=lambda: Path("reward_curve.png"))
+    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png"))
     agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/new2_surrogate_agent_1mil.zip"))
     data_path: Path = field(default_factory=lambda: Path(
         "/home/gijs/Desktop/Thesis/data/raw/triangular/",

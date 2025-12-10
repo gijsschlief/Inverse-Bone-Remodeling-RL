@@ -220,7 +220,7 @@ def main(run_parameters: RunConfiguration) -> None:
                 ),
                 RewardSavingCallback(
                     metrics=metrics,
-                    out_path="/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png",
+                    out_path=run_parameters.reward_plot_path,
                 ),
                 ValidationCallback(
                     metrics=metrics,
