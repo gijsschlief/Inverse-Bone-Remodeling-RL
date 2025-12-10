@@ -27,72 +27,64 @@ class RewardSavingCallback(BaseCallback):
         """
         super().__init__(verbose)
         self.metrics = metrics
-        self.current_episode_reward: float = 0.0
+        self.current_episode_reward = 0.0
         self.out_path = out_path
-        self.episode_rewards: list[float] = []
         self.smoothing_window = smoothing_window
-        self.steps_in_episode: int = 0
 
     def _on_step(self) -> bool:
         reward = float(self.locals["rewards"][0])
-        self.current_episode_reward += reward
-        self.steps_in_episode += 1
         done = bool(self.locals["dones"][0])
 
+        self.current_episode_reward += reward
+
         if done:
+            # Store episode reward
             self.metrics.episode_rewards.append(self.current_episode_reward)
-            self.metrics.steps_at_end_of_episode.append(self.steps_in_episode)
+            self.metrics.episode_indices.append(len(self.metrics.episode_rewards) - 1)
+            self.metrics.episode_end_timesteps.append(self.num_timesteps)
+
             self.current_episode_reward = 0.0
+
         return True
 
     def _on_training_end(self) -> None:
-        """Calculate the mean reward on an interval. Add the validation data and plot and save the figure."""
         rewards = self.metrics.episode_rewards
-        steps = self.metrics.steps_at_end_of_episode
+        episodes = self.metrics.episode_indices
         val_steps = self.metrics.validation_steps
         val_scores = self.metrics.validation_ssim
 
         if len(rewards) == 0:
-            logger.warning("No rewards collected, skipping plot generation.")
+            logger.warning("No rewards collected, skipping plot.")
             return
 
+        # Smooth reward
         window = self.smoothing_window
-        small_window = max(1, window // 10)
-
-        # Scale reward to below 1
-        max_reward = max(abs(min(rewards)), abs(max(rewards)))
-        rewards = [r / max_reward for r in rewards]
-
-        # Slightly smoothed
-        # Moving-average smoothing
-        smoothed = None
-        if len(rewards) >= small_window:
-            slightly_smoothed = np.convolve(
-                rewards, np.ones(small_window) / small_window, mode="valid",
-            )
-
-        # Moving-average smoothing
-        smoothed = None
         if len(rewards) >= window:
-            smoothed = np.convolve(
-                rewards, np.ones(window) / window, mode="valid",
-            )
+            smoothed = np.convolve(rewards, np.ones(window) / window, mode="valid")
+            smoothed_x = episodes[window - 1:]
+        else:
+            smoothed = None
 
-        plt.figure(figsize=(10, 5))
-        if slightly_smoothed is not None:
-            plt.plot(steps[small_window - 1:], slightly_smoothed, c='grey', alpha=0.3, label=f"Slightly smoothed reward (window={small_window})")
+        fig, ax1 = plt.subplots(figsize=(12, 5))
 
+        # Reward curve (left y-axis)
+        ax1.plot(episodes, rewards, alpha=0.3, label="Raw reward", color="gray")
         if smoothed is not None:
-            plt.plot(steps[window - 1:], smoothed, label=f"Smoothed reward (window={window})")
+            ax1.plot(smoothed_x, smoothed, label=f"Smoothed reward (w={window})")
 
+        ax1.set_xlabel("Episode index")
+        ax1.set_ylabel("Reward")
+        ax1.legend(loc="upper left")
+        ax1.grid(True)
+
+        # Validation curve (right y-axis)
         if len(val_scores) > 0:
-            plt.plot(val_steps, val_scores, marker="o", label="Validation SSIM")
+            ax2 = ax1.twinx()
+            ax2.plot(val_steps, val_scores, "o-", color="orange", label="Validation SSIM")
+            ax2.set_ylabel("SSIM")
+            ax2.legend(loc="upper right")
 
-        plt.xlabel("Episode index")
-        plt.ylabel("Reward / SSIM")
         plt.title("Training Reward and Validation Performance")
-        plt.legend()
-        plt.grid(visible=True)
         plt.tight_layout()
         plt.savefig(self.out_path)
         plt.close()

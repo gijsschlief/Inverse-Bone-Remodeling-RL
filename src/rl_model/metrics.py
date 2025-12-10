@@ -8,4 +8,5 @@ class MetricsContainer:
         self.episode_rewards: list[float] = []
         self.validation_steps: list[int] = []
         self.validation_ssim: list[float] = []
-        self.steps_at_end_of_episode: list[int] = []
+        self.episode_indices: list[int] = []
+        self.episode_end_timesteps: list[int] = []
