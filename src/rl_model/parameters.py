@@ -36,4 +36,4 @@ class RLParameters:
     patience: int = 10
     location_dead_zone: float = 0.1
     per_step_force_change: float = 10.0
-    per_step_location_change: int = 1
+    per_step_location_change: float = 1.0
