@@ -15,7 +15,7 @@ from bone_remodeling.src.rl_model.forward_pass import (
     ForwardPass,
     SurrogateForwarder,
 )
-from bone_remodeling.src.rl_model.parameters import RLParameters
+from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_saving_callback import RewardSavingCallback
 from bone_remodeling.src.rl_model.validation_callback import ValidationCallback
@@ -119,7 +119,7 @@ def initialize_new_model(
     )
 
 
-def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -> None:
+def main(run_parameters: RunConfiguration) -> None:
     """Designs and trains a reinforcement learning agent for bone remodeling.
 
     This function initializes the bone remodeling environment, loads the surrogate model,
@@ -129,9 +129,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     Args:
     ----
-        agent_path (Path): Path to the agent model file.
-        data_path (Path): Path to the data file for training.
-        surrogate_path (Path): Path to the surrogate model file.
+        run_parameters (RunConfiguration): Configuration parameters for the run.
 
     """
     (
@@ -141,15 +139,13 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         train_densities,
         validation_densities,
         _,
-    ) = load_and_split_data(data_path, random_state=0)
+    ) = load_and_split_data(run_parameters.data_path, random_state=run_parameters.random_state)
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
     rl_parameters = RLParameters()
 
     forwarder_surrogate = SurrogateForwarder(  # noqa: F841
-        surrogate_model_path=Path(
-            "/home/gijs/Desktop/Thesis/data/models/trained_model.pth",
-        ),
+        surrogate_model_path=run_parameters.surrogate_path,
         density_shape=train_densities[0].shape,
         model_class=ReversedSurrogateModel,
     )
@@ -159,7 +155,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     )
 
     #forwarder_ensemble = EnsembleForwarder(
-    #    model_paths=surrogate_path,
+    #    model_paths=run_parameters.ensemble_path,
     #    model_class=ReversedSurrogateModel,
     #    model_loader=SurrogateModelLoader,
     #)
@@ -167,8 +163,8 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         forwarder_surrogate, rl_parameters,
     )
 
-    number_of_environments: int = 10
-    base_seed = 0
+    number_of_environments: int = run_parameters.number_of_environments
+    base_seed = run_parameters.random_state
     logger.info(f"Using base_seed: {base_seed} for environment seeding.")
 
     make_environment = partial(
@@ -192,11 +188,11 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
     )
 
     logger.info("Environment functions created, loading agent if it exists.")
-    if agent_path.is_dir():
+    if run_parameters.agent_path.is_dir():
         model = initialize_new_model(vectorized_environment, rl_parameters)
         latest_agent_path = None
     else:
-        latest_agent_path = find_latest_agent(agent_path)
+        latest_agent_path = find_latest_agent(run_parameters.agent_path)
         try:
             model = PPO.load(latest_agent_path, env=vectorized_environment)
             model.set_env(vectorized_environment)
@@ -213,10 +209,10 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=1_000_000,
+            total_timesteps=run_parameters.total_timesteps,
             callback=[
                 RenderCallback(
-                    render_freq=9999,
+                    render_freq=run_parameters.render_frequency,
                     environment_index=0,
                     rl_parameters=rl_parameters,
                 ),
@@ -225,16 +221,16 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
                 ),
                 ValidationCallback(
                     learning_rate_container=current_learning_rate,
-                    validation_data=(validation_forces[:40], validation_densities[:40]),
+                    validation_data=(validation_forces[:run_parameters.validation_size], validation_densities[:run_parameters.validation_size]),
                     validation_environment_builder=validation_environment_builder,
                     final_forwarder=forwarder_fenics,
                     rl_parameters=rl_parameters,
-                    validation_frequency=200_000,
+                    validation_frequency=run_parameters.validation_frequency,
                 ),
             ],
         )
         logger.info("Training complete.")
-        saved_path = save_model_safely(model, agent_path)
+        saved_path = save_model_safely(model, run_parameters.agent_path)
         logger.info(f"Model saved to {saved_path}")
     finally:
         vectorized_environment.close()
@@ -243,16 +239,5 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/new_surrogate_agent_1mil.zip")
-    DATA_PATH = Path(
-        "/home/gijs/Desktop/Thesis/data/raw/triangular/",
-    )
-    SURROGATE_PATHS = [
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
-
-    ]
-    main(agent_path=AGENT_PATH, data_path=DATA_PATH, surrogate_path=SURROGATE_PATHS)
+    run_parameters = RunConfiguration()
+    main(run_parameters=run_parameters)
