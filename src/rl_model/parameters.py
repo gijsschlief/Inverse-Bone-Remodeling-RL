@@ -59,9 +59,9 @@ class RunConfiguration:
 
     """
 
-    total_timesteps: int = 1_000_000
+    total_timesteps: int = 300_002
     render_frequency: int = 9999
-    validation_frequency: int = 200_000
+    validation_frequency: int = 100_000
     validation_size: int = 40
     number_of_environments: int = 10
     random_state: int = 0

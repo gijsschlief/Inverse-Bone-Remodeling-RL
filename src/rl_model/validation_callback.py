@@ -34,6 +34,8 @@ class ValidationCallback(BaseCallback):
         """Initialize the validation callback."""
         super().__init__(rl_parameters.verbose)
         self.metrics = metrics
+        self.metrics.validation_steps.append(0)
+        self.metrics.validation_ssim.append(0.0)
         self.learning_rate_container = learning_rate_container
         self.validation_environment_builder = validation_environment_builder
         self.fenics_forwarder = final_forwarder
