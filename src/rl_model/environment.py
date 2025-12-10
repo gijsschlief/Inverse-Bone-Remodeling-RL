@@ -49,9 +49,12 @@ class BoneRemodelingEnvironment(Env):
         self.current_sample_index = 0
 
         # Define the action space
+        self.per_step_force_change = rl_parameters.per_step_force_change
+        self.per_step_location_change = rl_parameters.per_step_location_change
+
         self.action_space = spaces.Box(
-            low=np.array([-1, -1], dtype=np.float32),
-            high=np.array([1, 1], dtype=np.float32),
+            low=np.array([-self.per_step_force_change, -self.per_step_location_change], dtype=np.float32),
+            high=np.array([self.per_step_force_change, self.per_step_location_change], dtype=np.float32),
             dtype=np.float32,
         )
 
@@ -144,6 +147,11 @@ class BoneRemodelingEnvironment(Env):
         """
         peak_action, location_action = action
         self.peak_magnitude = self.peak_magnitude + np.float32(peak_action)
+        if self.peak_magnitude < -self.force_boundary:
+            self.peak_magnitude = np.float32(-self.force_boundary)
+        elif self.peak_magnitude > self.force_boundary:
+            self.peak_magnitude = np.float32(self.force_boundary)
+
         if abs(location_action) < self.location_dead_zone:
             move_peak = np.int8(0)
         else:

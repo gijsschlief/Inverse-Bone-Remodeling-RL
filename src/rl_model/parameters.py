@@ -22,7 +22,7 @@ class RLParameters:
     """
 
     max_steps: int = 25
-    force_boundary: float = 30
+    force_boundary: float = 130
     density_constraint: float = 1.73
     n_steps: int = 2048
     batch_size: int = 64
@@ -35,3 +35,5 @@ class RLParameters:
     device: str = "cpu"
     patience: int = 10
     location_dead_zone: float = 0.1
+    per_step_force_change: float = 10.0
+    per_step_location_change: int = 1

@@ -30,7 +30,7 @@ class RewardSavingCallback(BaseCallback):
         return True
 
     def _on_training_end(self) -> None:
-        """Plot and save the figure."""
+        """Calculate the mean reward on an interval. Add the validation data and plot and save the figure."""
         plt.figure(figsize=(8, 4))
         plt.plot(self.episode_rewards)
         plt.xlabel("Timestep")

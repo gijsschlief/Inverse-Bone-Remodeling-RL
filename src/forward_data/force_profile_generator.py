@@ -229,6 +229,10 @@ if __name__ == "__main__":
 
     logger.info(f"Generated profiles like: {force_profiles[0]} and {force_profiles[1]}")
 
+    # Find the maximum force value
+    max_force_value = np.max(np.abs(force_profiles))
+    logger.info(f"Maximum force value across all profiles: {max_force_value}")
+
     plt.figure(1)
     plt.subplot(2, 2, 1)
     plt.hist(force_profiles.flatten(), bins=200)

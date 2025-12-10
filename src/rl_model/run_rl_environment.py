@@ -167,7 +167,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         forwarder_surrogate, rl_parameters,
     )
 
-    number_of_environments: int = 10
+    number_of_environments: int = 1
     base_seed = 0
     logger.info(f"Using base_seed: {base_seed} for environment seeding.")
 
@@ -216,7 +216,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
             total_timesteps=1_000_000,
             callback=[
                 RenderCallback(
-                    render_freq=10_000,
+                    render_freq=1,
                     environment_index=0,
                     rl_parameters=rl_parameters,
                 ),
