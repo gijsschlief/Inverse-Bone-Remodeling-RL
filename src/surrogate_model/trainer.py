@@ -330,7 +330,7 @@ def main(
         )
     logger.info(f"Model saved to {model_path}")
 
-    model.plot_loss()
+    #model.plot_loss()
 
     logger.info("Evaluating model normalised on validation set.")
 
@@ -352,7 +352,7 @@ if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
-    for i in range(1, 5): # USE FOR ENSEMBLE TRAINING
+    for i in range(3, 5): # USE FOR ENSEMBLE TRAINING
         main(data_file_path, model_path, normalize=True, random_state=i)
 
     logger.info("All training runs completed.")

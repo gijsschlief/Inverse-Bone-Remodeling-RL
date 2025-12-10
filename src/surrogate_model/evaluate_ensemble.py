@@ -143,16 +143,10 @@ if __name__ == "__main__":
     )
 
     model_paths = [
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
         Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_5.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_7.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_9.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_10.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_11.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_12.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_13.pth"),
     ]
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
@@ -161,5 +155,5 @@ if __name__ == "__main__":
         model_class=ReversedSurrogateModel,
         model_loader=SurrogateModelLoader,
         data_file_path=data_file_path,
-        random_state=0,
+        random_state=1,
     )

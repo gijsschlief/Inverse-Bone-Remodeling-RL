@@ -217,18 +217,16 @@ class BoneRemodelingEnvironment(Env):
         profile = np.zeros((3, self._profile_length), dtype=np.float32)
         peak_position = int(np.clip(peak_position, 0, self._profile_length - 1))
 
+        # Create a triangular profile
         for j in range(self._profile_length):
             if j < peak_position:
                 profile[side, j] = (peak_height / peak_position) * j
             elif j > peak_position:
-                denom = self._profile_length - 1 - peak_position
-                denom = max(denom, 1e-6)  # Prevent divide-by-zero
-                profile[side, j] = (peak_height / denom) * (
-                    self._profile_length - 1 - j
-                )
+                denomerator = (self._profile_length - 1 - peak_position)
+                profile[side, j] = (
+                    peak_height / max(denomerator, 1e-6)) * (self._profile_length - 1 - j)
             else:
                 profile[side, j] = peak_height
-
         return profile
 
     def get_data_for_visualization(

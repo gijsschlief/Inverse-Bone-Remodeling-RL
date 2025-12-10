@@ -148,7 +148,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     forwarder_surrogate = SurrogateForwarder(  # noqa: F841
         surrogate_model_path=Path(
-            "/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth",
+            "/home/gijs/Desktop/Thesis/data/models/trained_model.pth",
         ),
         density_shape=train_densities[0].shape,
         model_class=ReversedSurrogateModel,
@@ -157,16 +157,17 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         force_profile=train_forces[0],
         initial_density_field=np.ones(train_densities[0].shape) * 0.8,
     )
-    forwarder_ensemble = EnsembleForwarder(
-        model_paths=surrogate_path,
-        model_class=ReversedSurrogateModel,
-        model_loader=SurrogateModelLoader,
-    )
+
+    #forwarder_ensemble = EnsembleForwarder(
+    #    model_paths=surrogate_path,
+    #    model_class=ReversedSurrogateModel,
+    #    model_loader=SurrogateModelLoader,
+    #)
     validation_environment_builder = ValidationEnvironmentBuilder(
-        forwarder_ensemble, rl_parameters,
+        forwarder_surrogate, rl_parameters,
     )
 
-    number_of_environments: int = 10
+    number_of_environments: int = 3
     base_seed = 0
     logger.info(f"Using base_seed: {base_seed} for environment seeding.")
 
@@ -175,7 +176,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
         train_forces=train_forces,
         train_densities=train_densities,
         rl_parameters=rl_parameters,
-        forwarder=forwarder_ensemble,
+        forwarder=forwarder_surrogate,
     )
 
     environment_functions = [
@@ -212,7 +213,7 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 
     try:
         model.learn(
-            total_timesteps=10_000_000,
+            total_timesteps=1_000_000,
             callback=[
                 RenderCallback(
                     render_freq=1,
@@ -242,20 +243,16 @@ def main(agent_path: Path, data_path: Path, surrogate_path: Path | list[Path]) -
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
-    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/ensemble_agent_10mil.zip")
+    AGENT_PATH = Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_1mil.zip")
     DATA_PATH = Path(
-        "/home/gijs/Desktop/Thesis/data/raw_triangular/training_triangular_third_order_15000_samples_0724_0629.json",
+        "/home/gijs/Desktop/Thesis/data/raw/triangular/",
     )
     SURROGATE_PATHS = [
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
         Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_5.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_7.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_9.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_10.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_11.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_12.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_13.pth"),
+
     ]
     main(agent_path=AGENT_PATH, data_path=DATA_PATH, surrogate_path=SURROGATE_PATHS)
