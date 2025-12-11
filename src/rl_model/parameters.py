@@ -30,19 +30,19 @@ class RLParameters:
     """
 
     max_steps: int = 25
-    force_boundary: float = 130
+    force_boundary: float = 200
     density_constraint: float = 1.73
     n_steps: int = 2048
     batch_size: int = 64
     ent_coef: float = 0.01
-    learning_rate: float = 1e-4 # lowered for refinement (originally 1e-3)
+    learning_rate: float = 1e-3
     learning_rate_decay: float = 0.1
     minimum_learning_rate: float = 1e-5
     seed: int = 42
     verbose: int = 1
     device: str = "cpu"
     patience: int = 10
-    location_dead_zone: float = 0.1
+    per_step_dead_zone: float = 1.0
     per_step_force_change: float = 10.0
     per_step_location_change: float = 1.0
 
@@ -65,8 +65,8 @@ class RunConfiguration:
     validation_size: int = 40
     number_of_environments: int = 10
     random_state: int = 0
-    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_20mil.png"))
-    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_10mil.zip"))
+    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_extra_action_RL_10mil.png"))
+    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_extra_action_10mil.zip"))
     data_path: Path = field(default_factory=lambda: Path(
         "/home/gijs/Desktop/Thesis/data/raw/triangular/",
     ))

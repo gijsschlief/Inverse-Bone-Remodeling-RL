@@ -50,11 +50,12 @@ class BoneRemodelingEnvironment(Env):
 
         # Define the action space
         self.per_step_force_change = rl_parameters.per_step_force_change
+        self.per_step_dead_zone = rl_parameters.per_step_dead_zone
         self.per_step_location_change = rl_parameters.per_step_location_change
 
         self.action_space = spaces.Box(
-            low=np.array([-self.per_step_force_change, -self.per_step_location_change], dtype=np.float32),
-            high=np.array([self.per_step_force_change, self.per_step_location_change], dtype=np.float32),
+            low=np.array([-self.per_step_force_change, -self.per_step_dead_zone, -self.per_step_location_change], dtype=np.float32),
+            high=np.array([self.per_step_force_change, self.per_step_dead_zone, self.per_step_location_change], dtype=np.float32),
             dtype=np.float32,
         )
 
@@ -145,17 +146,14 @@ class BoneRemodelingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        peak_action, location_action = action
+        peak_action, dead_zone, location_action = action
         self.peak_magnitude = self.peak_magnitude + np.float32(peak_action)
         if self.peak_magnitude < -self.force_boundary:
             self.peak_magnitude = np.float32(-self.force_boundary)
         elif self.peak_magnitude > self.force_boundary:
             self.peak_magnitude = np.float32(self.force_boundary)
 
-        if abs(location_action) < self.location_dead_zone:
-            move_peak = np.int8(0)
-        else:
-            move_peak = np.int8(np.sign(location_action))
+        move_peak = np.int8(0) if dead_zone > 0 else np.int8(np.sign(location_action))
         self.peak_location = np.mod(
             self.peak_location + move_peak,
             self._profile_length * 3,
