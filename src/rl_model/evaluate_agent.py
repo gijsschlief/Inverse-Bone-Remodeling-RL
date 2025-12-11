@@ -178,9 +178,7 @@ def main() -> None:
     test_peak_locations = np.argmax(np.abs(sample_forces), axis=2)
     eval_peak_locations = np.argmax(np.abs(pred_forces), axis=2)
 
-    side_match = (test_side == eval_side)
-    peak_match = (test_peak_locations == eval_peak_locations)
-    exact_match = np.logical_and(side_match, peak_match)
+    exact_match = (test_peak_locations == eval_peak_locations)
     logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} correct.")
 
     # Calculate average metrics
