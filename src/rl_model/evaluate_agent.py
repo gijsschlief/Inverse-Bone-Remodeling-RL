@@ -1,7 +1,6 @@
 """Evaluate the trained RL agent."""
 
 import logging
-from pathlib import Path
 
 from gymnasium import Env
 from stable_baselines3 import PPO
@@ -10,6 +9,7 @@ from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
 from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
+from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 
 def evaluate_agent(
     model: PPO,
-    environment: Env,
+    environment: BoneRemodelingEnvironment,
     num_episodes: int = 10,
     *,
     render: bool = False,
-) -> dict:
+) -> dict[str, list[float]]:
     """Evaluate the trained RL agent.
 
     Args:
@@ -41,9 +41,11 @@ def evaluate_agent(
 
     """
     episode_rewards = []
+    ssim_scores = []
     mse_errors = []
     all_force_profiles = []
     all_predicted_densities = []
+    render_callback = RenderCallback()
 
     for ep in range(num_episodes):
         obs, _ = environment.reset()
@@ -56,27 +58,41 @@ def evaluate_agent(
 
             total_reward += float(reward)
             done = terminated or truncated
+            sample_information, estimate_information, plot_reward = environment.get_data_for_visualization()
 
             if render:
-                environment.render()
+                render_callback.render(
+                    sample_information=sample_information,
+                    estimate_information=estimate_information,
+                    reward=plot_reward,
+                )
 
         # Evaluation metrics for this episode
         episode_rewards.append(total_reward)
-        mse = calculate_similarity(
-            reference_matrix=environment.target_densities,
-            comparison_matrix=info["predicted_density"],
+        ssim = calculate_similarity(
+            reference_matrix=sample_information[2],
+            comparison_matrix=estimate_information[2],
             method="ssim",
         )
+        ssim_scores.append(ssim)
+
+        mse = calculate_similarity(
+            reference_matrix=sample_information[2],
+            comparison_matrix=estimate_information[2],
+            method="mse",
+        )
         mse_errors.append(mse)
+
         all_force_profiles.append(info["force_profile"])
         all_predicted_densities.append(info["predicted_density"])
 
         logger.info(
-            f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final MSE: {mse:.6f}",
+            f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final SSIM: {ssim:.6f}, Final MSE: {mse:.6f}",
         )
 
     return {
         "rewards": episode_rewards,
+        "ssim_scores": ssim_scores,
         "mse_errors": mse_errors,
         "forces": all_force_profiles,
         "predicted_densities": all_predicted_densities,
@@ -97,7 +113,7 @@ def main() -> None:
         random_state=run_parameters.random_state,
     )
 
-    model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_10mil.zip")
+    model = PPO.load(run_parameters.agent_path.as_posix())
 
     rl_parameters = RLParameters()
 
@@ -107,27 +123,25 @@ def main() -> None:
     model_class=ReversedSurrogateModel,
     )
 
-    all_results = []
-    for i in range(len(test_density_profiles)):
-        agent_evaluation_environment = BoneRemodelingEnvironment(
-            forwarder=forwarder_surrogate,
-            target_densities=test_density_profiles[i],
-            target_forces=test_forces[i],
-            rl_parameters=rl_parameters,
-        )
-        evaluation_result = evaluate_agent(
-            model,
-            agent_evaluation_environment,
-            num_episodes=1,
-            render=True,
-        )
-        all_results.append(evaluation_result)
+    agent_evaluation_environment = BoneRemodelingEnvironment(
+        forwarder=forwarder_surrogate,
+        target_densities=test_density_profiles,
+        target_forces=test_forces,
+        rl_parameters=rl_parameters,
+    )
+    evaluation_result = evaluate_agent(
+        model,
+        agent_evaluation_environment,
+        num_episodes=len(test_density_profiles[:,1,1]),
+        render=False,
+    )
 
     # Calculate average metrics
-    avg_rewards = sum(res["rewards"][0] for res in all_results) / len(all_results)
-    avg_mse = sum(res["mse_errors"][0] for res in all_results) / len(all_results)
+    avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
+    avg_ssim = sum(evaluation_result["ssim_scores"]) / len(evaluation_result["ssim_scores"])
+    avg_mse = sum(evaluation_result["mse_errors"]) / len(evaluation_result["mse_errors"])
 
-    logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_mse:.6f}")
+    logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}")
 
 
 if __name__ == "__main__":

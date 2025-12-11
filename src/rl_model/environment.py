@@ -239,7 +239,7 @@ class BoneRemodelingEnvironment(Env):
 
     def get_data_for_visualization(
         self,
-    ) -> tuple[int, np.ndarray, np.ndarray, float, np.ndarray, np.ndarray, int]:
+    ) -> tuple[ tuple[int, np.ndarray, np.ndarray], tuple[int, np.ndarray, np.ndarray], float]:
         """Pass data needed for rendering the environment to the callback function."""
         sample_information = (
             self.current_sample_index,
