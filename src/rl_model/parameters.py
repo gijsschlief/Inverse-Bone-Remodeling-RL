@@ -23,7 +23,7 @@ class RLParameters:
         verbose: int
         device: str
         patience: int
-        location_dead_zone: float
+        per_step_dead_zone: float
         per_step_force_change: float
         per_step_location_change: float
 

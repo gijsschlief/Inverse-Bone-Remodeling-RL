@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class RewardSavingCallback(BaseCallback):
     """Callback to collect episode rewards and save a final plot."""
 
-    def __init__(self, metrics: MetricsContainer, out_path: Path = Path("reward_curve.png"), verbose: int = 0, smoothing_window: int = 1000) -> None:
+    def __init__(self, metrics: MetricsContainer, out_path: Path, verbose: int = 0, smoothing_window: int = 1000) -> None:
         """Initialize the reward saving callback.
 
         Args:

@@ -36,7 +36,6 @@ class BoneRemodelingEnvironment(Env):
         self.max_steps = rl_parameters.max_steps
         self.density_constraint = rl_parameters.density_constraint
         self.force_boundary = rl_parameters.force_boundary
-        self.location_dead_zone = rl_parameters.location_dead_zone
 
         self.force_shape = (3, self._profile_length)
         self.force_profile = np.zeros(
