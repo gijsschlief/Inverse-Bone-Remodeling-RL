@@ -26,7 +26,7 @@ def evaluate_agent(
     num_episodes: int = 10,
     *,
     render: bool = False,
-) -> dict[str, list[float]]:
+) -> dict[str, list[np.ndarray] | list[float]]:
     """Evaluate the trained RL agent.
 
     Args:
@@ -46,6 +46,8 @@ def evaluate_agent(
     mse_errors = []
     all_force_profiles = []
     all_predicted_densities = []
+    all_samples_forces = []
+    all_sample_densities = []
     render_callback = RenderCallback()
 
     for ep in range(num_episodes):
@@ -55,12 +57,9 @@ def evaluate_agent(
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
-            obs, reward, terminated, truncated, info = environment.step(action)
+            obs, reward, terminated, truncated, _ = environment.step(action)
 
-            total_reward += float(reward)
-            done = terminated or truncated
             sample_information, estimate_information, plot_reward = environment.get_data_for_visualization()
-
             if render:
                 render_callback.render(
                     sample_information=sample_information,
@@ -68,7 +67,10 @@ def evaluate_agent(
                     reward=plot_reward,
                 )
 
-        # Evaluation metrics for this episode
+            total_reward += float(reward)
+            done = terminated or truncated
+
+        # Evaluation metrics
         episode_rewards.append(total_reward)
         ssim = calculate_similarity(
             reference_matrix=sample_information[2],
@@ -83,8 +85,10 @@ def evaluate_agent(
             method="mse",
         )
         mse_errors.append(mse)
-        all_force_profiles.append(info["force_profile"])
-        all_predicted_densities.append(info["predicted_density"])
+        all_force_profiles.append(estimate_information[1])
+        all_predicted_densities.append(estimate_information[2])
+        all_samples_forces.append(sample_information[1])
+        all_sample_densities.append(sample_information[2])
 
         logger.info(
             f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final SSIM: {ssim:.6f}, Final MSE: {mse:.6f}",
@@ -94,6 +98,8 @@ def evaluate_agent(
         "rewards": episode_rewards,
         "ssim_scores": ssim_scores,
         "mse_errors": mse_errors,
+        "sample_forces": all_samples_forces,
+        "sample_densities": all_sample_densities,
         "forces": all_force_profiles,
         "predicted_densities": all_predicted_densities,
     }
@@ -107,7 +113,7 @@ def main() -> None:
     if result is not None:
         _, target_forces, target_densities = result
 
-    _, _, test_density_profiles, _, _, test_forces = splitting(
+    _, _, test_density_profiles, _, _, test_force_profiles = splitting(
         target_densities,
         target_forces,
         random_state=run_parameters.random_state,
@@ -126,7 +132,7 @@ def main() -> None:
     agent_evaluation_environment = BoneRemodelingEnvironment(
         forwarder=forwarder_surrogate,
         target_densities=test_density_profiles,
-        target_forces=test_forces,
+        target_forces=test_force_profiles,
         rl_parameters=rl_parameters,
     )
     evaluation_result = evaluate_agent(
@@ -136,37 +142,46 @@ def main() -> None:
         render=False,
     )
 
-    # Magnitude accuracy
-    peak_test_forces = np.max(test_forces, axis=1)
-    peak_evaluation_forces = np.max(evaluation_result["forces"], axis=1)
+    # Force Magnitude Comparison
+    test_peaks = np.max(np.abs(np.array(evaluation_result["sample_forces"])), axis=(1, 2))
+    eval_peaks = np.max(np.abs(np.array(evaluation_result["forces"])), axis=(1, 2))
+    eps = 1e-3
+    test_peaks = np.clip(test_peaks, eps, None)
+    eval_peaks = np.clip(eval_peaks, eps, None)
     plt.figure()
-    plt.subplot(1, 3, 1)
-    plt.scatter(peak_test_forces, peak_evaluation_forces)
-    plt.xlabel("Peak Test Forces")
-    plt.ylabel("Peak Evaluation Forces")
-    plt.title("Peak Force Comparison")
-    plt.grid(visible=True)
-
-    # Side accuracy
-    side_test_forces = test_forces[:, 0, :]
-    side_evaluation_forces = evaluation_result["forces"][:, 0, :]
-    plt.subplot(1, 3, 2)
-    plt.scatter(side_test_forces.flatten(), side_evaluation_forces.flatten())
-    plt.xlabel("Side Test Forces")
-    plt.ylabel("Side Evaluation Forces")
-    plt.title("Side Force Comparison")
-    plt.grid(visible=True)
-
-    # Location accuracy
-    peak_test_locations = np.argmax(test_forces, axis=1)
-    peak_evaluation_locations = np.argmax(evaluation_result["forces"], axis=1)
-    plt.subplot(1, 3, 3)
-    plt.scatter(peak_test_locations, peak_evaluation_locations)
-    plt.xlabel("Peak Test Locations")
-    plt.ylabel("Peak Evaluation Locations")
-    plt.title("Peak Location Comparison")
+    plt.scatter(test_peaks, eval_peaks, alpha=0.4)
+    max_test = test_peaks.max()
+    max_eval = eval_peaks.max()
+    min_test = test_peaks.min()
+    min_eval = eval_peaks.min()
+    max_val = max(max_test, max_eval)
+    min_val = min(min_test, min_eval)
+    plt.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=2)
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlim(min_test, max_test)
+    plt.ylim(min_eval, max_eval)
+    plt.xlabel("True Peak Force")
+    plt.ylabel("Predicted Peak Force")
+    plt.title("Absolute Peak Force Magnitude Accuracy")
     plt.grid(visible=True)
     plt.show()
+
+    # Force Side Selection
+    sample_forces = np.array(evaluation_result["sample_forces"])
+    pred_forces = np.array(evaluation_result["forces"])
+
+    test_side = np.argmax(np.max(np.abs(sample_forces), axis=2), axis=1)
+    eval_side = np.argmax(np.max(np.abs(pred_forces), axis=2), axis=1)
+    logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} correct.")
+
+    test_peak_locations = np.argmax(np.abs(sample_forces), axis=2)
+    eval_peak_locations = np.argmax(np.abs(pred_forces), axis=2)
+
+    side_match = (test_side == eval_side)
+    peak_match = (test_peak_locations == eval_peak_locations)
+    exact_match = np.logical_and(side_match, peak_match)
+    logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} correct.")
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
