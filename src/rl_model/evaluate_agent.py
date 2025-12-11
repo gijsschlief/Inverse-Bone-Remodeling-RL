@@ -2,7 +2,8 @@
 
 import logging
 
-from gymnasium import Env
+import numpy as np
+from matplotlib import pyplot as plt
 from stable_baselines3 import PPO
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
@@ -82,7 +83,6 @@ def evaluate_agent(
             method="mse",
         )
         mse_errors.append(mse)
-
         all_force_profiles.append(info["force_profile"])
         all_predicted_densities.append(info["predicted_density"])
 
@@ -135,6 +135,38 @@ def main() -> None:
         num_episodes=len(test_density_profiles[:,1,1]),
         render=False,
     )
+
+    # Magnitude accuracy
+    peak_test_forces = np.max(test_forces, axis=1)
+    peak_evaluation_forces = np.max(evaluation_result["forces"], axis=1)
+    plt.figure()
+    plt.subplot(1, 3, 1)
+    plt.scatter(peak_test_forces, peak_evaluation_forces)
+    plt.xlabel("Peak Test Forces")
+    plt.ylabel("Peak Evaluation Forces")
+    plt.title("Peak Force Comparison")
+    plt.grid(visible=True)
+
+    # Side accuracy
+    side_test_forces = test_forces[:, 0, :]
+    side_evaluation_forces = evaluation_result["forces"][:, 0, :]
+    plt.subplot(1, 3, 2)
+    plt.scatter(side_test_forces.flatten(), side_evaluation_forces.flatten())
+    plt.xlabel("Side Test Forces")
+    plt.ylabel("Side Evaluation Forces")
+    plt.title("Side Force Comparison")
+    plt.grid(visible=True)
+
+    # Location accuracy
+    peak_test_locations = np.argmax(test_forces, axis=1)
+    peak_evaluation_locations = np.argmax(evaluation_result["forces"], axis=1)
+    plt.subplot(1, 3, 3)
+    plt.scatter(peak_test_locations, peak_evaluation_locations)
+    plt.xlabel("Peak Test Locations")
+    plt.ylabel("Peak Evaluation Locations")
+    plt.title("Peak Location Comparison")
+    plt.grid(visible=True)
+    plt.show()
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
