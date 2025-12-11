@@ -66,7 +66,7 @@ class RunConfiguration:
     number_of_environments: int = 10
     random_state: int = 0
     reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_20mil.png"))
-    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_20mil.zip"))
+    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_10mil.zip"))
     data_path: Path = field(default_factory=lambda: Path(
         "/home/gijs/Desktop/Thesis/data/raw/triangular/",
     ))

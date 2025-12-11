@@ -8,8 +8,12 @@ from stable_baselines3 import PPO
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
-from bone_remodeling.src.rl_model.parameters import RLParameters
+from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
+from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
+    ReversedSurrogateModel,
+)
 from bone_remodeling.src.surrogate_model.splitter import splitting
 
 logger = logging.getLogger(__name__)
@@ -81,32 +85,32 @@ def evaluate_agent(
 
 def main() -> None:
     """Evaluate the RL agent."""
-    directory_path = Path(
-#        "/home/gijs/Desktop/Thesis/data/old_raw/training_triangular_profiles_1000_samples_0708_1457.json",
-        "/home/gijs/Desktop/Thesis/data/raw_triangular/training_triangular_third_order_1000_samples_0720_1430.json",
-    )
-    result = forward_data_reader(directory_path)
+    run_parameters = RunConfiguration()
+
+    result = forward_data_reader(run_parameters.data_path)
     if result is not None:
         _, target_forces, target_densities = result
 
     _, _, test_density_profiles, _, _, test_forces = splitting(
         target_densities,
         target_forces,
-        random_state=0,
+        random_state=run_parameters.random_state,
     )
 
-    model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/discrete_agents")
+    model = PPO.load("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_10mil.zip")
 
-    rl_parameters = RLParameters(
-        max_steps=1,
+    rl_parameters = RLParameters()
+
+    forwarder_surrogate = SurrogateForwarder(
+    surrogate_model_path=run_parameters.surrogate_path,
+    density_shape=test_density_profiles[0].shape,
+    model_class=ReversedSurrogateModel,
     )
 
     all_results = []
-    for i in range(10):
+    for i in range(len(test_density_profiles)):
         agent_evaluation_environment = BoneRemodelingEnvironment(
-            forwarder=Path(
-                "/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth",
-            ),
+            forwarder=forwarder_surrogate,
             target_densities=test_density_profiles[i],
             target_forces=test_forces[i],
             rl_parameters=rl_parameters,

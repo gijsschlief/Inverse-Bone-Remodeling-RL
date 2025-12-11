@@ -146,7 +146,7 @@ def main(run_parameters: RunConfiguration) -> None:
     rl_parameters = RLParameters()
     metrics = MetricsContainer()
 
-    forwarder_surrogate = SurrogateForwarder(  # noqa: F841
+    forwarder_surrogate = SurrogateForwarder(
         surrogate_model_path=run_parameters.surrogate_path,
         density_shape=train_densities[0].shape,
         model_class=ReversedSurrogateModel,

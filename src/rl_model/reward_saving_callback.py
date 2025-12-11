@@ -4,6 +4,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
+from matplotlib.path import Path
 from stable_baselines3.common.callbacks import BaseCallback
 
 from bone_remodeling.src.rl_model.metrics import MetricsContainer
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 class RewardSavingCallback(BaseCallback):
     """Callback to collect episode rewards and save a final plot."""
 
-    def __init__(self, metrics: MetricsContainer, out_path: str = "reward_curve.png", verbose: int = 0, smoothing_window: int = 1000) -> None:
+    def __init__(self, metrics: MetricsContainer, out_path: Path = Path("reward_curve.png"), verbose: int = 0, smoothing_window: int = 1000) -> None:
         """Initialize the reward saving callback.
 
         Args:
@@ -73,21 +74,22 @@ class RewardSavingCallback(BaseCallback):
         else:
             small_smoothed = None
 
-        fig, ax1 = plt.subplots(figsize=(12, 5))
+        fig, reward_axis = plt.subplots(figsize=(12, 5))
 
         # Reward curve (left y-axis)
-        ax1.plot(small_smoothed_x, small_smoothed, alpha=0.3, label=f"Smoothed reward (w={small_window})", color="gray")
+        if small_smoothed is not None:
+            reward_axis.plot(small_smoothed_x, small_smoothed, alpha=0.3, label=f"Smoothed reward (w={small_window})", color="gray")
         if smoothed is not None:
-            ax1.plot(smoothed_x, smoothed, label=f"Smoothed reward (w={window})")
+            reward_axis.plot(smoothed_x, smoothed, label=f"Smoothed reward (w={window})")
 
-        ax1.set_xlabel("Episode index")
-        ax1.set_ylabel("Reward")
-        ax1.legend(loc="upper left")
-        ax1.grid(True)
+        reward_axis.set_xlabel("Episode index")
+        reward_axis.set_ylabel("Reward")
+        reward_axis.legend(loc="upper left")
+        reward_axis.grid(visible=True)
 
         # Validation curve (right y-axis)
         if len(val_scores) > 0:
-            ax2 = ax1.twinx()
+            ax2 = reward_axis.twinx()
             ax2.plot(val_steps, val_scores, "o-", color="orange", label="Validation SSIM")
             ax2.set_ylabel("SSIM")
             ax2.legend(loc="upper right")
@@ -111,5 +113,5 @@ if __name__ == "__main__":
         metrics.episode_rewards.append(random.uniform(-100, 100))
     metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
     metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    callback = RewardSavingCallback(metrics, out_path="/home/gijs/Desktop/Thesis/data/figures/test_reward_curve.png", smoothing_window=1000, verbose=1)
+    callback = RewardSavingCallback(metrics, out_path=Path("/home/gijs/Desktop/Thesis/data/figures/test_reward_curve.png"), smoothing_window=1000, verbose=1)
     callback._on_training_end()
