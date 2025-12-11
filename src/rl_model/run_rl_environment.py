@@ -242,6 +242,5 @@ def main(run_parameters: RunConfiguration) -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
     run_parameters = RunConfiguration()
     main(run_parameters=run_parameters)

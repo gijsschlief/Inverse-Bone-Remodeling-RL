@@ -35,7 +35,7 @@ class RLParameters:
     n_steps: int = 2048
     batch_size: int = 64
     ent_coef: float = 0.01
-    learning_rate: float = 1e-3
+    learning_rate: float = 1e-4 # lowered for refinement (originally 1e-3)
     learning_rate_decay: float = 0.1
     minimum_learning_rate: float = 1e-5
     seed: int = 42
@@ -59,14 +59,14 @@ class RunConfiguration:
 
     """
 
-    total_timesteps: int = 300_002
+    total_timesteps: int = 10_000_001
     render_frequency: int = 9999
-    validation_frequency: int = 100_000
+    validation_frequency: int = 200_000
     validation_size: int = 40
     number_of_environments: int = 10
     random_state: int = 0
-    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_discrete.png"))
-    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/new2_surrogate_agent_1mil.zip"))
+    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_RL_20mil.png"))
+    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_20mil.zip"))
     data_path: Path = field(default_factory=lambda: Path(
         "/home/gijs/Desktop/Thesis/data/raw/triangular/",
     ))

@@ -49,7 +49,7 @@ class RewardSavingCallback(BaseCallback):
 
     def _on_training_end(self) -> None:
         rewards = self.metrics.episode_rewards
-        episodes = self.metrics.episode_indices
+        episode_x = np.array(self.metrics.episode_end_timesteps)
         val_steps = self.metrics.validation_steps
         val_scores = self.metrics.validation_ssim
 
@@ -61,14 +61,22 @@ class RewardSavingCallback(BaseCallback):
         window = self.smoothing_window
         if len(rewards) >= window:
             smoothed = np.convolve(rewards, np.ones(window) / window, mode="valid")
-            smoothed_x = episodes[window - 1:]
+            smoothed_x = episode_x[window - 1:]
         else:
             smoothed = None
+
+        # Small smooth reward
+        small_window = self.smoothing_window // 10
+        if len(rewards) >= small_window:
+            small_smoothed = np.convolve(rewards, np.ones(small_window) / small_window, mode="valid")
+            small_smoothed_x = episode_x[small_window - 1:]
+        else:
+            small_smoothed = None
 
         fig, ax1 = plt.subplots(figsize=(12, 5))
 
         # Reward curve (left y-axis)
-        ax1.plot(episodes, rewards, alpha=0.3, label="Raw reward", color="gray")
+        ax1.plot(small_smoothed_x, small_smoothed, alpha=0.3, label=f"Smoothed reward (w={small_window})", color="gray")
         if smoothed is not None:
             ax1.plot(smoothed_x, smoothed, label=f"Smoothed reward (w={window})")
 
@@ -98,7 +106,8 @@ if __name__ == "__main__":
 
     metrics = MetricsContainer()
     for i in range(0, 500_000, 25):
-        metrics.steps_at_end_of_episode.append(i)
+        metrics.episode_indices.append(i // 25)
+        metrics.episode_end_timesteps.append(i)
         metrics.episode_rewards.append(random.uniform(-100, 100))
     metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
     metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
