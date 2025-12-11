@@ -176,11 +176,10 @@ def main() -> None:
     side_accuracy = np.sum(test_side == eval_side) / len(test_side)
     logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.")
 
+    test_peak_locations = np.argmax(np.abs(sample_forces[:, test_side, :]), axis=(2))
+    eval_peak_locations = np.argmax(np.abs(pred_forces[:, test_side, :]), axis=(2))
 
-    test_peak_locations = np.argmax(np.abs(sample_forces), axis=(1, 2))
-    eval_peak_locations = np.argmax(np.abs(pred_forces), axis=(1, 2))
-
-    exact_match = (test_peak_locations == eval_peak_locations) - 2*sample_forces.shape[1]
+    exact_match = (test_peak_locations == eval_peak_locations)
     exact_accuracy = np.sum(exact_match) / len(exact_match)
     logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
 

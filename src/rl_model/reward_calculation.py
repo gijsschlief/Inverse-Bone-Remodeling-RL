@@ -95,8 +95,7 @@ def _norm_overlap(metric: float) -> float:
 
 def _mse(ref: np.ndarray, cmp: np.ndarray, baseline: float, *_: float) -> float:
     metric: float = np.mean((ref - cmp) ** 2)
-    return _norm_err(metric, baseline)
-
+    return metric
 
 def _mae(ref: np.ndarray, cmp: np.ndarray, baseline: float, *_: float) -> float:
     metric: float = np.mean(np.abs(ref - cmp))
