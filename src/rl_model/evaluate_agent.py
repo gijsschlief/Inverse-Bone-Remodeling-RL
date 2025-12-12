@@ -55,6 +55,11 @@ def evaluate_agent(
         done = False
         total_reward = 0.0
 
+        # For plotting worst sample at the end
+        worst_sample_information = None
+        worst_estimate_information = None
+        worst_reward = 0.0
+
         while not done:
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, _ = environment.step(action)
@@ -66,6 +71,10 @@ def evaluate_agent(
                     estimate_information=estimate_information,
                     reward=plot_reward,
                 )
+            if worst_reward > plot_reward:
+                worst_reward = plot_reward
+                worst_sample_information = sample_information
+                worst_estimate_information = estimate_information
 
             total_reward += float(reward)
             done = terminated or truncated
@@ -93,6 +102,12 @@ def evaluate_agent(
         logger.info(
             f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final SSIM: {ssim:.6f}, Final MSE: {mse:.6f}",
         )
+
+    if worst_estimate_information is not None and worst_sample_information is not None:
+        render_callback.render(
+            sample_information=worst_sample_information,
+            estimate_information=worst_estimate_information,
+            reward=worst_reward)
 
     return {
         "rewards": episode_rewards,
