@@ -50,15 +50,15 @@ def evaluate_agent(
     all_sample_densities = []
     render_callback = RenderCallback()
 
+    # For plotting worst sample at the end
+    worst_sample_information = None
+    worst_estimate_information = None
+    worst_reward = float('inf')
+
     for ep in range(num_episodes):
         obs, _ = environment.reset()
         done = False
         total_reward = 0.0
-
-        # For plotting worst sample at the end
-        worst_sample_information = None
-        worst_estimate_information = None
-        worst_reward = 0.0
 
         while not done:
             action, _ = model.predict(obs, deterministic=True)
@@ -77,6 +77,7 @@ def evaluate_agent(
 
         # Track worst performing sample
         if worst_reward > plot_reward:
+            logger.info(f"New worst sample found with reward: {plot_reward:.4f}")
             worst_reward = plot_reward
             worst_sample_information = sample_information
             worst_estimate_information = estimate_information
@@ -110,6 +111,9 @@ def evaluate_agent(
             sample_information=worst_sample_information,
             estimate_information=worst_estimate_information,
             reward=worst_reward)
+
+    # Pause to allow viewing of final render
+    plt.pause(20.0)
 
     return {
         "rewards": episode_rewards,
@@ -165,7 +169,7 @@ def main() -> None:
     eps = 1e-3
     test_peaks = np.clip(test_peaks, eps, None)
     eval_peaks = np.clip(eval_peaks, eps, None)
-    plt.figure()
+    plt.figure(num=2)
     plt.scatter(test_peaks, eval_peaks, alpha=0.4)
     max_test = test_peaks.max()
     max_eval = eval_peaks.max()
