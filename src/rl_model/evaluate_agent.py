@@ -71,13 +71,15 @@ def evaluate_agent(
                     estimate_information=estimate_information,
                     reward=plot_reward,
                 )
-            if worst_reward > plot_reward:
-                worst_reward = plot_reward
-                worst_sample_information = sample_information
-                worst_estimate_information = estimate_information
 
             total_reward += float(reward)
             done = terminated or truncated
+
+        # Track worst performing sample
+        if worst_reward > plot_reward:
+            worst_reward = plot_reward
+            worst_sample_information = sample_information
+            worst_estimate_information = estimate_information
 
         # Evaluation metrics
         episode_rewards.append(total_reward)
