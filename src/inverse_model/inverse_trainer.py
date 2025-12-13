@@ -211,7 +211,7 @@ def evaluate_model(
         validation_predictions = model(x_validation)
         validation_loss = combined_loss(validation_predictions, y_validation).item()
 
-    # Convert predicted parameters → 3×10 force profiles
+    # Convert predicted parameters → 3x10 force profiles
     validation_predictions = validation_predictions.cpu().numpy()
     reconstructed_forces = np.array([
         params_to_force_profile(
@@ -224,16 +224,10 @@ def evaluate_model(
 
     # Load the trained forward ensemble models (force → density)
     model_paths = [
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
         Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_5.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_6.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_7.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_8.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_9.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_10.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_11.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_12.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_13.pth"),
     ]
     ensemble_models, x_means, x_stds, y_means, y_stds = load_ensemble_models(model_paths, model_class=ReversedSurrogateModel,
         model_loader=SurrogateModelLoader)
@@ -435,7 +429,7 @@ if __name__ == "__main__":
     )
 
     model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
-    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/training_triangular_third_order_15000_samples_0724_0629.json")
+    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
 
     main(data_file_path, model_path, normalize=False, random_state=1)
 
