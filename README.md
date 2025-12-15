@@ -1,6 +1,6 @@
 # Thesis Code Repository
 
-Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks has to be given to Bansod whose code was a large inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling.
+Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks have to be given to Bansod whose code was a large inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling.
 
 ## Table of Contents
 - [Overview](#overview)

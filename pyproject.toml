@@ -63,12 +63,12 @@ lint.select = [
   "PLR",  # Code should be refactored
   "LOG",  # Use logger rules
   "PTH",  # Path rules
-  "RSE",  # Parantheses on exception
+  "RSE",  # Parentheses on exception
   "ICN",  # import conventions
   "COM",  # Comma rules
   "FURB", # Refurb pypi
   "PYI",  # Pyi files
-  "ISC",  # Implicit string concatination
+  "ISC",  # Implicit string concatenation
   "FBT",  # Boolean traps
   "BLE",  # Blind exceptions
 ]
