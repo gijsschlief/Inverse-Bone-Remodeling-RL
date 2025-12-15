@@ -88,8 +88,8 @@ class ForceProfileGenerator:
         for i in range(num_samples):
             position_1 = self._rng.integers(0, self._profile_length)
             position_2 = self._rng.integers(0, self._profile_length)
-            start_position = min(position_1, position_2)
-            end_position = max(position_1, position_2)
+            start_position = min(position_1.item(), position_2.item())
+            end_position = max(position_1.item(), position_2.item())
             height = self._rng.uniform(force_min, force_max)
             height = height if self._rng.choice([True, False]) else -height
             side = self._rng.choice([0, 1, 2])
@@ -119,8 +119,8 @@ class ForceProfileGenerator:
         for i in range(num_samples):
             position_1 = self._rng.integers(0, self._profile_length)
             position_2 = self._rng.integers(0, self._profile_length)
-            start_position = min(position_1, position_2)
-            end_position = max(position_1, position_2)
+            start_position = min(position_1.item(), position_2.item())
+            end_position = max(position_1.item(), position_2.item())
             height = self._rng.uniform(force_min, force_max)
             height = height if self._rng.choice([True, False]) else -height
             side = self._rng.choice([0, 1, 2])
@@ -218,8 +218,8 @@ if __name__ == "__main__":
     logger = logging.getLogger(__name__)
 
     generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
-    #force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
-    force_profiles = generator.triangular_only(num_samples=100_000)
+    force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
+    #force_profiles = generator.triangular_only(num_samples=100_000)
     force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
 
     # Find empty profiles
@@ -243,7 +243,7 @@ if __name__ == "__main__":
 
     # Logarithmic histogram of energy values
     plt.subplot(2, 2, 2)
-    bins = np.logspace(-2, 5, 200)
+    bins = np.logspace(-2, 5, 200).tolist()
     plt.hist(force_profile_energy, bins=bins)
     plt.title("Distribution of Force Profile Energy")
     plt.xscale("log")
