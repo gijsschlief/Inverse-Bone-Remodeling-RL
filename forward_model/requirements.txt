@@ -1,9 +1,0 @@
-fenics==2019.1.0
-pyvista
-numpy
-
-# Optional dependencies for linting, testing and formatting
-ruff
-pypi
-black
-pytest

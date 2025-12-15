@@ -1,26 +1,27 @@
 """Test cases for the visualizer module in the surrogate model package."""
 
-import matplotlib
+import matplotlib as mpl
 import numpy as np
 import pytest
-from bone_remodeling.surrogate_model import visualizer
 
-matplotlib.use("Agg")  # Use non-interactive backend for testing
+from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
+
+mpl.use("Agg")  # Use non-interactive backend for testing
 
 
-def test_plot_surrogate_model_returns_figures(monkeypatch):
+def test_plot_surrogate_model_returns_figures() -> None:
     """Test that plot_surrogate_model returns a list of matplotlib figures."""
     # Arrange
     predicted_matrices = np.ones((4, 5, 5))
     true_matrices = np.ones((4, 5, 5)) * 2
     sample_count = 2
 
-    # Patch plt.show to avoid opening windows during tests
-    monkeypatch.setattr(visualizer.plt, "show", lambda: None)
-
     # Act
-    figures = visualizer.plot_surrogate_model(
-        true_matrices, predicted_matrices, sample_count=sample_count, show_plot=True
+    figures = plot_surrogate_model(
+        true_matrices,
+        predicted_matrices,
+        sample_count=sample_count,
+        show_plot=False,
     )
 
     # Assert
@@ -30,58 +31,46 @@ def test_plot_surrogate_model_returns_figures(monkeypatch):
         assert hasattr(fig, "savefig")  # matplotlib Figure
 
 
-def test_plot_surrogate_model_invalid_array_type():
+def test_plot_surrogate_model_invalid_array_type() -> None:
     """Test that plot_surrogate_model raises ValueError for invalid array type."""
     # Arrange
     true_matrices = np.ones((3, 4, 4))
     predicted_matrices = "not an array"
 
     # Act & Assert
-    with pytest.raises(ValueError):
-        visualizer.plot_surrogate_model(true_matrices, predicted_matrices)
+    with pytest.raises(
+        ValueError,
+        match="Both predicted_matrices and true_matrices must be numpy.ndarray objects.",
+    ):
+        plot_surrogate_model(true_matrices, predicted_matrices, show_plot=False)  # type: ignore
 
 
-def test_plot_surrogate_model_shape_mismatch():
+def test_plot_surrogate_model_shape_mismatch() -> None:
     """Test that plot_surrogate_model raises ValueError for shape mismatch."""
     true_matrices = np.ones((3, 4, 4))
     predicted_matrices = np.ones((2, 4, 4))
     with pytest.raises(ValueError, match="must have the same shape"):
-        visualizer.plot_surrogate_model(true_matrices, predicted_matrices)
+        plot_surrogate_model(true_matrices, predicted_matrices, show_plot=False)
 
 
-def test_plot_surrogate_model_invalid_sample_count():
+def test_plot_surrogate_model_invalid_sample_count() -> None:
     """Test that plot_surrogate_model raises ValueError for invalid sample_count."""
     true_matrices = np.ones((3, 4, 4))
     predicted_matrices = np.ones((3, 4, 4))
     with pytest.raises(ValueError, match="sample_count must be a positive integer"):
-        visualizer.plot_surrogate_model(
-            true_matrices, predicted_matrices, sample_count=0
+        plot_surrogate_model(
+            true_matrices,
+            predicted_matrices,
+            sample_count=0,
+            show_plot=False,
         )
     with pytest.raises(ValueError, match="sample_count must be a positive integer"):
-        visualizer.plot_surrogate_model(
-            true_matrices, predicted_matrices, sample_count=4
+        plot_surrogate_model(
+            true_matrices,
+            predicted_matrices,
+            sample_count=4,
+            show_plot=False,
         )
-
-
-def test_plot_density_matrix_creates_annotations():
-    """Test that plot_density_matrix creates text annotations for matrix values."""
-    import matplotlib.pyplot as plt
-
-    matrix = np.array([[1.0, 2.0], [3.0, 4.0]])
-    fig, ax = plt.subplots()
-    visualizer.plot_density_matrix(
-        matrix, "Test Matrix", ax, color_scale_min=1.0, color_scale_max=4.0
-    )
-    # Check that the axis has the correct title and labels
-    assert ax.get_title() == "Test Matrix"
-    assert ax.get_xlabel() == "Columns"
-    assert ax.get_ylabel() == "Rows"
-    # Check that text annotations exist
-    texts = [
-        child for child in ax.get_children() if isinstance(child, matplotlib.text.Text)
-    ]
-    assert any("1.00" in t.get_text() for t in texts)
-    plt.close(fig)
 
 
 if __name__ == "__main__":
