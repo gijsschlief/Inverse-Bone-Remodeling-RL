@@ -1,6 +1,6 @@
 # Thesis Code Repository
 
-Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research.
+Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks has to be given to Bansod whose code was a large inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -42,9 +42,15 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
     ```
 
 ## Usage
-Run the main script to start the experiments:
-```bash
-python thesis_cli
+Please be aware that all code has currently been implemented using absolute paths that point to local drives which need to be changed inside the source code to a new location!
+The main scripts that contain the important steps taken in the thesis are the files:
+-   density_animation.py    # Run the forward simulation on a sample and plot the animation
+-   generator.py            # Run the forward simulation in parallel on many generated samples
+-   trainer.py              # Train a surrogate model on the created dataset
+-   evaluate_surrogate.py   # Evaluate surrogate performance
+-   run_rl_environment.py   # Train the rl_agent
+-   evaluate_agent.py       # Analyse agent performance on the test set 
+-   inverse_trainer.py      # Run the inverse neural network on the same dataset
 ```
 
 ## Project Structure
@@ -54,6 +60,7 @@ Thesis_code/
 ├── src/                    # Contains all source code
 |   ├── forward_data/       # Module for data generation and visualization
 |   ├── forward_model/      # Simulation environment for the forward model
+|   ├── inverse_model/      # Simulation environment for the inverse baseline model
 |   ├── rl_model/           # RL models and training scripts
 |   ├── surrogate_model/    # Unsupervised learning neural network model to estimate the forward model
 |   └── main.py             # Entry point for running experiments
