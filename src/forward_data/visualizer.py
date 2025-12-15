@@ -64,8 +64,8 @@ def visualize_force_comparison(
     mag_bins = np.histogram_bin_edges(mag_all, bins=30)
 
     # Consistent colors
-    color1 = "#1f77b4"  # blue
-    color2 = "#ff7f0e"  # orange
+    blue_force_visualization = "#1f77b4"
+    orange_force_visualization = "#ff7f0e"
 
     # Plotting
     fig, axes_array = plt.subplots(1, 2, figsize=(14, 6), constrained_layout=True)
@@ -77,7 +77,7 @@ def visualize_force_comparison(
         bins=nz_bins,
         alpha=0.6,
         label=label_1,
-        color=color1,
+        color=blue_force_visualization,
         edgecolor="black",
     )
     axes_array[0].hist(
@@ -85,7 +85,7 @@ def visualize_force_comparison(
         bins=nz_bins,
         alpha=0.6,
         label=label_2,
-        color=color2,
+        color=orange_force_visualization,
         edgecolor="black",
     )
     axes_array[0].set_title("Non-zero Force Counts")
@@ -100,7 +100,7 @@ def visualize_force_comparison(
         bins=mag_bins,
         alpha=0.6,
         label=label_1,
-        color=color1,
+        color=blue_force_visualization,
         edgecolor="black",
     )
     axes_array[1].hist(
@@ -108,7 +108,7 @@ def visualize_force_comparison(
         bins=mag_bins,
         alpha=0.6,
         label=label_2,
-        color=color2,
+        color=orange_force_visualization,
         edgecolor="black",
     )
     axes_array[1].set_title("Force Magnitude Distribution")

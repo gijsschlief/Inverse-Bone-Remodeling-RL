@@ -206,12 +206,7 @@ def _convert_forward_data_to_numpy(
 ################################ ADDITIONAL CODE FOR DIVERSITY METRICS ################################
 
 def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
-    """Compute simple dataset diversity metrics for biomechanical force profiles.
-
-    Assumes `force_profiles` is shape (n_samples, n_nodes) or (n_samples, n_features).
-    """
-    from scipy.stats import entropy  # noqa: PLC0415
-
+    """Compute simple dataset diversity metrics for biomechanical force profiles."""
     # Coverage fraction (fraction of nodes ever loaded)
     nonzero_counts = np.count_nonzero(force_profiles, axis=0)
     coverage_fraction = np.count_nonzero(nonzero_counts) / force_profiles.shape[1]
@@ -220,7 +215,7 @@ def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
     # Average absolute load per node, normalised to sum 1
     node_loads = np.abs(force_profiles).sum(axis=0)
     normalized_node_loads = node_loads / node_loads.sum()
-    location_entropy = entropy(normalized_node_loads)  # bits of information
+    location_entropy = entropy(normalized_node_loads)
     max_entropy = np.log(len(normalized_node_loads))
     normalized_entropy = location_entropy / max_entropy
 
@@ -260,9 +255,10 @@ if __name__ == "__main__":
 
     # Add a plot that visualizes the distribution of the output densities
     import matplotlib.pyplot as plt
+    from scipy.stats import entropy  # type: ignore
 
     from bone_remodeling.src.forward_model.density_visualizer import (
-        plot_density_matrix,  # type: ignore
+        plot_density_matrix,
     )
     avg_output_densities = output_densities.mean(axis=0)
     avg_force_profiles = force_profiles.mean(axis=0)
@@ -279,9 +275,9 @@ if __name__ == "__main__":
 
     directory_path_triangular = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
     result_triangular = forward_data_reader(directory_path_triangular)
-    try:
+    if result_triangular is not None:
         _, force_profiles_triangular, output_densities_triangular = result_triangular
-    except TypeError:
+    else:
         logger.error("Failed to load data from triangular dataset: forward_data_reader returned None.")
 
     force_profile_energy = np.zeros(force_profiles.shape[0])
