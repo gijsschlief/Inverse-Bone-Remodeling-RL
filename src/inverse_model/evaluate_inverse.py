@@ -4,23 +4,16 @@ import logging
 from pathlib import Path
 
 import numpy as np
+import torch
 from torch.nn.modules.module import Module
 
 from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.inverse_model.inverse_neural_network import (
+    InverseModel,
+)
 from bone_remodeling.src.surrogate_model.evaluator import (
     average_similarity_score,
     validate_surrogate_model,
-)
-from bone_remodeling.src.surrogate_model.loader import load_surrogate_model
-from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
-    SurrogateModel,
-)
-from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,
-)
-from bone_remodeling.src.surrogate_model.normalizor import (
-    normalize_data,
-    unnormalize_data,
 )
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
@@ -32,10 +25,13 @@ logger = logging.getLogger(__name__)
 def run_inverse_model_evaluation(
     model_path: Path,
     data_path: Path,
-    model_class: type[SurrogateModel],
+    model_class: type[torch.nn.Module],
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
-    model, x_mean, x_std, y_mean, y_std = _load_model(model_path, model_class)
+    model = _load_model(model_path, model_class)
+    if model is None:
+        logger.error("Failed to load the inverse model.")
+        return
 
     data = forward_data_reader(data_path)
     if data is None:
@@ -54,38 +50,19 @@ def run_inverse_model_evaluation(
     x_train, x_val, x_test, y_train, y_val, y_test = splitting(
         force_profiles,
         final_output_densities,
-        random_state=0,
+        random_state=1,
     )
     if x_val is None or y_val is None:
         logger.error("Failed to split the data into validation sets.")
         return
 
-    # Normalize the validation data if normalization parameters are available
-    if x_mean is not None and x_std is not None:
-        x_val_unnormalized = x_val.copy()
-        x_train, _, _ = normalize_data(x_train, x_mean, x_std)
-        x_val, _, _ = normalize_data(x_val, x_mean, x_std)
-        x_test, _, _ = normalize_data(x_test, x_mean, x_std)
-
-    if y_mean is not None and y_std is not None:
-        y_train, _, _ = normalize_data(y_train, y_mean, y_std)
-        y_val, _, _ = normalize_data(y_val, y_mean, y_std)
-        y_test, _, _ = normalize_data(y_test, y_mean, y_std)
-        output_normalized = True
-    else:
-        output_normalized = False
-
     predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
+    if hasattr(predicted_matrices, "detach"):
+        predicted_matrices = predicted_matrices.detach().cpu().numpy()
+    if hasattr(true_matrices, "detach"):
+        true_matrices = true_matrices.detach().cpu().numpy()
 
-    if output_normalized and y_mean is not None and y_std is not None:
-        predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
-        true_matrices = unnormalize_data(true_matrices, y_mean, y_std)
-        if hasattr(predicted_matrices, "detach"):
-            predicted_matrices = predicted_matrices.detach().cpu().numpy()
-        if hasattr(true_matrices, "detach"):
-            true_matrices = true_matrices.detach().cpu().numpy()
-
-    plot_worst_prediction(true_matrices, predicted_matrices, x_val_unnormalized)
+    plot_worst_prediction(true_matrices, predicted_matrices, x_val)
 
     average_similarity = average_similarity_score(
         predicted_matrices,
@@ -100,31 +77,49 @@ def run_inverse_model_evaluation(
     plot_surrogate_model(
         predicted_matrices=predicted_matrices,
         true_matrices=true_matrices,
-        force_profiles=x_val_unnormalized,
+        force_profiles=x_val,
         sample_count=20,
         show_plot=True,
     )
     return
 
+def load_inverse_model(
+    model_path: Path,
+    model_class: type[Module],
+) -> Module | None:
+    """Load the inverse surrogate model and its normalization parameters from a file.
+
+    Args:
+    ----
+        model_path (Path): The path to the model file.
+        model_class (type[Module]): The class of the model to be loaded.
+
+    Returns:
+    -------
+        tuple: A tuple containing the model, input mean, input std, output mean, and output std.
+
+    """
+    try:
+        checkpoint = torch.load(model_path)
+        model = model_class()
+        model.load_state_dict(checkpoint["model_state_dict"])
+        model.eval()
+        return model
+    except Exception as e:
+        logger.error(f"Error loading model from {model_path}: {e}")
+        return None
 
 def _load_model(
     model_path: Path,
     model_class: type[Module],
-) -> tuple[Module, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    model_and_normalization_params = load_surrogate_model(
+) -> Module | None:
+    model = load_inverse_model(
         model_path,
         model_class,
     )
-    if model_and_normalization_params is None:
-        raise RuntimeError(
-            "Failed to load the surrogate model and normalization parameters.",
-        )
-    model, x_mean, x_std, y_mean, y_std = model_and_normalization_params
     if model is None:
         raise RuntimeError("Failed to load the surrogate model.")
-    if x_mean is None or x_std is None or y_mean is None or y_std is None:
-        raise RuntimeError("Normalization parameters are missing.")
-    return model, x_mean, x_std, y_mean, y_std
+    return model
 
 
 def plot_worst_prediction(
@@ -161,10 +156,10 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
     run_inverse_model_evaluation(
         model_path=model_path,
         data_path=data_path,
-        model_class=ReversedSurrogateModel,
+        model_class=InverseModel,
     )

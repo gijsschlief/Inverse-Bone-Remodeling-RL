@@ -7,16 +7,16 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from bone_remodeling.src.forward_data.force_profile_generator import (
-    ForceProfileGenerator,  # type: ignore
+    ForceProfileGenerator,
 )
 from bone_remodeling.src.forward_data.generator import (
-    TrainingDataGenerator,  # type: ignore
+    TrainingDataGenerator,
 )
 from bone_remodeling.src.forward_data.reader import (
-    forward_data_reader,  # type: ignore
+    forward_data_reader,
 )
 from bone_remodeling.src.forward_model.parameters import (
-    SimulationParameters,  # type: ignore
+    SimulationParameters,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -28,11 +28,11 @@ def shannon_energy_entropy(density: np.ndarray) -> float:
     p = e / e.sum()
     return -np.sum(p * np.log(p))
 
-def matrix_saturation(density: np.ndarray, max_density: float = 1.74) -> int:
+def matrix_saturation(density: np.ndarray, max_density: float = 1.74) -> np.bool:
     """Calculate the saturation level of the density matrix."""
     return np.sum(density >= max_density)
 
-def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> int:
+def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> np.bool:
     """Calculate the level of undersaturation of the density matrix."""
     return np.sum(density <= min_density)
 
@@ -82,6 +82,35 @@ def force_profile_energy(force_profile: np.ndarray) -> float:
     """Calculate the energy of a force profile using the sum of all values squared."""
     return np.sum(force_profile ** 2)
 
+def plot_oversaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float], bin_means: list[float], saturation_threshold: float = 5e4) -> None:
+    """Plot oversaturation analysis from the sweep results."""
+    plt.figure(num=1,figsize=(8, 6))
+    plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
+    plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
+    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
+    plt.xlabel("Force Profile Energy")
+    plt.ylabel("Matrix Oversaturation")
+    plt.xscale("log")
+    plt.xlim(left=1)
+    plt.title("Energy vs Matrix Oversaturation")
+    plt.grid(visible=True)
+    plt.legend()
+
+def plot_undersaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float], bin_means: list[float], saturation_threshold: float = 1e2) -> None:
+    """Plot undersaturation analysis from the sweep results."""
+    plt.figure(num=2,figsize=(8, 6))
+    plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
+    plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
+    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
+    plt.xlabel("Force Profile Energy")
+    plt.ylabel("Matrix Undersaturation")
+    plt.xscale("log")
+    plt.xlim(left=1)
+    plt.title("Energy vs Matrix Undersaturation")
+    plt.grid(visible=True)
+    plt.legend()
+    plt.show()
+
 def analyse_sweep() -> None:
     """Analyse the results of the max force sweep simulations."""
     data = forward_data_reader(
@@ -93,9 +122,9 @@ def analyse_sweep() -> None:
         return
     _, force_profiles, densities = data
 
-    saturations = []
-    undersaturations = []
-    energies = []
+    saturations: list[np.bool] = []
+    undersaturations: list[np.bool] = []
+    energies: list[float] = []
 
     for force_profile, final_density in zip(force_profiles, densities):
         energy = force_profile_energy(force_profile)
@@ -105,74 +134,43 @@ def analyse_sweep() -> None:
         saturations.append(saturation)
         undersaturations.append(undersaturation)
 
-    energies = np.array(energies)
-    saturations = np.array(saturations)
-    undersaturations = np.array(undersaturations)
+    energies_array = np.array(energies)
+    saturations_array = np.array(saturations)
+    undersaturations_array = np.array(undersaturations)
 
     # Sort by energy
-    idx = np.argsort(energies)
-    x = energies[idx]
-    y = saturations[idx]
-    N_bins: int = 20
-    bins = np.logspace(np.log10(1), np.log10(10e8), N_bins + 1)
+    idx = np.argsort(energies_array)
+    x = energies_array[idx]
+    y_oversaturated = saturations_array[idx]
+    total_bins: int = 20
+    bins = np.logspace(np.log10(1), np.log10(10e8), total_bins + 1)
 
-    bin_centers = []
-    bin_means = []
+    bin_centers_oversaturated = []
+    bin_means_oversaturated = []
 
-    for i in range(N_bins):
+    for i in range(total_bins):
         mask = (x >= bins[i]) & (x < bins[i + 1])
         if np.any(mask):
-            bin_centers.append((bins[i] + bins[i + 1]) / 2)
-            bin_means.append(np.mean(y[mask]))
+            bin_centers_oversaturated.append((bins[i] + bins[i + 1]) / 2)
+            bin_means_oversaturated.append(np.mean(y_oversaturated[mask]))
 
-    plt.figure(num=1,figsize=(8, 6))
-    plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
-    plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
-
-    # Add vertical line at saturation threshold
-    saturation_threshold = 5e4  # Example threshold value
-    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
-
-    plt.xlabel("Force Profile Energy")
-    plt.ylabel("Matrix Oversaturation")
-    plt.xscale("log")
-    plt.xlim(left=1)
-    plt.title("Energy vs Matrix Oversaturation")
-    plt.grid(visible=True)
-    plt.legend()
+    plot_oversaturation(x, y_oversaturated, bin_centers_oversaturated, bin_means_oversaturated)
 
     # THE SAME BUT FOR UNDERSATURATION
+    y_undersaturated = undersaturations_array[idx]
+    bins = np.logspace(np.log10(1), np.log10(10e8), total_bins + 1)
 
-    y = undersaturations[idx]
-    N_bins: int = 20
-    bins = np.logspace(np.log10(1), np.log10(10e8), N_bins + 1)
+    bin_centers_undersaturated = []
+    bin_means_undersaturated = []
 
-    bin_centers = []
-    bin_means = []
-
-    for i in range(N_bins):
+    for i in range(total_bins):
         mask = (x >= bins[i]) & (x < bins[i + 1])
         if np.any(mask):
-            bin_centers.append((bins[i] + bins[i + 1]) / 2)
-            bin_means.append(np.mean(y[mask]))
+            bin_centers_undersaturated.append((bins[i] + bins[i + 1]) / 2)
+            bin_means_undersaturated.append(np.mean(y_undersaturated[mask]))
 
-    plt.figure(num=2,figsize=(8, 6))
-    plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
-    plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
-
-    # Add vertical line at saturation threshold
-    saturation_threshold = 1e2  # Example threshold value
-    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
-
-    plt.xlabel("Force Profile Energy")
-    plt.ylabel("Matrix Undersaturation")
-    plt.xscale("log")
-    plt.xlim(left=1)
-    plt.title("Energy vs Matrix Undersaturation")
-    plt.grid(visible=True)
-    plt.legend()
-    plt.show()
+    plot_undersaturation(x, y_undersaturated, bin_centers_undersaturated, bin_means_undersaturated)
 
 if __name__ == "__main__":
-    #run_sweep()
+    run_sweep()
     analyse_sweep()
