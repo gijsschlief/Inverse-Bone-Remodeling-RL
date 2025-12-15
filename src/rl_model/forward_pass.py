@@ -150,7 +150,10 @@ class SurrogateForwarder(ForwardPass):
             force_profile_tensor = torch.from_numpy(
                 force_profile.reshape(1, -1).astype(np.float32),
             ).to(self.device)
-        density_tensor = self.surrogate_model(force_profile_tensor)
+        if force_profile_tensor is not None and self.surrogate_model is not None:
+            density_tensor = self.surrogate_model(force_profile_tensor)
+        else:
+            raise ValueError("Force profile tensor is None or surrogate model is None.")
 
         density_tensor = self._unnormalize_data(density_tensor)
         surrogate_density: np.ndarray = density_tensor.detach().cpu().numpy()

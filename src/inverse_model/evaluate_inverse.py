@@ -47,7 +47,7 @@ def run_inverse_model_evaluation(
         final_output_densities,
     )
 
-    x_train, x_val, x_test, y_train, y_val, y_test = splitting(
+    _, x_val, _, _, y_val, _ = splitting(
         force_profiles,
         final_output_densities,
         random_state=1,
@@ -105,7 +105,7 @@ def load_inverse_model(
         model.load_state_dict(checkpoint["model_state_dict"])
         model.eval()
         return model
-    except Exception as e:
+    except (FileNotFoundError, KeyError, RuntimeError) as e:
         logger.error(f"Error loading model from {model_path}: {e}")
         return None
 

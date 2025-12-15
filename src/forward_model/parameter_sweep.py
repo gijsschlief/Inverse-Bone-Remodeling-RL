@@ -18,14 +18,14 @@ from typing import Any
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
+import pandas as pd  # type: ignore
 
 from bone_remodeling.src.forward_data.force_profile_generator import (
-    ForceProfileGenerator,  # type: ignore
+    ForceProfileGenerator,
 )
-from bone_remodeling.src.forward_model.main import DensitySimulation  # type: ignore
+from bone_remodeling.src.forward_model.main import DensitySimulation
 from bone_remodeling.src.forward_model.parameters import (
-    SimulationParameters,  # type: ignore
+    SimulationParameters,
 )
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,7 @@ def run_simulation(params: SimulationParameters) -> np.ndarray:
     density_simulation.run()
     return density_simulation.get_density()
 
-def compute_l2_error(a: np.ndarray, b: np.ndarray) -> float:
+def compute_l2_error(a: np.ndarray, b: np.ndarray) -> np.floating:
     """Compute relative L2 error."""
     return np.linalg.norm(a - b) / np.linalg.norm(b)
 
@@ -70,9 +70,8 @@ def run_reference_simulation(initial_simulation_parameters: SimulationParameters
     logger.info(f"Reference simulation runtime: {t1 - t0:.2f}s")
     return reference_densities
 
-def parameter_grid() -> Generator[Any, Any, Any]:
+def parameter_grid() -> Generator[dict[str, float | int], Any, Any]:
     """Yield dictionaries of possible parameter combinations to test. Modify here to change sweep ranges."""
-    # SINGLE LARGE SWEEP
     decay_tol_options = [1, 1.02, 1.04, 1.06, 1.08]
     ct0_options = [1, 5, 10]
     ct_decay_options = [1, 0.98, 0.96, 0.94]
@@ -101,9 +100,17 @@ def run_parameter_sweep(base_params: SimulationParameters, force_profiles: np.nd
         for combo in parameter_grid():
             logger.info(f"Testing params: {combo}")
 
-            params = replace(base_params, **combo)
-            density = np.zeros((len(force_profiles),) + base_params.initial_density_field.shape)
+            params = replace(
+                base_params,
+                convergence_tolerance_decay=float(combo["convergence_tolerance_decay"]),
+                convergence_after_steps=int(combo["convergence_after_steps"]),
+                convergence_steps_decay=float(combo["convergence_steps_decay"]),
+                time_steps=int(combo["time_steps"]),
+            )
+            density = np.zeros((len(force_profiles), *base_params.initial_density_field.shape))
             l2_error = np.zeros(len(force_profiles))
+            runtime: float = np.nan
+            average_l2_error: float = np.nan
 
             t0 = time.time()
             try:
@@ -114,11 +121,9 @@ def run_parameter_sweep(base_params: SimulationParameters, force_profiles: np.nd
                 runtime = time.time() - t0
                 for i in range(len(force_profiles)):
                     l2_error[i] = compute_l2_error(density[i], density_references[i])
-                average_l2_error = np.mean(l2_error)
-            except Exception as e:
+                average_l2_error = float(np.mean(l2_error))
+            except (RuntimeError, ValueError) as e:
                 logger.error(f"A simulation failed: {e!s}")
-                runtime = np.nan
-                average_l2_error = np.nan
 
             writer.writerow([
                 combo["convergence_tolerance_decay"],
@@ -209,7 +214,7 @@ def performance_comparison(num_samples: int = 100) -> None:
             convergence_steps_decay=0.99,
             time_steps=1000,
         )
-    parameter_sets = [
+    parameter_sets: list[dict[str, float | int]] = [
         {
             "convergence_tolerance_decay": 1.06,
             "convergence_after_steps": 20,

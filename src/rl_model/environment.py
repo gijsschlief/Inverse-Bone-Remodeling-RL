@@ -5,7 +5,11 @@ import logging
 import numpy as np
 from gymnasium import Env, spaces
 
-from bone_remodeling.src.rl_model.forward_pass import ForwardPass
+from bone_remodeling.src.rl_model.forward_pass import (
+    EnsembleForwarder,
+    FenicsForwarder,
+    SurrogateForwarder,
+)
 from bone_remodeling.src.rl_model.parameters import RLParameters
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 
@@ -17,7 +21,7 @@ class BoneRemodelingEnvironment(Env):
 
     def __init__(
         self,
-        forwarder: type[ForwardPass],
+        forwarder: EnsembleForwarder | FenicsForwarder | SurrogateForwarder,
         target_densities: np.ndarray,
         target_forces: np.ndarray,
         rl_parameters: RLParameters,
@@ -166,7 +170,7 @@ class BoneRemodelingEnvironment(Env):
             peak_height=float(self.peak_magnitude),
         )
 
-        predicted_density = self.forwarder.forward_pass(self.force_profile)
+        predicted_density = self.forwarder.forward_pass(force_profile=self.force_profile)
         reward = calculate_similarity(
             reference_matrix=self.target_density,
             comparison_matrix=predicted_density,

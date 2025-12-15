@@ -13,38 +13,38 @@ logger = logging.getLogger(__name__)
 class InverseModel(torch.nn.Module):
     """Inverse Neural Network Model for bone remodeling simulation."""
 
-    def __init__(self, input_size: int=100, hidden_dim: int=256, output_dim: int=3) -> None:
+    def __init__(self, input_size: int=100, hidden_dimension: int=256, output_dim: int=3) -> None:
         """Initialize the inverse model.
 
         Args:
         ----
             input_size (int): Flattened 10x10 density map (100).
-            hidden_dim (int): Hidden layer width.
+            hidden_dimension (int): Hidden layer width.
             output_dim (int): Number of predicted force components (e.g., 3).
 
         """
         super().__init__()
-        self.train_losses = []
-        self.val_losses = []
-
+        self.train_losses: list[float] = []
+        self.val_losses: list[float] = []
 
         self.fc = torch.nn.Sequential(
-            torch.nn.Linear(input_size, 256),
+            torch.nn.Linear(input_size, hidden_dimension),
             torch.nn.ReLU(),
-            torch.nn.Linear(256, 512),
+            torch.nn.Linear(hidden_dimension, hidden_dimension*2),
             torch.nn.ReLU(),
-            torch.nn.Linear(512, 1024),
+            torch.nn.Linear(hidden_dimension*2, hidden_dimension*4),
             torch.nn.ReLU(),
-            torch.nn.Linear(1024, 512),
+            torch.nn.Linear(hidden_dimension*4, hidden_dimension*2),
             torch.nn.ReLU(),
-            torch.nn.Linear(512, 256),
+            torch.nn.Linear(hidden_dimension*2, hidden_dimension),
             torch.nn.ReLU(),
-            torch.nn.Linear(256, output_dim),
+            torch.nn.Linear(hidden_dimension, output_dim),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the inverse model."""
-        if x.ndim == 3:
+        sides = 3
+        if x.ndim == sides:
             x = x.view(x.size(0), -1)
         return self.fc(x)
 

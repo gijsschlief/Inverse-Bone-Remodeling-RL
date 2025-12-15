@@ -24,7 +24,7 @@ def load_ensemble_models(
     model_class: type[SurrogateModel],
     model_loader: type[SurrogateModelLoader],
 ) -> tuple[
-    list[type[SurrogateModel]],
+    list[SurrogateModel],
     list[np.ndarray],
     list[np.ndarray],
     list[np.ndarray],

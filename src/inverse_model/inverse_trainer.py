@@ -233,7 +233,7 @@ def evaluate_model(
         model_loader=SurrogateModelLoader)
 
     # Predict densities from the estimated force profiles
-    predicted_densities, _ = predict_with_ensemble(ensemble_models, reconstructed_forces, [x_means, x_stds], [y_means, y_stds])
+    predicted_densities, _ = predict_with_ensemble(ensemble_models, reconstructed_forces, tuple(x_means, x_stds), tuple(y_means, y_stds))
     if isinstance(predicted_densities, torch.Tensor):
         predicted_densities = predicted_densities.cpu().numpy()
 
@@ -266,7 +266,7 @@ def evaluate_model(
     )
 
     # === Show sample visualizations ===
-    for i in range(10):
+    for _ in range(10):
         fig, axes = plt.subplots(1, 2)
         idx = np.random.choice(len(true_densities))
         fig.suptitle(f"Inverse Model Evaluation Samples (Original vs. Prediction) {idx}")
@@ -287,7 +287,8 @@ def evaluate_model(
 
 def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]:
     """Convert a 3xN force profile into peak location, peak side, and peak height."""
-    if force_profile.shape[0] != 3:
+    total_sides = 3
+    if force_profile.shape[0] != total_sides:
         raise ValueError("Force profile must have shape (3, N)")
 
     peak_side = int(np.argmax(np.max(force_profile, axis=1)))
@@ -305,7 +306,8 @@ def params_to_force_profile(
 ) -> np.ndarray:
     """Convert peak location, peak side, and peak height back into a triangular 3xN force profile."""
     peak_side = min(peak_side, 2)
-    if not (0 <= peak_side < 3):
+    total_sides = 3
+    if not (0 <= peak_side < total_sides):
         raise ValueError("Peak side must be 0, 1, or 2")
     if not (0 <= peak_location < length):
         raise ValueError(f"Peak location must be between 0 and {length - 1}")
