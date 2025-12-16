@@ -88,7 +88,7 @@ class SimulationParameters:
     # Max remodelling rate based on viscous remodeling assumption
     maximum_delta: float = 0.02
 
-    # FEM element orders
+    # FEM element orders (low orders result in checkerboarding and mesh-dependency)
     displacement_element_order: int = 3
     density_element_order: int = 0
 
