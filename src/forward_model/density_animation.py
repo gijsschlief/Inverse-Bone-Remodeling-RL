@@ -6,8 +6,6 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
-from matplotlib.animation import FuncAnimation
-
 from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,
 )
@@ -17,6 +15,7 @@ from bone_remodeling.src.forward_model.density_visualizer import (
 )
 from bone_remodeling.src.forward_model.main import DensitySimulation
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
+from matplotlib.animation import FuncAnimation
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +162,7 @@ def main() -> None:
 
     # Alternative profile for Weinans model validation ----
     validation_force_maginitude = -25 # -5 for previous parameters
-    n_points = 100
+    n_points = 10
     scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
 
     validation_force_profile = np.array([
@@ -193,7 +192,7 @@ def main() -> None:
     # To run change parameters to moment_parameters ----
 
 
-    simulation = DensitySimulation(parameters)
+    simulation = DensitySimulation(validation_parameters)
 
     animate_density_matplotlib(
         simulation=simulation,

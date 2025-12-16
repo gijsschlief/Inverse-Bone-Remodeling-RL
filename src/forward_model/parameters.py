@@ -46,6 +46,16 @@ class SimulationParameters:
             Decay factor for the number of steps for convergence checks.
         boundary_tolerance : float
             Tolerance for the boundary conditions.
+        maximum_delta : float
+            Maximum allowable change in density per time step.
+        krylov_solver_tolerance : float
+            Tolerance for the Krylov solver.
+        krylov_solver_iterations : int
+            Maximum iterations for the Krylov solver.
+        linear_solver : str
+            Type of linear solver to use.
+        preconditioner : str
+            Type of preconditioner to use.
         output_dir : str
             Directory to save output files.
         output_basename : str
@@ -64,26 +74,38 @@ class SimulationParameters:
 
     force_profile: np.ndarray  # shape (3,n)
     initial_density_field: np.ndarray  # shape (n,n)
-    time_steps: int = 250
-    dt: float = 1.0
 
-    # material parameters
+    # material parameters based on Weinans et al. 1992
     poisson_ratio: float = 0.3
-    elastic_modulus_scale: float = 3790.0 #100.0 new parameters match validation significantly better
-    modulus_exponent: float = 3.0 #2.0
-
-    # remodeling parameters
+    elastic_modulus_scale: float = 3790.0
+    modulus_exponent: float = 3.0
     remodeling_rate_coefficient: float = 1.0
     stimulus_threshold: float = 0.25
     min_density: float = 0.01
     max_density: float = 1.74
+    dt: float = 1.0
 
-    # convergence parameters
+    # Max remodelling rate based on viscous remodeling assumption
     maximum_delta: float = 0.02
-    convergence_tolerance: float = 1e-9
+
+    # FEM element orders
+    displacement_element_order: int = 3
+    density_element_order: int = 0
+
+    # convergence parameters based on parameter sweep experiment
+    time_steps: int = 250
     convergence_tolerance_decay: float = 1.06
     convergence_after_steps: int = 10
     convergence_steps_decay: float = 1
+
+    # standard value for Krylov solver
+    linear_solver: str = "default"
+    preconditioner: str = "hypre_amg"
+    krylov_solver_iterations: int = 1000
+
+    # Numerical parameters based on machine precision float 64-bit = 2.22e-16 < boundary_tolerance < krylov_solver_tolerance < convergence_tolerance
+    convergence_tolerance: float = 1e-9
+    krylov_solver_tolerance: float = 1e-10
     boundary_tolerance: float = 1e-14
 
     # I/O parameters
