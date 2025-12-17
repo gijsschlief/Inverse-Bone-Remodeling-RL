@@ -227,7 +227,7 @@ class TrainingDataGenerator:
 if __name__ == "__main__":
     import time
 
-    initial_density = np.full((10, 10), 0.8)
+    initial_density = np.full((10, 10), 0.87)
 
     logger.setLevel(logging.INFO)
     logger.info("Generating force profiles...")
@@ -237,12 +237,12 @@ if __name__ == "__main__":
         batch_seed=1,
     )
 
-    #force_profiles = force_profile_generator.merger(
-    #    num_samples=50_000,
-    #)
-    force_profiles = force_profile_generator.triangular_only(
-        num_samples=40_000,
+    force_profiles = force_profile_generator.merger(
+        num_samples=100_000,
     )
+    #force_profiles = force_profile_generator.triangular_only(
+    #    num_samples=40_000,
+    #)
 
     logger.info("Running forward model simulations...")
 

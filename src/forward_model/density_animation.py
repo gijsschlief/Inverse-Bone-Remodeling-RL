@@ -147,7 +147,7 @@ def main() -> None:
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=11,
+        batch_seed=1258,
     )
     force_profile = force_profile_generator.merger(
         num_samples=1,
@@ -156,13 +156,13 @@ def main() -> None:
 
     parameters = SimulationParameters(
         force_profile=force_profile,
-        initial_density_field=np.ones((10, 10)) * 0.8,
+        initial_density_field=np.ones((10, 10)) * 0.87,
         save_data=True,
     )
 
     # Alternative profile for Weinans model validation ----
     validation_force_maginitude = -25 # -5 for previous parameters
-    n_points = 10
+    n_points = 40
     scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
 
     validation_force_profile = np.array([
@@ -173,7 +173,7 @@ def main() -> None:
 
     validation_parameters = SimulationParameters(  # noqa: F841
         force_profile=validation_force_profile,
-        initial_density_field=np.ones((n_points, n_points)) * 0.8,
+        initial_density_field=np.ones((n_points, n_points)) * 0.87,
         save_data=True,
     )
     # To run change parameters to validation_parameters ----
@@ -186,24 +186,23 @@ def main() -> None:
 
     moment_parameters = SimulationParameters(  # noqa: F841
         force_profile=moment_force_profile,
-        initial_density_field=np.ones((10, 10)) * 0.8,
+        initial_density_field=np.ones((10, 10)) * 0.87,
         save_data=True,
     )
     # To run change parameters to moment_parameters ----
 
-
-    simulation = DensitySimulation(validation_parameters)
+    simulation = DensitySimulation(parameters)
 
     animate_density_matplotlib(
         simulation=simulation,
         output_directory=Path(
-            "/home/gijs/Desktop/Thesis/data/animations/0_density_animation.gif",
+            "/home/gijs/Desktop/Thesis/data/animations/9_density_animation.gif",
         ),
     )
     animate_density_pyvista(
         simulation=simulation,
         output_directory=Path(
-            "/home/gijs/Desktop/Thesis/data/animations/0_density_animation_pyvista.gif",
+            "/home/gijs/Desktop/Thesis/data/animations/9_density_animation_pyvista.gif",
         ),
         file_pattern="/home/gijs/Desktop/Thesis/data/animations/density_animation",
     )

@@ -34,7 +34,7 @@ class ForceProfileGenerator:
         total_elements = profiles.shape[1] * profiles.shape[2]
 
         # Determine number of forces per sample using lognormal distribution
-        profile_count = self._log_normal_sampling(mean=0.0, sigma=0.5, size=num_samples, rng=self._rng).astype(int)
+        profile_count = self._log_normal_sampling(mean=0.5, sigma=0.8, size=num_samples, rng=self._rng).astype(int)
         counts = np.clip(profile_count, 1, force_count_max)
         total_forces = np.sum(counts)
 
@@ -150,7 +150,7 @@ class ForceProfileGenerator:
 
     def merger(self, num_samples: int, scaling: float = 10.0) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
-        profile_count = self._log_normal_sampling(mean=0.0, sigma=0.5, size=num_samples, rng=self._rng).astype(int)
+        profile_count = self._log_normal_sampling(mean=0.5, sigma=0.8, size=num_samples, rng=self._rng).astype(int)
         profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
         for i in range(num_samples):
             if profile_count[i] == 0:
