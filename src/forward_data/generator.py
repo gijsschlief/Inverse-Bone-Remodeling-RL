@@ -15,8 +15,6 @@ from multiprocessing import cpu_count, get_context
 from pathlib import Path
 
 import numpy as np
-from fenics import LogLevel, set_log_level  # type: ignore
-
 from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
@@ -26,6 +24,7 @@ from bone_remodeling.src.forward_model.main import (
 from bone_remodeling.src.forward_model.parameters import (
     SimulationParameters,  # type: ignore
 )
+from fenics import LogLevel, set_log_level  # type: ignore
 
 set_log_level(LogLevel.ERROR)
 logger = logging.getLogger(__name__)

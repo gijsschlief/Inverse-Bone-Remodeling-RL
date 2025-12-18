@@ -8,7 +8,7 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-@dataclass
+@dataclass(frozen=True)
 class SimulationParameters:
     """Simulation parameters used by the forward model.
 
