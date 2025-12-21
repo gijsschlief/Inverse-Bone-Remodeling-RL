@@ -4,8 +4,6 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from torch.nn.modules.module import Module
-
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.surrogate_model.evaluator import (
     average_similarity_score,
@@ -25,6 +23,7 @@ from bone_remodeling.src.surrogate_model.normalizor import (
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
 from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
+from torch.nn.modules.module import Module
 
 logger = logging.getLogger(__name__)
 
@@ -162,7 +161,7 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
     run_model_evaluation(
         model_path=model_path,

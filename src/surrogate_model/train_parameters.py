@@ -16,7 +16,7 @@ class SurrogateTrainParameters:
     patience_lr_scheduler: int = 25
     factor_lr_scheduler: float = 0.5
     cooldown_lr_scheduler: int = 10
-    patience: int = 50
+    patience: int = 500
     min_delta: float = 1e-4
     log_interval: int = 10
     log_all_for_first_epochs: int = 10
