@@ -3,9 +3,6 @@
 import logging
 
 import numpy as np
-from matplotlib import pyplot as plt
-from stable_baselines3 import PPO
-
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
@@ -16,6 +13,8 @@ from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
 from bone_remodeling.src.surrogate_model.splitter import splitting
+from matplotlib import pyplot as plt
+from stable_baselines3 import PPO
 
 logger = logging.getLogger(__name__)
 

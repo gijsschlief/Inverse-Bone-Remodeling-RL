@@ -161,7 +161,7 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
     run_model_evaluation(
         model_path=model_path,

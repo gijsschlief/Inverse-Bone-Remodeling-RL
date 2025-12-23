@@ -5,9 +5,6 @@ from functools import partial
 from pathlib import Path
 
 import numpy as np
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
-
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import (
     EnsembleForwarder,
@@ -28,6 +25,8 @@ from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
 from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 logger = logging.getLogger(__name__)
 
