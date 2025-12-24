@@ -51,7 +51,7 @@ class InverseModel(torch.nn.Module):
         # === Spatial Attention ===
         self.attention = torch.nn.Sequential(
             torch.nn.Conv2d(64, 1, kernel_size=1),
-            torch.nn.Identity(),
+            torch.nn.Sigmoid(),
         )
 
         # === Feature projection ===
@@ -62,7 +62,7 @@ class InverseModel(torch.nn.Module):
             torch.nn.Linear(512, 128),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.25),
-            torch.nn.Linear(128, 3),
+            torch.nn.Linear(128, 31),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

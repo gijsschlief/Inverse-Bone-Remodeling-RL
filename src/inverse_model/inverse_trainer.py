@@ -65,12 +65,12 @@ def convert_tensors(
     # Handle y
     if isinstance(y_data, torch.Tensor):
         y_tensor = (
-            y_data.clone().detach().to(torch.float32).reshape(num_samples, 3)
+            y_data.clone().detach().to(torch.float32).reshape(num_samples, 31)
         )
     else:
         y_tensor = torch.tensor(y_data, dtype=torch.float32).reshape(
             num_samples,
-            3,
+            31,
         )
 
     return x_tensor.to(device), y_tensor.to(device)
@@ -322,6 +322,27 @@ def params_to_force_profile(
             force_profile[peak_side, j] = peak_height
     return force_profile
 
+def newer_data(unconverted_data: np.ndarray) -> np.ndarray:
+    """Convert new data to tensor format for the model.
+
+    Args:
+        unconverted_data (np.ndarray): Input features (N, int, int, float).
+
+    Returns:
+        converted_data (np.ndarray): Converted tensor data reshaped for the model.
+
+    """
+    converted_data = np.zeros((unconverted_data.shape[0], 31), dtype=np.float32)
+    for i in range(unconverted_data.shape[0]):
+        side = unconverted_data[i][1]  # peak side
+        location = unconverted_data[i][0]  # peak location
+        magnitude = unconverted_data[i][2]  # peak height
+        class_index = int(side * 10 + location)
+        force_location_vector = np.zeros(30, dtype=np.float32)
+        force_location_vector[class_index] = 1.0
+        converted_data[i] = np.concatenate([force_location_vector, [magnitude]])
+    return converted_data
+
 def main(
     data_file_path: Path,
     model_path: Path,
@@ -360,6 +381,10 @@ def main(
         [force_profile_to_params(fp.reshape(3, -1)) for fp in x_test_np],
         dtype=np.float32,
     )
+
+    x_train_np = newer_data(x_train_np)
+    x_val_np = newer_data(x_val_np)
+    x_test_np = newer_data(x_test_np)
 
     if normalize:
         logger.info("Normalizing data...")
@@ -414,7 +439,7 @@ def main(
         )
     logger.info(f"Model saved to {model_path}")
 
-    # model.plot_loss()
+    model.plot_loss()
 
     logger.info("Evaluating model on validation set.")
 
