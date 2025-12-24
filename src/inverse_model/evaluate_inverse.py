@@ -11,7 +11,11 @@ from bone_remodeling.src.inverse_model.inverse_neural_network import (
 )
 from bone_remodeling.src.inverse_model.inverse_trainer import params_to_force_profile
 from bone_remodeling.src.rl_model.evaluate_agent import inverse_model_metrics
+from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
+    ReversedSurrogateModel,
+)
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
 from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
@@ -87,14 +91,23 @@ def run_inverse_model_evaluation(
                           predicted_forces=reconstructed_forces)
 
     # Calculate similarity metrics
+    surrogate_forwarder = SurrogateForwarder(
+        surrogate_model_path=Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"),
+        density_shape=(10, 10),
+        model_class=ReversedSurrogateModel,
+    )
+    if surrogate_forwarder.surrogate_model is None:
+        logger.error("Failed to load the surrogate model for forward pass.")
+        return
     ssim = np.zeros(reconstructed_forces.shape[0])
     mse = np.zeros(reconstructed_forces.shape[0])
     for sample in range(reconstructed_forces.shape[0]):
+        reconstructed_density = surrogate_forwarder.forward_pass(reconstructed_forces[sample])
         ssim[sample] = calculate_similarity(reference_matrix=y_test[sample],
-                         comparison_matrix=reconstructed_forces[sample],
+                         comparison_matrix=reconstructed_density,
                          method="ssim")
         mse[sample] = calculate_similarity(reference_matrix=y_test[sample],
-                        comparison_matrix=reconstructed_forces[sample],
+                        comparison_matrix=reconstructed_density,
                         method="mse")
     logger.info(f"Average SSIM over validation set: {np.mean(ssim):.6f}")
     logger.info(f"Average MSE over validation set: {np.mean(mse):.6f}")
