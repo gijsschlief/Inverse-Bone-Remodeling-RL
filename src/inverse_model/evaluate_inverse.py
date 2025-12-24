@@ -11,6 +11,7 @@ from bone_remodeling.src.inverse_model.inverse_neural_network import (
 )
 from bone_remodeling.src.inverse_model.inverse_trainer import params_to_force_profile
 from bone_remodeling.src.rl_model.evaluate_agent import inverse_model_metrics
+from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
 from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
@@ -66,8 +67,8 @@ def run_inverse_model_evaluation(
     peak_location = np.zeros(validation_predictions_np.shape[0])
     for i in range(validation_predictions_np.shape[0]):
         peak_index = np.argmax(validation_predictions_np[i])
-        side_location[i] = np.round(peak_index / 10)
-        peak_location[i] = peak_index // 10
+        peak_location[i] = peak_index % 10
+        side_location[i] = peak_index // 10
 
     predictions = np.zeros((validation_predictions_np.shape[0], 3))
     predictions[:, 0] = peak_location[:]
@@ -77,14 +78,26 @@ def run_inverse_model_evaluation(
         params_to_force_profile(
             int(np.clip(pred[0], 0, 9)),
             int(np.clip(np.round(pred[1]), 0, 2)),
-            float(np.clip(pred[2], 0.0, 1.0)),
+            float(pred[2]),
         )
         for pred in predictions
     ])
 
-    inverse_model_metrics(sample_forces=y_test,
+    inverse_model_metrics(sample_forces=x_test,
                           predicted_forces=reconstructed_forces)
 
+    # Calculate similarity metrics
+    ssim = np.zeros(reconstructed_forces.shape[0])
+    mse = np.zeros(reconstructed_forces.shape[0])
+    for sample in range(reconstructed_forces.shape[0]):
+        ssim[sample] = calculate_similarity(reference_matrix=y_test[sample],
+                         comparison_matrix=reconstructed_forces[sample],
+                         method="ssim")
+        mse[sample] = calculate_similarity(reference_matrix=y_test[sample],
+                        comparison_matrix=reconstructed_forces[sample],
+                        method="mse")
+    logger.info(f"Average SSIM over validation set: {np.mean(ssim):.6f}")
+    logger.info(f"Average MSE over validation set: {np.mean(mse):.6f}")
     return
 
 def load_inverse_model(
@@ -145,7 +158,7 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model_1.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = InverseModel().to(device)

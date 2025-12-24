@@ -138,12 +138,11 @@ def inverse_model_metrics(sample_forces: np.ndarray, predicted_forces: np.ndarra
         for i in range(len(sample_forces))
     ])
 
-    eval_peak_locations = np.array([
-        np.argmax(np.abs(predicted_forces[i, eval_side[i], :]))
+    eval_peak_locations_on_true_side = np.array([
+        np.argmax(np.abs(predicted_forces[i, test_side[i], :]))
         for i in range(len(predicted_forces))
     ])
-
-    exact_match = (test_peak_locations == eval_peak_locations)
+    exact_match = (test_side == eval_side) & (test_peak_locations == eval_peak_locations_on_true_side)
     exact_accuracy = np.mean(exact_match)
     logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
 
