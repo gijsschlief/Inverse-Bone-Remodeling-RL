@@ -60,13 +60,26 @@ def run_inverse_model_evaluation(
 
     # Convert predicted parameters → 3x10 force profiles
     validation_predictions_np = validation_predictions.cpu().numpy()
+
+    # convert [zeroes area with one at peak to peak and side location]
+    side_location = np.zeros(validation_predictions_np.shape[0])
+    peak_location = np.zeros(validation_predictions_np.shape[0])
+    for i in range(validation_predictions_np.shape[0]):
+        peak_index = np.argmax(validation_predictions_np[i])
+        side_location[i] = np.round(peak_index / 10)
+        peak_location[i] = peak_index // 10
+
+    predictions = np.zeros((validation_predictions_np.shape[0], 3))
+    predictions[:, 0] = peak_location[:]
+    predictions[:, 1] = side_location[:]
+    predictions[:, 2] = validation_predictions_np[:, 30]
     reconstructed_forces = np.array([
         params_to_force_profile(
             int(np.clip(pred[0], 0, 9)),
             int(np.clip(np.round(pred[1]), 0, 2)),
             float(np.clip(pred[2], 0.0, 1.0)),
         )
-        for pred in validation_predictions_np
+        for pred in predictions
     ])
 
     inverse_model_metrics(sample_forces=y_test,
@@ -132,7 +145,7 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model_1.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = InverseModel().to(device)

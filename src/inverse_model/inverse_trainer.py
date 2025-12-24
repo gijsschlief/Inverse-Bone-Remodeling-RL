@@ -339,7 +339,7 @@ def newer_data(unconverted_data: np.ndarray) -> np.ndarray:
         magnitude = unconverted_data[i][2]  # peak height
         class_index = int(side * 10 + location)
         force_location_vector = np.zeros(30, dtype=np.float32)
-        force_location_vector[class_index] = 1.0
+        force_location_vector[class_index] = 100.0
         converted_data[i] = np.concatenate([force_location_vector, [magnitude]])
     return converted_data
 
