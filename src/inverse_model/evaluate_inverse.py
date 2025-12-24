@@ -5,16 +5,12 @@ from pathlib import Path
 
 import numpy as np
 import torch
-from torch.nn.modules.module import Module
-
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.inverse_model.inverse_neural_network import (
     InverseModel,
 )
-from bone_remodeling.src.surrogate_model.evaluator import (
-    average_similarity_score,
-    validate_surrogate_model,
-)
+from bone_remodeling.src.inverse_model.inverse_trainer import params_to_force_profile
+from bone_remodeling.src.rl_model.evaluate_agent import inverse_model_metrics
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
 from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
@@ -25,10 +21,10 @@ logger = logging.getLogger(__name__)
 def run_inverse_model_evaluation(
     model_path: Path,
     data_path: Path,
-    model_class: type[torch.nn.Module],
+    unloaded_model: InverseModel,
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
-    model = _load_model(model_path, model_class)
+    model: InverseModel | None = load_inverse_model(model_path, unloaded_model)
     if model is None:
         logger.error("Failed to load the inverse model.")
         return
@@ -47,52 +43,47 @@ def run_inverse_model_evaluation(
         final_output_densities,
     )
 
-    _, x_val, _, _, y_val, _ = splitting(
+    _, _, x_test, _, _, y_test = splitting(
         force_profiles,
         final_output_densities,
         random_state=1,
     )
-    if x_val is None or y_val is None:
+    if x_test is None or y_test is None:
         logger.error("Failed to split the data into validation sets.")
         return
 
-    predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
-    if hasattr(predicted_matrices, "detach"):
-        predicted_matrices = predicted_matrices.detach().cpu().numpy()
-    if hasattr(true_matrices, "detach"):
-        true_matrices = true_matrices.detach().cpu().numpy()
+    y_test_tensor = torch.tensor(
+    y_test, dtype=torch.float32, device=next(model.parameters()).device)
 
-    plot_worst_prediction(true_matrices, predicted_matrices, x_val)
+    with torch.no_grad():
+        validation_predictions = model(y_test_tensor)
 
-    average_similarity = average_similarity_score(
-        predicted_matrices,
-        true_matrices,
-        baseline=0.1,
-        threshold=0.5,
-        method="ssim",
-    )
+    # Convert predicted parameters → 3x10 force profiles
+    validation_predictions_np = validation_predictions.cpu().numpy()
+    reconstructed_forces = np.array([
+        params_to_force_profile(
+            int(np.clip(pred[0], 0, 9)),
+            int(np.clip(np.round(pred[1]), 0, 2)),
+            float(np.clip(pred[2], 0.0, 1.0)),
+        )
+        for pred in validation_predictions_np
+    ])
 
-    logger.info(f"The average similarity = {average_similarity}")
+    inverse_model_metrics(sample_forces=y_test,
+                          predicted_forces=reconstructed_forces)
 
-    plot_surrogate_model(
-        predicted_matrices=predicted_matrices,
-        true_matrices=true_matrices,
-        force_profiles=x_val,
-        sample_count=20,
-        show_plot=True,
-    )
     return
 
 def load_inverse_model(
     model_path: Path,
-    model_class: type[Module],
-) -> Module | None:
+    model: InverseModel,
+) -> InverseModel | None:
     """Load the inverse surrogate model and its normalization parameters from a file.
 
     Args:
     ----
         model_path (Path): The path to the model file.
-        model_class (type[Module]): The class of the model to be loaded.
+        model (InverseModel): The model instance to be loaded.
 
     Returns:
     -------
@@ -100,27 +91,12 @@ def load_inverse_model(
 
     """
     try:
-        checkpoint = torch.load(model_path)
-        model = model_class()
-        model.load_state_dict(checkpoint["model_state_dict"])
+        model.load_model(model_path)
         model.eval()
         return model
     except (FileNotFoundError, KeyError, RuntimeError) as e:
         logger.error(f"Error loading model from {model_path}: {e}")
         return None
-
-def _load_model(
-    model_path: Path,
-    model_class: type[Module],
-) -> Module | None:
-    model = load_inverse_model(
-        model_path,
-        model_class,
-    )
-    if model is None:
-        raise RuntimeError("Failed to load the surrogate model.")
-    return model
-
 
 def plot_worst_prediction(
     true_matrices: np.ndarray,
@@ -158,8 +134,10 @@ def plot_worst_prediction(
 if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = InverseModel().to(device)
     run_inverse_model_evaluation(
         model_path=model_path,
         data_path=data_path,
-        model_class=InverseModel,
+        unloaded_model=model,
     )

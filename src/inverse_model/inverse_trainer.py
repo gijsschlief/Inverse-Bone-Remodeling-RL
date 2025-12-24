@@ -6,9 +6,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
-from bone_remodeling.src.inverse_model.inverse_neural_network_simple import (
+from bone_remodeling.src.inverse_model.inverse_neural_network import (
     InverseModel,
 )
 from bone_remodeling.src.inverse_model.train_parameters import (
@@ -142,7 +141,7 @@ def train_model(
         with torch.no_grad():
             val_logits = model(x_validation)
             val_loss = combined_loss(val_logits, y_validation)
-        model.val_losses.append(val_loss)
+        model.val_losses.append(val_loss.item())
         scheduler.step(val_loss)
         # Early stopping logic
         if val_loss + train_parameters.min_delta < best_val_loss:

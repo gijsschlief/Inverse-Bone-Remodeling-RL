@@ -124,6 +124,36 @@ def evaluate_agent(
         "predicted_densities": all_predicted_densities,
     }
 
+def inverse_model_metrics(sample_forces: np.ndarray, predicted_forces: np.ndarray) -> None:
+    """Calculate metrics for the inverse model predictions. Looks at the force side, exact location and magnitude differences."""
+    # Force Side Selection
+    test_side = np.argmax(np.max(np.abs(sample_forces), axis=2), axis=1)
+    eval_side = np.argmax(np.max(np.abs(predicted_forces), axis=2), axis=1)
+    side_accuracy = np.sum(test_side == eval_side) / len(test_side)
+    logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.")
+
+    # Correct per-sample peak location extraction
+    test_peak_locations = np.array([
+        np.argmax(np.abs(sample_forces[i, test_side[i], :]))
+        for i in range(len(sample_forces))
+    ])
+
+    eval_peak_locations = np.array([
+        np.argmax(np.abs(predicted_forces[i, eval_side[i], :]))
+        for i in range(len(predicted_forces))
+    ])
+
+    exact_match = (test_peak_locations == eval_peak_locations)
+    exact_accuracy = np.mean(exact_match)
+    logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
+
+    # Difference between predicted and true peak locations
+    sample_max_force = np.max(np.max(np.abs(sample_forces), axis=2), axis=1)
+    eval_max_force = np.max(np.max(np.abs(predicted_forces), axis=2), axis=1)
+    location_differences = np.abs(sample_max_force - eval_max_force)
+    mean_difference = np.mean(location_differences)
+    logger.info(f"Mean Absolute Difference in Peak Locations: {mean_difference:.4f} Newton.")
+
 
 def main() -> None:
     """Evaluate the RL agent."""
@@ -187,29 +217,9 @@ def main() -> None:
     plt.grid(visible=True)
     plt.show()
 
-    # Force Side Selection
     sample_forces = np.array(evaluation_result["sample_forces"])
-    pred_forces = np.array(evaluation_result["forces"])
-
-    test_side = np.argmax(np.max(np.abs(sample_forces), axis=2), axis=1)
-    eval_side = np.argmax(np.max(np.abs(pred_forces), axis=2), axis=1)
-    side_accuracy = np.sum(test_side == eval_side) / len(test_side)
-    logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.")
-
-    # Correct per-sample peak location extraction
-    test_peak_locations = np.array([
-        np.argmax(np.abs(sample_forces[i, test_side[i], :]))
-        for i in range(len(sample_forces))
-    ])
-
-    eval_peak_locations = np.array([
-        np.argmax(np.abs(pred_forces[i, eval_side[i], :]))
-        for i in range(len(pred_forces))
-    ])
-
-    exact_match = (test_peak_locations == eval_peak_locations)
-    exact_accuracy = np.mean(exact_match)
-    logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
+    predicted_forces = np.array(evaluation_result["forces"])
+    inverse_model_metrics(sample_forces, predicted_forces)
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
