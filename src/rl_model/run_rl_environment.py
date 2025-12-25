@@ -155,11 +155,11 @@ def main(run_parameters: RunConfiguration) -> None:
         initial_density_field=np.ones(train_densities[0].shape) * 0.8,
     )
 
-    #forwarder_ensemble = EnsembleForwarder(
-    #    model_paths=run_parameters.ensemble_path,
-    #    model_class=ReversedSurrogateModel,
-    #    model_loader=SurrogateModelLoader,
-    #)
+    forwarder_ensemble = EnsembleForwarder(
+        model_paths=run_parameters.ensemble_path,
+        model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader,
+    )
     validation_environment_builder = ValidationEnvironmentBuilder(
         forwarder_surrogate, rl_parameters,
     )
@@ -173,7 +173,7 @@ def main(run_parameters: RunConfiguration) -> None:
         train_forces=train_forces,
         train_densities=train_densities,
         rl_parameters=rl_parameters,
-        forwarder=forwarder_surrogate,
+        forwarder=forwarder_ensemble,
     )
 
     environment_functions = [
