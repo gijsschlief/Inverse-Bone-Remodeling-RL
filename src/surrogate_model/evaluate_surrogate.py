@@ -75,7 +75,7 @@ def run_model_evaluation(
     else:
         output_normalized = False
 
-    predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
+    predicted_matrices, true_matrices = validate_surrogate_model(model, x_test, y_test)
 
     if output_normalized and y_mean is not None and y_std is not None:
         predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)

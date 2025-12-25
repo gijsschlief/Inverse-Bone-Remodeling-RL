@@ -5,7 +5,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
 from bone_remodeling.src.surrogate_model.ensemble import (
     load_ensemble_models,
@@ -143,10 +142,11 @@ if __name__ == "__main__":
     )
 
     model_paths = [
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_2.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_3.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_5.pth"),
     ]
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
