@@ -4,6 +4,7 @@ import logging
 
 import numpy as np
 from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.inverse_model.evaluate_inverse import plot_inverse_model
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
 from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
@@ -218,6 +219,8 @@ def main() -> None:
 
     sample_forces = np.array(evaluation_result["sample_forces"])
     predicted_forces = np.array(evaluation_result["forces"])
+    sample_densities = np.array(evaluation_result["sample_densities"])
+    predicted_densities = np.array(evaluation_result["predicted_densities"])
     inverse_model_metrics(sample_forces, predicted_forces)
 
     # Calculate average metrics
@@ -227,6 +230,18 @@ def main() -> None:
 
     logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}")
 
+    # Plot representative samples from evaluation
+    for _ in range(100):
+        k = np.random.randint(0, len(sample_forces))
+        logger.info(f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}")
+        logger.info(f"Original Force Profile: {sample_forces[k]}")
+        logger.info(f"Reconstructed Force Profile: {predicted_forces[k]}")
+        plot_inverse_model(
+            predicted_densities[k],
+            sample_densities[k],
+            predicted_forces[k],
+            sample_forces[k],
+        )
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
