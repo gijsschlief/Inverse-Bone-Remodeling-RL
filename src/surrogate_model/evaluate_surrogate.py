@@ -62,7 +62,7 @@ def run_model_evaluation(
 
     # Normalize the validation data if normalization parameters are available
     if x_mean is not None and x_std is not None:
-        x_val_unnormalized = x_val.copy()
+        x_test_unnormalized = x_test.copy()
         x_train, _, _ = normalize_data(x_train, x_mean, x_std)
         x_val, _, _ = normalize_data(x_val, x_mean, x_std)
         x_test, _, _ = normalize_data(x_test, x_mean, x_std)
@@ -85,7 +85,7 @@ def run_model_evaluation(
         if hasattr(true_matrices, "detach"):
             true_matrices = true_matrices.detach().cpu().numpy()
 
-    plot_worst_prediction(true_matrices, predicted_matrices, x_val_unnormalized)
+    plot_worst_prediction(true_matrices, predicted_matrices, x_test_unnormalized)
 
     average_similarity = average_similarity_score(
         predicted_matrices,
@@ -97,13 +97,23 @@ def run_model_evaluation(
 
     logger.info(f"The average similarity (unnormalized) = {average_similarity}")
 
-    plot_surrogate_model(
-        predicted_matrices=predicted_matrices,
-        true_matrices=true_matrices,
-        force_profiles=x_val_unnormalized,
-        sample_count=20,
-        show_plot=True,
-    )
+    for _ in range(100):
+        k = np.random.randint(0, len(x_test_unnormalized))
+        sample_similarity = average_similarity_score(
+        predicted_matrices[k].squeeze(),
+        true_matrices[k],
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
+        )
+        logger.info(f"Sample {k} similarity = {sample_similarity}")
+        plot_surrogate_model(
+            predicted_matrices=predicted_matrices[k : k + 1],
+            true_matrices=true_matrices[k : k + 1],
+            force_profiles=x_test_unnormalized[k : k + 1],
+            sample_count=1,
+            show_plot=True,
+        )
     return
 
 
@@ -131,7 +141,7 @@ def plot_worst_prediction(
     true_matrices: np.ndarray,
     predicted_matrices: np.ndarray,
     force_profiles: np.ndarray,
-    count: int = 3,
+    count: int = 1,
 ) -> None:
     """Find the samples with the largest differences and plot it.
 
@@ -151,6 +161,14 @@ def plot_worst_prediction(
     bad_prediction = predicted_matrices[largest_differences[:count]]
     bad_originals = true_matrices[largest_differences[:count]]
     bad_forces = force_profiles[largest_differences[:count]]
+    worst_similarities = average_similarity_score(
+        bad_prediction,
+        bad_originals,
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
+        )
+    logger.info(f"Sample {largest_differences[:count]} has the : {worst_similarities}")
     plot_surrogate_model(
         predicted_matrices=bad_prediction,
         true_matrices=bad_originals,

@@ -99,15 +99,22 @@ def main(
     x_normalizations = (x_means, x_stds)
     y_normalizations = (y_means, y_stds)
 
-    for _ in range(5):
+    for _ in range(100):
         k = np.random.randint(0, len(x_test_np))
-        logger.info(f"Predicting for test sample {k}")
         mean_pred, std_pred = predict_with_ensemble(
             models,
             x_test_np[k],
             x_normalizations,
             y_normalizations,
         )
+        sample_similarity = average_similarity_score(
+        mean_pred.squeeze(),
+        y_test_np[k],
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
+        )
+        logger.info(f"Sample {k} similarity = {sample_similarity}")
         plot_ensemble(
             mean_pred.squeeze(),
             std_pred.squeeze(),

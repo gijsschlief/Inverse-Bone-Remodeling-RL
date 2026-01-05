@@ -1,7 +1,6 @@
 """The density updater is responsible for updating the density each timestep when running the forward simulation."""
 
 import numpy as np
-
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 
 
