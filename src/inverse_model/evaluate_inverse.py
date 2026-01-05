@@ -118,6 +118,8 @@ def run_inverse_model_evaluation(
     for _ in range(100):
         k = np.random.randint(0, len(x_test))
         logger.info(f"Sample {k}: SSIM = {ssim[k]:.6f}, MSE = {mse[k]:.6f}")
+        logger.info(f"Original Force Profile: {x_test[k]}")
+        logger.info(f"Reconstructed Force Profile: {reconstructed_forces[k]}")
         plot_inverse_model(
             reconstructed_density[k],
             y_test[k],
