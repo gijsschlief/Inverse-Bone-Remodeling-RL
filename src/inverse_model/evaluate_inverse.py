@@ -12,7 +12,6 @@ from bone_remodeling.src.inverse_model.inverse_neural_network import (
     InverseModel,
 )
 from bone_remodeling.src.inverse_model.inverse_trainer import params_to_force_profile
-from bone_remodeling.src.rl_model.evaluate_agent import inverse_model_metrics
 from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
@@ -24,6 +23,34 @@ from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matri
 
 logger = logging.getLogger(__name__)
 
+def inverse_model_metrics(sample_forces: np.ndarray, predicted_forces: np.ndarray) -> None:
+    """Calculate metrics for the inverse model predictions. Looks at the force side, exact location and magnitude differences."""
+    # Force Side Selection
+    test_side = np.argmax(np.max(np.abs(sample_forces), axis=2), axis=1)
+    eval_side = np.argmax(np.max(np.abs(predicted_forces), axis=2), axis=1)
+    side_accuracy = np.sum(test_side == eval_side) / len(test_side)
+    logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.")
+
+    # Correct per-sample peak location extraction
+    test_peak_locations = np.array([
+        np.argmax(np.abs(sample_forces[i, test_side[i], :]))
+        for i in range(len(sample_forces))
+    ])
+
+    eval_peak_locations_on_true_side = np.array([
+        np.argmax(np.abs(predicted_forces[i, test_side[i], :]))
+        for i in range(len(predicted_forces))
+    ])
+    exact_match = (test_side == eval_side) & (test_peak_locations == eval_peak_locations_on_true_side)
+    exact_accuracy = np.mean(exact_match)
+    logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
+
+    # Difference between predicted and true peak locations
+    sample_max_force = np.max(np.max(np.abs(sample_forces), axis=2), axis=1)
+    eval_max_force = np.max(np.max(np.abs(predicted_forces), axis=2), axis=1)
+    location_differences = np.abs(sample_max_force - eval_max_force)
+    mean_difference = np.mean(location_differences)
+    logger.info(f"Mean Absolute Difference in Peak Locations: {mean_difference:.4f} Newton.")
 
 def run_inverse_model_evaluation(
     model_path: Path,

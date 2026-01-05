@@ -4,7 +4,10 @@ import logging
 
 import numpy as np
 from bone_remodeling.src.forward_data.reader import forward_data_reader
-from bone_remodeling.src.inverse_model.evaluate_inverse import plot_inverse_model
+from bone_remodeling.src.inverse_model.evaluate_inverse import (
+    inverse_model_metrics,
+    plot_inverse_model,
+)
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
 from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
@@ -124,35 +127,6 @@ def evaluate_agent(
         "forces": all_force_profiles,
         "predicted_densities": all_predicted_densities,
     }
-
-def inverse_model_metrics(sample_forces: np.ndarray, predicted_forces: np.ndarray) -> None:
-    """Calculate metrics for the inverse model predictions. Looks at the force side, exact location and magnitude differences."""
-    # Force Side Selection
-    test_side = np.argmax(np.max(np.abs(sample_forces), axis=2), axis=1)
-    eval_side = np.argmax(np.max(np.abs(predicted_forces), axis=2), axis=1)
-    side_accuracy = np.sum(test_side == eval_side) / len(test_side)
-    logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.")
-
-    # Correct per-sample peak location extraction
-    test_peak_locations = np.array([
-        np.argmax(np.abs(sample_forces[i, test_side[i], :]))
-        for i in range(len(sample_forces))
-    ])
-
-    eval_peak_locations_on_true_side = np.array([
-        np.argmax(np.abs(predicted_forces[i, test_side[i], :]))
-        for i in range(len(predicted_forces))
-    ])
-    exact_match = (test_side == eval_side) & (test_peak_locations == eval_peak_locations_on_true_side)
-    exact_accuracy = np.mean(exact_match)
-    logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
-
-    # Difference between predicted and true peak locations
-    sample_max_force = np.max(np.max(np.abs(sample_forces), axis=2), axis=1)
-    eval_max_force = np.max(np.max(np.abs(predicted_forces), axis=2), axis=1)
-    location_differences = np.abs(sample_max_force - eval_max_force)
-    mean_difference = np.mean(location_differences)
-    logger.info(f"Mean Absolute Difference in Peak Locations: {mean_difference:.4f} Newton.")
 
 
 def main() -> None:
