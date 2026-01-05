@@ -3,9 +3,11 @@
 import logging
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.forward_model.density_visualizer import plot_density_matrix
 from bone_remodeling.src.inverse_model.inverse_neural_network import (
     InverseModel,
 )
@@ -18,7 +20,7 @@ from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
 )
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
-from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
+from bone_remodeling.src.surrogate_model.visualizer import plot_difference_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -101,16 +103,27 @@ def run_inverse_model_evaluation(
         return
     ssim = np.zeros(reconstructed_forces.shape[0])
     mse = np.zeros(reconstructed_forces.shape[0])
+    reconstructed_density = np.zeros((reconstructed_forces.shape[0], 10, 10))
     for sample in range(reconstructed_forces.shape[0]):
-        reconstructed_density = surrogate_forwarder.forward_pass(reconstructed_forces[sample])
+        reconstructed_density[sample] = surrogate_forwarder.forward_pass(reconstructed_forces[sample])
         ssim[sample] = calculate_similarity(reference_matrix=y_test[sample],
-                         comparison_matrix=reconstructed_density,
+                         comparison_matrix=reconstructed_density[sample],
                          method="ssim")
         mse[sample] = calculate_similarity(reference_matrix=y_test[sample],
-                        comparison_matrix=reconstructed_density,
+                        comparison_matrix=reconstructed_density[sample],
                         method="mse")
     logger.info(f"Average SSIM over validation set: {np.mean(ssim):.6f}")
     logger.info(f"Average MSE over validation set: {np.mean(mse):.6f}")
+
+    for _ in range(100):
+        k = np.random.randint(0, len(x_test))
+        logger.info(f"Sample {k}: SSIM = {ssim[k]:.6f}, MSE = {mse[k]:.6f}")
+        plot_inverse_model(
+            reconstructed_density[k],
+            y_test[k],
+            reconstructed_forces[k],
+            x_test[k],
+        )
     return
 
 def load_inverse_model(
@@ -137,38 +150,52 @@ def load_inverse_model(
         logger.error(f"Error loading model from {model_path}: {e}")
         return None
 
-def plot_worst_prediction(
-    true_matrices: np.ndarray,
-    predicted_matrices: np.ndarray,
-    force_profiles: np.ndarray,
-    count: int = 1,
-) -> None:
-    """Find the samples with the largest differences and plot it.
+
+def plot_inverse_model(
+    predicted_matrix: np.ndarray,
+    actual_matrix: np.ndarray,
+    predicted_force_profile: np.ndarray,
+    original_force_profile: np.ndarray,
+) -> plt.Figure:
+    """Compare the surrogate model's predictions with the actual validation data.
 
     Args:
     ----
-        true_matrices (np.ndarray): The true matrices of shape (N, 10, 10).
-        predicted_matrices (np.ndarray): The predicted matrices of shape (N, 10, 10).
-        force_profiles (np.ndarray): The force profiles of shape (N, 3, 10).
-        count (int): The number of samples to plot with the largest differences.
+        predicted_matrix (np.ndarray): Predicted density matrix from the surrogate model.
+        actual_matrix (np.ndarray): Actual density matrix from the validation set.
+        predicted_force_profile (np.ndarray): Force profile predicted by the inverse model.
+        original_force_profile (np.ndarray): Original force profile from the validation set.
 
     """
-    offset = predicted_matrices - true_matrices
-    largest_differences = np.abs(offset).mean(axis=(1, 2)).argsort()[::-1]
+    # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
+    min_true_value: float = 0.01
+    max_true_value: float = 1.74
 
-    logger.info(f"Largest differences in predicted matrices: {largest_differences}")
-
-    bad_prediction = predicted_matrices[largest_differences[:count]]
-    bad_originals = true_matrices[largest_differences[:count]]
-    bad_forces = force_profiles[largest_differences[:count]]
-    plot_surrogate_model(
-        predicted_matrices=bad_prediction,
-        true_matrices=bad_originals,
-        force_profiles=bad_forces,
-        sample_count=count,
-        show_plot=True,
+    figure, axes = plt.subplots(1, 3, figsize=(18, 6))
+    plot_density_matrix(
+        actual_matrix,
+        original_force_profile,
+        "Original Density Matrix",
+        axes[0],
+        (min_true_value, max_true_value),
+    )
+    plot_density_matrix(
+        predicted_matrix,
+        predicted_force_profile,
+        "Predicted Density Matrix",
+        axes[1],
+        (min_true_value, max_true_value),
+    )
+    plot_difference_matrix(
+        predicted_matrix,
+        actual_matrix,
+        "Difference Matrix (Predicted - Actual) as Percentage",
+        axes[2],
     )
 
+    plt.tight_layout()
+    plt.show()
+    return figure
 
 if __name__ == "__main__":
     model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
