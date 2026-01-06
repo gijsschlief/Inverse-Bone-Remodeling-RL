@@ -6,9 +6,6 @@ from typing import cast
 
 import numpy as np
 import torch
-from torch import Tensor
-from torch.nn import Module
-
 from bone_remodeling.src.forward_model.main import DensitySimulation
 from bone_remodeling.src.forward_model.parameters import SimulationParameters
 from bone_remodeling.src.surrogate_model.ensemble import (
@@ -26,6 +23,8 @@ from bone_remodeling.src.surrogate_model.normalizor import (
     normalize_data,
     unnormalize_data,
 )
+from torch import Tensor
+from torch.nn import Module
 
 
 class ForwardPass(ABC):

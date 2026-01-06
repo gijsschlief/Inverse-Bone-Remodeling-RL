@@ -9,10 +9,14 @@ from bone_remodeling.src.inverse_model.evaluate_inverse import (
     plot_inverse_model,
 )
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
-from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
+from bone_remodeling.src.rl_model.forward_pass import (
+    EnsembleForwarder,
+    SurrogateForwarder,
+)
 from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.loader import SurrogateModelLoader
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
@@ -109,14 +113,12 @@ def evaluate_agent(
             f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final SSIM: {ssim:.6f}, Final MSE: {mse:.6f}",
         )
 
-    if worst_estimate_information is not None and worst_sample_information is not None:
+    if worst_estimate_information is not None and worst_sample_information is not None and render:
         render_callback.render(
             sample_information=worst_sample_information,
             estimate_information=worst_estimate_information,
             reward=worst_reward)
 
-    # Pause to allow viewing of final render
-    plt.pause(20.0)
 
     return {
         "rewards": episode_rewards,
@@ -147,10 +149,17 @@ def main() -> None:
 
     rl_parameters = RLParameters()
 
+    # USE THE SURROGATE OR ENSEMBLE FORWARDER DEPENDING ON THE TRAINING SETUP
     forwarder_surrogate = SurrogateForwarder(
     surrogate_model_path=run_parameters.surrogate_path,
     density_shape=test_density_profiles[0].shape,
     model_class=ReversedSurrogateModel,
+    )
+
+    forwarder_ensemble = EnsembleForwarder(  # noqa: F841
+        model_paths=run_parameters.ensemble_path,
+        model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader,
     )
 
     agent_evaluation_environment = BoneRemodelingEnvironment(
@@ -216,6 +225,7 @@ def main() -> None:
             predicted_forces[k],
             sample_forces[k],
         )
+        plt.show()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
