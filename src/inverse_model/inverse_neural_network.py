@@ -17,8 +17,8 @@ class InverseModel(torch.nn.Module):
         """Initialize the inverse model."""
         super().__init__()
 
-        self.train_losses = []
-        self.val_losses = []
+        self.train_losses: list[float] = []
+        self.val_losses: list[float] = []
 
         # === Coordinate channels: encode (x, y) position ===
         self.register_buffer(
@@ -51,7 +51,7 @@ class InverseModel(torch.nn.Module):
         # === Spatial Attention ===
         self.attention = torch.nn.Sequential(
             torch.nn.Conv2d(64, 1, kernel_size=1),
-            torch.nn.Identity(),
+            torch.nn.Sigmoid(),
         )
 
         # === Feature projection ===
@@ -62,7 +62,7 @@ class InverseModel(torch.nn.Module):
             torch.nn.Linear(512, 128),
             torch.nn.ReLU(),
             torch.nn.Dropout(0.25),
-            torch.nn.Linear(128, 3),
+            torch.nn.Linear(128, 31),
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -88,11 +88,12 @@ class InverseModel(torch.nn.Module):
 
     def save_model(self, file_path: Path) -> None:
         """Save the model state to a file."""
-        torch.save(self.state_dict(), file_path)
+        torch.save({"model_state_dict": self.state_dict()}, file_path)
 
-    def load_model(self, file_path: str) -> None:
+    def load_model(self, file_path: Path) -> None:
         """Load the model state from a file."""
-        self.load_state_dict(torch.load(file_path))
+        checkpoint = torch.load(file_path)
+        self.load_state_dict(checkpoint["model_state_dict"])
         self.eval()
 
     def __str__(self) -> str:

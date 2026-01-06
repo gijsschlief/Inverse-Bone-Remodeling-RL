@@ -15,8 +15,6 @@ from multiprocessing import cpu_count, get_context
 from pathlib import Path
 
 import numpy as np
-from fenics import LogLevel, set_log_level  # type: ignore
-
 from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,  # type: ignore
 )
@@ -26,6 +24,7 @@ from bone_remodeling.src.forward_model.main import (
 from bone_remodeling.src.forward_model.parameters import (
     SimulationParameters,  # type: ignore
 )
+from fenics import LogLevel, set_log_level  # type: ignore
 
 set_log_level(LogLevel.ERROR)
 logger = logging.getLogger(__name__)
@@ -227,7 +226,7 @@ class TrainingDataGenerator:
 if __name__ == "__main__":
     import time
 
-    initial_density = np.full((10, 10), 0.8)
+    initial_density = np.full((10, 10), 0.87)
 
     logger.setLevel(logging.INFO)
     logger.info("Generating force profiles...")
@@ -237,12 +236,12 @@ if __name__ == "__main__":
         batch_seed=1,
     )
 
-    #force_profiles = force_profile_generator.merger(
-    #    num_samples=50_000,
-    #)
-    force_profiles = force_profile_generator.triangular_only(
-        num_samples=40_000,
+    force_profiles = force_profile_generator.merger(
+        num_samples=100_000,
     )
+    #force_profiles = force_profile_generator.triangular_only(
+    #    num_samples=40_000,
+    #)
 
     logger.info("Running forward model simulations...")
 

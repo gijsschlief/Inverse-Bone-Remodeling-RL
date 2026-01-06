@@ -5,9 +5,6 @@ from functools import partial
 from pathlib import Path
 
 import numpy as np
-from stable_baselines3 import PPO
-from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
-
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodeling.src.rl_model.forward_pass import (
     EnsembleForwarder,
@@ -28,6 +25,8 @@ from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
 from bone_remodeling.src.surrogate_model.splitter import load_and_split_data
+from stable_baselines3 import PPO
+from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
 logger = logging.getLogger(__name__)
 
@@ -156,11 +155,11 @@ def main(run_parameters: RunConfiguration) -> None:
         initial_density_field=np.ones(train_densities[0].shape) * 0.8,
     )
 
-    #forwarder_ensemble = EnsembleForwarder(
-    #    model_paths=run_parameters.ensemble_path,
-    #    model_class=ReversedSurrogateModel,
-    #    model_loader=SurrogateModelLoader,
-    #)
+    forwarder_ensemble = EnsembleForwarder(
+        model_paths=run_parameters.ensemble_path,
+        model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader,
+    )
     validation_environment_builder = ValidationEnvironmentBuilder(
         forwarder_surrogate, rl_parameters,
     )
@@ -174,7 +173,7 @@ def main(run_parameters: RunConfiguration) -> None:
         train_forces=train_forces,
         train_densities=train_densities,
         rl_parameters=rl_parameters,
-        forwarder=forwarder_surrogate,
+        forwarder=forwarder_ensemble,
     )
 
     environment_functions = [

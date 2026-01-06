@@ -6,7 +6,6 @@ from pathlib import Path
 
 import numpy as np
 import torch
-
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
 from bone_remodeling.src.surrogate_model.loss_function import combined_loss
 from bone_remodeling.src.surrogate_model.neural_networks.neural_network import (
@@ -349,10 +348,10 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data.pth")
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 
-    for i in range(3, 5): # USE FOR ENSEMBLE TRAINING
+    for i in range(2, 6): # USE FOR ENSEMBLE TRAINING
         main(data_file_path, model_path, normalize=True, random_state=i)
 
     logger.info("All training runs completed.")

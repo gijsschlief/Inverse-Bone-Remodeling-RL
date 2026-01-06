@@ -41,7 +41,7 @@ class RLParameters:
     seed: int = 42
     verbose: int = 1
     device: str = "cpu"
-    patience: int = 10
+    patience: int = 20
     per_step_dead_zone: float = 1.0
     per_step_force_change: float = 10.0
     per_step_location_change: float = 1.0
@@ -59,22 +59,22 @@ class RunConfiguration:
 
     """
 
-    total_timesteps: int = 10_000_001
+    total_timesteps: int = 20_000_001
     render_frequency: int = 9999
     validation_frequency: int = 200_000
-    validation_size: int = 40
+    validation_size: int = 100
     number_of_environments: int = 10
     random_state: int = 0
-    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_extra_action_RL_20mil.png"))
-    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_extra_action_20mil.zip"))
+    reward_plot_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/figures/reward_curve_extra_action_ensemble_RL_20mil.png"))
+    agent_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/agents/surrogate_agent_extra_action_best_20mil.zip"))
     data_path: Path = field(default_factory=lambda: Path(
         "/home/gijs/Desktop/Thesis/data/raw/triangular/",
     ))
     ensemble_path: list[Path] = field(default_factory=lambda: [
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_2.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_3.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_5.pth"),
     ])
-    surrogate_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth"))
+    surrogate_path: Path = field(default_factory=lambda: Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"))

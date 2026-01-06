@@ -4,8 +4,6 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from torch.nn.modules.module import Module
-
 from bone_remodeling.src.forward_data.reader import forward_data_reader
 from bone_remodeling.src.surrogate_model.evaluator import (
     average_similarity_score,
@@ -25,6 +23,7 @@ from bone_remodeling.src.surrogate_model.normalizor import (
 from bone_remodeling.src.surrogate_model.sanitizer import sanitize_data
 from bone_remodeling.src.surrogate_model.splitter import splitting
 from bone_remodeling.src.surrogate_model.visualizer import plot_surrogate_model
+from torch.nn.modules.module import Module
 
 logger = logging.getLogger(__name__)
 
@@ -63,7 +62,7 @@ def run_model_evaluation(
 
     # Normalize the validation data if normalization parameters are available
     if x_mean is not None and x_std is not None:
-        x_val_unnormalized = x_val.copy()
+        x_test_unnormalized = x_test.copy()
         x_train, _, _ = normalize_data(x_train, x_mean, x_std)
         x_val, _, _ = normalize_data(x_val, x_mean, x_std)
         x_test, _, _ = normalize_data(x_test, x_mean, x_std)
@@ -76,7 +75,7 @@ def run_model_evaluation(
     else:
         output_normalized = False
 
-    predicted_matrices, true_matrices = validate_surrogate_model(model, x_val, y_val)
+    predicted_matrices, true_matrices = validate_surrogate_model(model, x_test, y_test)
 
     if output_normalized and y_mean is not None and y_std is not None:
         predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
@@ -86,7 +85,7 @@ def run_model_evaluation(
         if hasattr(true_matrices, "detach"):
             true_matrices = true_matrices.detach().cpu().numpy()
 
-    plot_worst_prediction(true_matrices, predicted_matrices, x_val_unnormalized)
+    plot_worst_prediction(true_matrices, predicted_matrices, x_test_unnormalized)
 
     average_similarity = average_similarity_score(
         predicted_matrices,
@@ -98,13 +97,23 @@ def run_model_evaluation(
 
     logger.info(f"The average similarity (unnormalized) = {average_similarity}")
 
-    plot_surrogate_model(
-        predicted_matrices=predicted_matrices,
-        true_matrices=true_matrices,
-        force_profiles=x_val_unnormalized,
-        sample_count=20,
-        show_plot=True,
-    )
+    for _ in range(100):
+        k = np.random.randint(0, len(x_test_unnormalized))
+        sample_similarity = average_similarity_score(
+        predicted_matrices[k].squeeze(),
+        true_matrices[k],
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
+        )
+        logger.info(f"Sample {k} similarity = {sample_similarity}")
+        plot_surrogate_model(
+            predicted_matrices=predicted_matrices[k : k + 1],
+            true_matrices=true_matrices[k : k + 1],
+            force_profiles=x_test_unnormalized[k : k + 1],
+            sample_count=1,
+            show_plot=True,
+        )
     return
 
 
@@ -132,7 +141,7 @@ def plot_worst_prediction(
     true_matrices: np.ndarray,
     predicted_matrices: np.ndarray,
     force_profiles: np.ndarray,
-    count: int = 3,
+    count: int = 1,
 ) -> None:
     """Find the samples with the largest differences and plot it.
 
@@ -152,6 +161,14 @@ def plot_worst_prediction(
     bad_prediction = predicted_matrices[largest_differences[:count]]
     bad_originals = true_matrices[largest_differences[:count]]
     bad_forces = force_profiles[largest_differences[:count]]
+    worst_similarities = average_similarity_score(
+        bad_prediction,
+        bad_originals,
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
+        )
+    logger.info(f"Sample {largest_differences[:count]} has the : {worst_similarities}")
     plot_surrogate_model(
         predicted_matrices=bad_prediction,
         true_matrices=bad_originals,
@@ -162,7 +179,7 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model.pth")
+    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth")
     data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
     run_model_evaluation(
         model_path=model_path,

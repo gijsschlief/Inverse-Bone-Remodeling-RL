@@ -15,6 +15,20 @@ from dataclasses import asdict
 from pathlib import Path
 
 import numpy as np
+from bone_remodeling.src.forward_model.boundary_condition_builder import (
+    BoundaryConditionBuilder,
+)
+from bone_remodeling.src.forward_model.calculate_strain_energy_density import (
+    StrainEnergyDensityCalculator,
+)
+from bone_remodeling.src.forward_model.density_updater import DensityUpdater
+from bone_remodeling.src.forward_model.load_form_builder import (
+    LoadFormBuilder,
+)
+from bone_remodeling.src.forward_model.parameters import SimulationParameters
+from bone_remodeling.src.forward_model.stiffness_form_builder import (
+    StiffnessFormBuilder,
+)
 from fenics import (  # type: ignore
     Expression,
     File,
@@ -29,21 +43,6 @@ from fenics import (  # type: ignore
     VectorFunctionSpace,
     cells,
     set_log_level,
-)
-
-from bone_remodeling.src.forward_model.boundary_condition_builder import (
-    BoundaryConditionBuilder,
-)
-from bone_remodeling.src.forward_model.calculate_strain_energy_density import (
-    StrainEnergyDensityCalculator,
-)
-from bone_remodeling.src.forward_model.density_updater import DensityUpdater
-from bone_remodeling.src.forward_model.load_form_builder import (
-    LoadFormBuilder,
-)
-from bone_remodeling.src.forward_model.parameters import SimulationParameters
-from bone_remodeling.src.forward_model.stiffness_form_builder import (
-    StiffnessFormBuilder,
 )
 
 logger = logging.getLogger(__name__)
@@ -67,6 +66,9 @@ class DensitySimulation:
     n_rows: int
     n_columns: int
 
+    displacement_element_order: int
+    density_element_order: int
+
     min_density: float
     max_density: float
     poisson_ratio: float
@@ -79,6 +81,10 @@ class DensitySimulation:
     convergence_steps_decay: float
     boundary_tolerance: float
     remodeling_rate_coefficient: float
+    krylov_solver_tolerance: float
+    krylov_solver_iterations: int
+    linear_solver: str
+    preconditioner: str
 
     output_dir: str
     full_file_path: str | Path
@@ -140,8 +146,8 @@ class DensitySimulation:
         and creates the necessary function spaces for the simulation.
         """
         self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
-        self.displacement_space = VectorFunctionSpace(self.mesh, "P", 3) # element order
-        self.cell_density_space = FunctionSpace(self.mesh, "DG", 0)
+        self.displacement_space = VectorFunctionSpace(self.mesh, "P", self.displacement_element_order)
+        self.cell_density_space = FunctionSpace(self.mesh, "DG", self.density_element_order)
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.displacement_test_function = TestFunction(self.displacement_space)
 
@@ -192,11 +198,11 @@ class DensitySimulation:
             self.boundary_condition_builder.get_boundary_conditions(),
         )
         solver = LinearVariationalSolver(problem)
-        solver.parameters["linear_solver"] = "default"
-        solver.parameters["preconditioner"] = "hypre_amg"
-        solver.parameters["krylov_solver"]["relative_tolerance"] = 1e-10
-        solver.parameters["krylov_solver"]["absolute_tolerance"] = 1e-10
-        solver.parameters["krylov_solver"]["maximum_iterations"] = 1000
+        solver.parameters["linear_solver"] = self.linear_solver
+        solver.parameters["preconditioner"] = self.preconditioner
+        solver.parameters["krylov_solver"]["relative_tolerance"] = self.krylov_solver_tolerance
+        solver.parameters["krylov_solver"]["absolute_tolerance"] = self.krylov_solver_tolerance
+        solver.parameters["krylov_solver"]["maximum_iterations"] = self.krylov_solver_iterations
         self.elasticity_solver = solver
 
     def _update_material_properties(self) -> None:

@@ -6,7 +6,6 @@ from dataclasses import dataclass
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from bone_remodeling.src.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
 )
@@ -55,17 +54,11 @@ def plot_surrogate_model(
     max_true_value = np.max(true_matrices)
     min_true_value = np.min(true_matrices)
 
-    logger.info("=== Surrogate Model Comparison ===")
     figures = []
     for idx in random_indices:
         predicted_matrix = predicted_matrices[idx]
         actual_matrix = true_matrices[idx]
 
-        logger.info(f"Sample Index: {idx}\nOriginal Density Matrix:\n{actual_matrix}")
-        logger.info(f"Predicted Density Matrix:\n{predicted_matrix}")
-        logger.info(
-            f"Force Profile: {force_profiles[idx] if force_profiles is not None else 'N/A'}",
-        )
 
         # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
         figure, axes = plt.subplots(1, 3, figsize=(18, 6))
@@ -95,8 +88,6 @@ def plot_surrogate_model(
 
         if show_plot:
             plt.show()
-
-        logger.info("-" * 50)
     return figures
 
 

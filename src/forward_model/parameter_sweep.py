@@ -19,7 +19,6 @@ from typing import Any
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd  # type: ignore
-
 from bone_remodeling.src.forward_data.force_profile_generator import (
     ForceProfileGenerator,
 )

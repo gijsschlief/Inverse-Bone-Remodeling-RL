@@ -5,7 +5,6 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-
 from bone_remodeling.src.forward_data.visualizer import plot_density_matrix
 from bone_remodeling.src.surrogate_model.ensemble import (
     load_ensemble_models,
@@ -100,15 +99,22 @@ def main(
     x_normalizations = (x_means, x_stds)
     y_normalizations = (y_means, y_stds)
 
-    for _ in range(5):
+    for _ in range(100):
         k = np.random.randint(0, len(x_test_np))
-        logger.info(f"Predicting for test sample {k}")
         mean_pred, std_pred = predict_with_ensemble(
             models,
             x_test_np[k],
             x_normalizations,
             y_normalizations,
         )
+        sample_similarity = average_similarity_score(
+        mean_pred.squeeze(),
+        y_test_np[k],
+        baseline=0.1,
+        threshold=0.5,
+        method="ssim",
+        )
+        logger.info(f"Sample {k} similarity = {sample_similarity}")
         plot_ensemble(
             mean_pred.squeeze(),
             std_pred.squeeze(),
@@ -143,10 +149,11 @@ if __name__ == "__main__":
     )
 
     model_paths = [
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_2.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_3.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_4.pth"),
+        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_5.pth"),
     ]
     data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
 

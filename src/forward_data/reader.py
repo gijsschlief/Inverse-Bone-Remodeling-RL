@@ -266,9 +266,9 @@ if __name__ == "__main__":
     std_output_densities = output_densities.std(axis=0)
 
     plot_density_matrix(
-        matrix=std_output_densities,
-        force_profile=std_force_profiles,
-        title="Average over all samples",
+        matrix=avg_output_densities,
+        force_profile=avg_force_profiles,
+        title="Location average of output densities - SL dataset",
         axis=plt.gca(),
     )
     plt.show()

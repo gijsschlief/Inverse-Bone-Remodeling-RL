@@ -3,19 +3,26 @@
 import logging
 
 import numpy as np
-from matplotlib import pyplot as plt
-from stable_baselines3 import PPO
-
 from bone_remodeling.src.forward_data.reader import forward_data_reader
+from bone_remodeling.src.inverse_model.evaluate_inverse import (
+    inverse_model_metrics,
+    plot_inverse_model,
+)
 from bone_remodeling.src.rl_model.environment import BoneRemodelingEnvironment
-from bone_remodeling.src.rl_model.forward_pass import SurrogateForwarder
+from bone_remodeling.src.rl_model.forward_pass import (
+    EnsembleForwarder,
+    SurrogateForwarder,
+)
 from bone_remodeling.src.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodeling.src.rl_model.render_callback import RenderCallback
 from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodeling.src.surrogate_model.loader import SurrogateModelLoader
 from bone_remodeling.src.surrogate_model.neural_networks.reversed_nn import (
     ReversedSurrogateModel,
 )
 from bone_remodeling.src.surrogate_model.splitter import splitting
+from matplotlib import pyplot as plt
+from stable_baselines3 import PPO
 
 logger = logging.getLogger(__name__)
 
@@ -106,14 +113,12 @@ def evaluate_agent(
             f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final SSIM: {ssim:.6f}, Final MSE: {mse:.6f}",
         )
 
-    if worst_estimate_information is not None and worst_sample_information is not None:
+    if worst_estimate_information is not None and worst_sample_information is not None and render:
         render_callback.render(
             sample_information=worst_sample_information,
             estimate_information=worst_estimate_information,
             reward=worst_reward)
 
-    # Pause to allow viewing of final render
-    plt.pause(20.0)
 
     return {
         "rewards": episode_rewards,
@@ -144,10 +149,17 @@ def main() -> None:
 
     rl_parameters = RLParameters()
 
+    # USE THE SURROGATE OR ENSEMBLE FORWARDER DEPENDING ON THE TRAINING SETUP
     forwarder_surrogate = SurrogateForwarder(
     surrogate_model_path=run_parameters.surrogate_path,
     density_shape=test_density_profiles[0].shape,
     model_class=ReversedSurrogateModel,
+    )
+
+    forwarder_ensemble = EnsembleForwarder(  # noqa: F841
+        model_paths=run_parameters.ensemble_path,
+        model_class=ReversedSurrogateModel,
+        model_loader=SurrogateModelLoader,
     )
 
     agent_evaluation_environment = BoneRemodelingEnvironment(
@@ -188,29 +200,11 @@ def main() -> None:
     plt.grid(visible=True)
     plt.show()
 
-    # Force Side Selection
     sample_forces = np.array(evaluation_result["sample_forces"])
-    pred_forces = np.array(evaluation_result["forces"])
-
-    test_side = np.argmax(np.max(np.abs(sample_forces), axis=2), axis=1)
-    eval_side = np.argmax(np.max(np.abs(pred_forces), axis=2), axis=1)
-    side_accuracy = np.sum(test_side == eval_side) / len(test_side)
-    logger.info(f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.")
-
-    # Correct per-sample peak location extraction
-    test_peak_locations = np.array([
-        np.argmax(np.abs(sample_forces[i, test_side[i], :]))
-        for i in range(len(sample_forces))
-    ])
-
-    eval_peak_locations = np.array([
-        np.argmax(np.abs(pred_forces[i, eval_side[i], :]))
-        for i in range(len(pred_forces))
-    ])
-
-    exact_match = (test_peak_locations == eval_peak_locations)
-    exact_accuracy = np.mean(exact_match)
-    logger.info(f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.")
+    predicted_forces = np.array(evaluation_result["forces"])
+    sample_densities = np.array(evaluation_result["sample_densities"])
+    predicted_densities = np.array(evaluation_result["predicted_densities"])
+    inverse_model_metrics(sample_forces, predicted_forces)
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
@@ -219,6 +213,19 @@ def main() -> None:
 
     logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}")
 
+    # Plot representative samples from evaluation
+    for _ in range(100):
+        k = np.random.randint(0, len(sample_forces))
+        logger.info(f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}")
+        logger.info(f"Original Force Profile: {sample_forces[k]}")
+        logger.info(f"Reconstructed Force Profile: {predicted_forces[k]}")
+        plot_inverse_model(
+            predicted_densities[k],
+            sample_densities[k],
+            predicted_forces[k],
+            sample_forces[k],
+        )
+        plt.show()
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
