@@ -2,8 +2,7 @@
 
 Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodelling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks are due to Bansod, whose code was a major source of inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling. A GIF demonstrating the capabilities of the forward model is shown below!
 
-![me](https://github.com/gijsschlief/bone_remodeling/LinkedIn_post_thesis(1).gif)
-
+![me](https://github.com/gijsschlief/bone_remodeling/blob/main/LinkedIn_post_thesis(1).gif)
 
 ## Table of Contents
 - [Overview](#overview)
@@ -54,21 +53,20 @@ The main scripts that contain the important steps taken in the thesis are the fi
 -   run_rl_environment.py   # Train the rl_agent
 -   evaluate_agent.py       # Analyse agent performance on the test set 
 -   inverse_trainer.py      # Run the inverse neural network on the same dataset
-```
 
 ## Project Structure
-```
+```text
 Thesis_code/
-├── delft_blue/             # Contains .sh files for running the modules on a supercomputer cluster
-├── src/                    # Contains all source code
-|   ├── forward_data/       # Module for data generation and visualisation
-|   ├── forward_model/      # Simulation environment for the forward model
-|   ├── inverse_model/      # Simulation environment for the inverse baseline model
-|   ├── rl_model/           # RL models and training scripts
-|   ├── surrogate_model/    # Unsupervised learning neural network model to estimate the forward model
-|   └── main.py             # Entry point for running experiments
-├── tests/                  # Test module containing test functions for all code
-└── README.md               # Project documentation
+├── delft_blue/         # .sh files for running modules on DelftBlue supercomputer
+├── src/                # All source code
+│   ├── forward_data/   # Data generation and visualisation
+│   ├── forward_model/  # Simulation environment (Forward Model)
+│   ├── inverse_model/  # Simulation environment (Inverse Baseline)
+│   ├── rl_model/       # RL models and PPO training scripts
+│   ├── surrogate_model/# Neural network to estimate the forward model
+│   └── main.py         # Entry point for running experiments
+├── tests/              # Test functions for all modules
+└── README.md           # Project documentation
 ```
 
 ## Contributing
