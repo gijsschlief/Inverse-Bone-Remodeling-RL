@@ -1,6 +1,9 @@
 # Thesis Code Repository
 
-Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodeling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks have to be given to Bansod whose code was a large inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling.
+Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodelling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks are due to Bansod, whose code was a major source of inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling. A GIF demonstrating the capabilities of the forward model is shown below!
+
+![me](https://github.com/gijsschlief/bone_remodeling/LinkedIn_post_thesis(1).gif)
+
 
 ## Table of Contents
 - [Overview](#overview)
@@ -11,13 +14,13 @@ Welcome to the repository for my thesis on **Using Reinforcement Learning to Sol
 - [License](#license)
 
 ## Overview
-The goal of this thesis is to explore how reinforcement learning can be applied to solve the inverse bone remodeling problem. This repository includes:
+The goal of this thesis is to explore how reinforcement learning can be applied to solve the inverse bone remodelling problem. This repository includes:
 - Implementation of reinforcement learning algorithms.
 - Simulation environments for testing and evaluation.
 - Data preprocessing and analysis scripts.
-- Visualization tools for results and findings.
+- Visualisation tools for results and findings.
 
-## Installation (Linux only - for windows use WSL2 environment)
+## Installation (Linux only - for Windows use WSL2 environment)
 1. Clone the repository:
     ```bash
     git clone https://github.com/gijsschlief/thesis-code.git
@@ -31,18 +34,18 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
     ```bash    
     poetry install
     ```
-    (if poetry install does not work rebuilt the poetry.lock file using: "poetry build" and retry)
+    (If the poetry install does not work rebuilt the poetry.lock file using: "poetry build" and retry)
 
-4. Install conda (as fenics can not be installed through poetry): 
+4. Install conda (as Fenics can not be installed through Poetry): 
     https://www.anaconda.com/docs/getting-started/miniconda/install#linux-terminal-installer
 
-5. Install fenics using conda:
+5. Install Fenics using conda:
     ```bash   
     conda install -c conda-forge fenics=2019.1.0
     ```
 
 ## Usage
-Please be aware that all code has currently been implemented using absolute paths that point to local drives which need to be changed inside the source code to a new location!
+Please be aware that all code has currently been implemented using absolute paths that point to local drives, which need to be changed inside the source code to a new location!
 The main scripts that contain the important steps taken in the thesis are the files:
 -   density_animation.py    # Run the forward simulation on a sample and plot the animation
 -   generator.py            # Run the forward simulation in parallel on many generated samples
@@ -56,9 +59,9 @@ The main scripts that contain the important steps taken in the thesis are the fi
 ## Project Structure
 ```
 Thesis_code/
-├── delft_blue/             # Contains .sh files for running the modules on a super computer cluster
+├── delft_blue/             # Contains .sh files for running the modules on a supercomputer cluster
 ├── src/                    # Contains all source code
-|   ├── forward_data/       # Module for data generation and visualization
+|   ├── forward_data/       # Module for data generation and visualisation
 |   ├── forward_model/      # Simulation environment for the forward model
 |   ├── inverse_model/      # Simulation environment for the inverse baseline model
 |   ├── rl_model/           # RL models and training scripts
