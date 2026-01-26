@@ -1,9 +1,28 @@
-# Thesis Code Repository
 
-Welcome to the repository for my Msc thesis on *Using Reinforcement Learning to Solve the Inverse Bone Remodelling Problem*. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks are due to Bansod, whose code was a major source of inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling. A GIF demonstrating the capabilities of the forward model is shown below!
+Inverse Modelling of Bone Remodelling using Reinforcement Learning
+==================================================================
+**MSc Thesis | Delft University of Technology | Grade: 9.5**
 
-![GIF of the forward model](https://github.com/gijsschlief/bone_remodeling/blob/main/LinkedIn_post_thesis(1).gif)  
+**Author:** *Gijs Bernd Schlief*
+
+Welcome to the repository for my Msc thesis on *Using Reinforcement Learning to Solve the Inverse Bone Remodelling Problem*. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks are due to Bansod, whose code was a major source of inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling. A GIF demonstrating the forward model's capabilities is shown below!
+  
+![GIF of the forward model](https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/blob/main/docs/readme_figures/forward_model.gif)  
 *Figure 1: The forward model adapting over time using a standard triangular loading condition on the top*
+  
+The agent's reward function is designed to bridge the gap between observed morphology and mechanical history. By penalising the Mean Squared Error (MSE) between the target bone density and the simulated density, the PPO (Proximal Policy Optimisation) agent learns to navigate a high-dimensional search space that is traditionally prone to local minima. As shown in Figure 2, the reward curve demonstrates stable convergence over 20 million timesteps. The agent successfully transitions from exploratory "random" loading to an exploitation phase, where it identifies the specific force vectors that replicate the target structure with high fidelity.
+  
+![Figure of the reward over time](https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/blob/main/docs/readme_figures/reward_curve_RL_20mil.png)  
+*Figure 2: The forward model adapting over time using a standard triangular loading condition on the top*  
+  
+## Key Results: RL vs. Baseline
+The core challenge of this thesis was to outperform traditional supervised learning and gradient-based methods.  
+  
+![Figure of the baseline result](https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/blob/main/docs/readme_figures/inverse_1258.png)  
+*Figure 3: A baseline supervised learning model struggles to solve the inverse bone remodelling model*  
+  
+![Figure of the RL agents result](https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/blob/main/docs/readme_figures/rl_surrogate_472.png)   
+*Figure 4: A reinforcement learning framework can estimate the inverse bone remodelling relation*  
 
 ## Table of Contents
 - [Overview](#overview)
