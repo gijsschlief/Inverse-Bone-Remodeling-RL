@@ -1,8 +1,9 @@
 # Thesis Code Repository
 
-Welcome to the repository for my thesis on **Using Reinforcement Learning to Solve the Inverse Bone Remodelling Problem**. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks are due to Bansod, whose code was a major source of inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling. A GIF demonstrating the capabilities of the forward model is shown below!
+Welcome to the repository for my Msc thesis on *Using Reinforcement Learning to Solve the Inverse Bone Remodelling Problem*. This repository contains all the code, scripts, and resources developed and used during the research. Special thanks are due to Bansod, whose code was a major source of inspiration for the forward model implementation. Please do check out his implementation on: https://github.com/YDBansod/Bone_Remodelling. A GIF demonstrating the capabilities of the forward model is shown below!
 
-![me](https://github.com/gijsschlief/bone_remodeling/blob/main/LinkedIn_post_thesis(1).gif)
+![GIF of the forward model](https://github.com/gijsschlief/bone_remodeling/blob/main/LinkedIn_post_thesis(1).gif)  
+*Figure 1: The forward model adapting over time using a standard triangular loading condition on the top*
 
 ## Table of Contents
 - [Overview](#overview)
