@@ -99,6 +99,7 @@ def animate_density_pyvista(
     output_directory.parent.mkdir(parents=True, exist_ok=True)
     pyvista_plotter = Plotter(off_screen=True)
     pyvista_plotter.open_gif(str(output_directory))
+    step = 0
 
     try:
         simulation.reset()
@@ -115,6 +116,9 @@ def animate_density_pyvista(
                 clim=(simulation.min_density, simulation.max_density),
             )
             pyvista_plotter.write_frame()
+    except RuntimeError as e:
+        logger.error(f"Animation interrupted at step {step}: {e}")
+        raise # Re-raise after closing plotter to notify the caller
     finally:
         pyvista_plotter.close()
 
