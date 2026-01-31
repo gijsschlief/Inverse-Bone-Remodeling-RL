@@ -1,6 +1,11 @@
 """Generates random force profiles for bone remodeling simulations."""
 
+import logging
+
 import numpy as np
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 
 class ForceProfileGenerator:
@@ -207,17 +212,8 @@ class ForceProfileGenerator:
         """Sample from a log-normal distribution with given mean and sigma."""
         return rng.lognormal(mean, sigma, size=size)
 
-
-if __name__ == "__main__":
-    # Example usage
-    import logging
-
-    import matplotlib.pyplot as plt
-    import numpy as np
-
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
+def example_usage() -> None:
+    """Use of the ForceProfileGenerator."""
     generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
     force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
     #force_profiles = generator.triangular_only(num_samples=100_000)
@@ -229,10 +225,14 @@ if __name__ == "__main__":
         logger.warning(f"Found {len(empty_profiles)} empty force profiles at indices: {empty_profiles}")
 
     logger.info(f"Generated profiles like: {force_profiles[0]} and {force_profiles[1]}")
-
-    # Find the maximum force value
     max_force_value = np.max(np.abs(force_profiles))
     logger.info(f"Maximum force value across all profiles: {max_force_value}")
+
+    visualise_profiles(force_profiles, force_profile_energy)
+
+def visualise_profiles(force_profiles: np.ndarray, force_profile_energy: np.ndarray) -> None:
+    """Visualise generated force profiles."""
+    import matplotlib.pyplot as plt  # noqa: PLC0415
 
     plt.figure(1)
     plt.subplot(2, 2, 1)
@@ -271,3 +271,6 @@ if __name__ == "__main__":
     plt.xlabel("Force Profile Index")
     plt.ylabel("Mean Force Value")
     plt.show()
+
+if __name__ == "__main__":
+    example_usage()
