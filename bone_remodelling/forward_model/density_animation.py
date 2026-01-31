@@ -92,8 +92,10 @@ def animate_density_pyvista(
     fenics_mesh = simulation.density_function.function_space().mesh()
     coords = fenics_mesh.coordinates()
     cells = fenics_mesh.cells()
+    points_3d = np.zeros((coords.shape[0], 3))
+    points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
-    base_grid = pv.UnstructuredGrid(cells_pv, [5] * cells.shape[0], coords)
+    base_grid = pv.UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
 
     # 2. Collect snapshots of the data
     simulation.reset()
@@ -178,7 +180,7 @@ def main() -> None:
 
     simulation = DensitySimulation(parameters)
 
-    animate_density_matplotlib(simulation=simulation)
+    #animate_density_matplotlib(simulation=simulation)
     animate_density_pyvista(simulation=simulation)
 
 
