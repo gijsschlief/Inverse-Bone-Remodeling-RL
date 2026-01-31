@@ -293,6 +293,7 @@ def plot_density_pyvista(
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
     base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
+    base_grid.cell_data["Density"] = simulation.get_density_function().vector().get_local()
 
     # 2. Plot the data
     try:
@@ -301,7 +302,7 @@ def plot_density_pyvista(
             pyvista_plotter,
             base_grid,
             "Density",
-            "Final Step",
+            "Initial density field",
             (simulation.min_density, simulation.max_density),
         )
         pyvista_plotter.show()
@@ -355,7 +356,6 @@ def example_usage() -> None:
     simulation = DensitySimulation(parameters=simulation_parameters)
     simulation.step()
     plot_density_pyvista(simulation=simulation)
-
 
 if __name__ == "__main__":
     example_usage()
