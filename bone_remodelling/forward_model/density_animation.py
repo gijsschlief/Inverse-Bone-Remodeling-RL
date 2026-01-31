@@ -5,8 +5,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pyvista as pv
 from matplotlib.animation import FuncAnimation
+from matplotlib.axes import Axes
+from pyvista import Plotter, UnstructuredGrid
 
 from bone_remodelling.forward_data.force_profile_generator import (
     ForceProfileGenerator,
@@ -48,7 +49,7 @@ def animate_density_matplotlib(
 
     fig, ax = plt.subplots()
 
-    def _update_to_next_frame(frame: int) -> list[plt.Axes]:
+    def _update_to_next_frame(frame: int) -> list[Axes]:
         """Update the plot for the current frame."""
         ax.clear()
         plot_density_matrix(
@@ -95,7 +96,7 @@ def animate_density_pyvista(
     points_3d = np.zeros((coords.shape[0], 3))
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
-    base_grid = pv.UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
+    base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
 
     # 2. Collect snapshots of the data
     simulation.reset()
@@ -109,23 +110,22 @@ def animate_density_pyvista(
 
     # 3. Create Animation
     output_directory.parent.mkdir(parents=True, exist_ok=True)
-    pv.OFF_SCREEN = True
-    plotter = pv.Plotter(off_screen=True)
-    plotter.open_gif(str(output_directory))
+    pyvista_plotter = Plotter(off_screen=True)
+    pyvista_plotter.open_gif(str(output_directory))
 
     try:
         for step, grid in enumerate(snapshots):
-            plotter.clear()
+            pyvista_plotter.clear()
             render_density_pyvista_frame(
-                plotter=plotter,
+                pyvista_plotter=pyvista_plotter,
                 grid=grid,
                 scalar_field_name="Density",
                 step_title=f"Step {step + 1}",
                 clim=(simulation.min_density, simulation.max_density),
             )
-            plotter.write_frame()
+            pyvista_plotter.write_frame()
     finally:
-        plotter.close()
+        pyvista_plotter.close()
 
     logger.info(f"PyVista animation saved to {output_directory}")
 
@@ -137,7 +137,7 @@ def main() -> None:
 
     force_profile_generator = ForceProfileGenerator(
         profile_length=10,
-        batch_seed=1270,
+        batch_seed=10,
     )
     force_profile = force_profile_generator.merger(
         num_samples=1,
@@ -180,7 +180,7 @@ def main() -> None:
 
     simulation = DensitySimulation(parameters)
 
-    #animate_density_matplotlib(simulation=simulation)
+    animate_density_matplotlib(simulation=simulation)
     animate_density_pyvista(simulation=simulation)
 
 

@@ -1,7 +1,16 @@
 """Form builder for stiffness matrix in bone remodeling simulation."""
 
 import ufl  # type: ignore
-from fenics import Function, TrialFunction, div, dot, dx, grad, inner  # type: ignore
+from fenics import (  # type: ignore
+    Function,
+    FunctionSpace,
+    TrialFunction,
+    div,
+    dot,
+    dx,
+    grad,
+    inner,
+)
 
 
 class StiffnessFormBuilder:
@@ -15,7 +24,7 @@ class StiffnessFormBuilder:
         self,
         shear_function: Function,
         lame_function: Function,
-        displacement_space: Function,
+        displacement_space: FunctionSpace,
         displacement_test_function: Function,
     ) -> None:
         """Initialize the StiffnessFormBuilder with shear and Lame functions."""

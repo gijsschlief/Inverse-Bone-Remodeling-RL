@@ -5,7 +5,8 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pyvista as pv  # type: ignore
+from matplotlib.axes import Axes
+from pyvista import Plotter, UnstructuredGrid, get_reader
 
 from bone_remodelling.forward_model.parameters import SimulationParameters
 
@@ -16,7 +17,7 @@ def plot_density_matrix(
     matrix: np.ndarray,
     force_profile: np.ndarray | None,
     title: str,
-    axis: plt.Axes,
+    axis: Axes,
     color_scale: tuple[float, float] = (0.01, 1.73),
 ) -> None:
     """Plot a density matrix with annotations.
@@ -89,7 +90,7 @@ def plot_density_matrix(
 def _build_up_arrows(
     top_forces: np.ndarray,
     max_force: float,
-    axis: plt.Axes,
+    axis: Axes,
     width: int,
 ) -> None:
     """Top forces: draw downward arrows above row 0."""
@@ -127,7 +128,7 @@ def _build_up_arrows(
 def _build_left_arrows(
     left_forces: np.ndarray,
     max_force: float,
-    axis: plt.Axes,
+    axis: Axes,
     height: int,
 ) -> None:
     """Left forces: draw rightward arrows left of column 0."""
@@ -165,7 +166,7 @@ def _build_left_arrows(
 def _build_right_arrows(
     right_forces: np.ndarray,
     max_force: float,
-    axis: plt.Axes,
+    axis: Axes,
     height: int,
     width: int,
 ) -> None:
@@ -241,7 +242,7 @@ def plot_density_pyvista(
     """
     try:
         # ensure we pass a string path to PyVista
-        reader = pv.get_reader(str(directory))
+        reader = get_reader(str(directory))
         reader.set_active_time_point(0)
         data = reader.read()
         grid = data[0]
@@ -260,29 +261,29 @@ def plot_density_pyvista(
 
         clim = (simulation_parameters.min_density, simulation_parameters.max_density)
 
-        plotter = pv.Plotter()
+        pyvista_plotter = Plotter()
         render_density_pyvista_frame(
-            plotter,
+            pyvista_plotter,
             grid,
             scalar_field_name,
             "Final Step",
             clim,
         )
-        plotter.show()
+        pyvista_plotter.show()
     except Exception as e:
         logger.exception(f"Failed to plot result with PyVista: {e}")
 
 
 def render_density_pyvista_frame(
-    plotter: pv.Plotter,
-    grid: pv.UnstructuredGrid,
+    pyvista_plotter: Plotter,
+    grid: UnstructuredGrid,
     scalar_field_name: str,
     step_title: str,
     clim: tuple[float, float],
 ) -> None:
     """Render a single frame of density in a PyVista Plotter."""
-    plotter.clear()
-    plotter.add_mesh(
+    pyvista_plotter.clear()
+    pyvista_plotter.add_mesh(
         grid,
         scalars=scalar_field_name,
         show_edges=True,
@@ -290,8 +291,8 @@ def render_density_pyvista_frame(
         clim=clim,
         cmap="viridis",
     )
-    plotter.camera_position = "xy"
-    plotter.add_text(step_title, position="upper_left", font_size=14)
+    pyvista_plotter.camera_position = "xy"
+    pyvista_plotter.add_text(step_title, position="upper_left", font_size=14)
 
 
 def example_usage() -> None:
@@ -305,7 +306,6 @@ def example_usage() -> None:
         force_profile=force_profile,
         initial_density_field=np.ones((10, 10)) * 0.8,
         time_steps=100,
-        save_data=False,
     )
 
     plot_density_matrix(
