@@ -76,9 +76,9 @@ The main scripts that contain the important steps taken in the thesis are the fi
 
 ## Project Structure
 ```text
-Thesis_code/
+INVERSE-BONE-REMODELING-RL/
 ├── delft_blue/         # .sh files for running modules on DelftBlue supercomputer
-├── src/                # All source code
+├── bone_remodelling/   # All source code
 │   ├── forward_data/   # Data generation and visualisation
 │   ├── forward_model/  # Simulation environment (Forward Model)
 │   ├── inverse_model/  # Simulation environment (Inverse Baseline)
