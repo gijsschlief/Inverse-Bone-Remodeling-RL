@@ -286,6 +286,7 @@ def render_density_pyvista_frame(
     pyvista_plotter.add_mesh(
         grid,
         scalars=scalar_field_name,
+        preference="cell",
         show_edges=True,
         show_scalar_bar=True,
         clim=clim,

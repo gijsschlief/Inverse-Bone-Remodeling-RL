@@ -104,8 +104,8 @@ def animate_density_pyvista(
     for _ in range(simulation.time_steps):
         simulation.step()
         frame_grid = base_grid.copy()
-        v_values = simulation.get_density_function().compute_vertex_values(fenics_mesh)
-        frame_grid.point_data["Density"] = v_values
+        cell_values = simulation.get_density_function().vector().get_local()
+        frame_grid.cell_data["Density"] = cell_values
         snapshots.append(frame_grid)
 
     # 3. Create Animation
