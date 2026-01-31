@@ -8,6 +8,7 @@ import numpy as np
 from matplotlib.axes import Axes
 from pyvista import Plotter, UnstructuredGrid, get_reader
 
+from bone_remodelling.forward_model.main import DensitySimulation
 from bone_remodelling.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
@@ -226,7 +227,7 @@ def _get_force_color(
     return f"#{red:02x}{green:02x}{blue:02x}"
 
 
-def plot_density_pyvista(
+def plot_density_pyvista_old(
     simulation_parameters: SimulationParameters,
     directory: Path = Path(
         "/home/gijs/Desktop/Thesis/data/fenics/density_simulation.pvd",
@@ -268,6 +269,40 @@ def plot_density_pyvista(
             scalar_field_name,
             "Final Step",
             clim,
+        )
+        pyvista_plotter.show()
+    except Exception as e:
+        logger.exception(f"Failed to plot result with PyVista: {e}")
+
+def plot_density_pyvista(
+
+    simulation: DensitySimulation,
+) -> None:
+    """Plot the density simulation using PyVista.
+
+    Args:
+    ----
+        simulation (DensitySimulation): The density simulation instance.
+
+    """
+    # 1. Setup Base PyVista Mesh from FEniCS Mesh
+    fenics_mesh = simulation.density_function.function_space().mesh()
+    coords = fenics_mesh.coordinates()
+    cells = fenics_mesh.cells()
+    points_3d = np.zeros((coords.shape[0], 3))
+    points_3d[:, :2] = coords
+    cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
+    base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
+
+    # 2. Plot the data
+    try:
+        pyvista_plotter = Plotter()
+        render_density_pyvista_frame(
+            pyvista_plotter,
+            base_grid,
+            "Density",
+            "Final Step",
+            (simulation.min_density, simulation.max_density),
         )
         pyvista_plotter.show()
     except Exception as e:
@@ -317,7 +352,9 @@ def example_usage() -> None:
     )
     plt.show()
 
-    plot_density_pyvista(simulation_parameters=simulation_parameters)
+    simulation = DensitySimulation(parameters=simulation_parameters)
+    simulation.step()
+    plot_density_pyvista(simulation=simulation)
 
 
 if __name__ == "__main__":

@@ -178,7 +178,7 @@ def main() -> None:
     )
     # To run change parameters to moment_parameters ----
 
-    simulation = DensitySimulation(parameters)
+    simulation = DensitySimulation(parameters=parameters)
 
     animate_density_matplotlib(simulation=simulation)
     animate_density_pyvista(simulation=simulation)
