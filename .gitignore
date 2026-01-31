@@ -178,3 +178,5 @@ cython_debug/
 
 # Conda environments
 .conda
+data/fenics/density_simulation000000.vtu
+data/fenics/density_simulation.pvd

@@ -6,16 +6,17 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 import pyvista as pv
-from bone_remodeling.src.forward_data.force_profile_generator import (
+from matplotlib.animation import FuncAnimation
+
+from bone_remodelling.forward_data.force_profile_generator import (
     ForceProfileGenerator,
 )
-from bone_remodeling.src.forward_model.density_visualizer import (
+from bone_remodelling.forward_model.density_visualizer import (
     plot_density_matrix,
     render_density_pyvista_frame,
 )
-from bone_remodeling.src.forward_model.main import DensitySimulation
-from bone_remodeling.src.forward_model.parameters import SimulationParameters
-from matplotlib.animation import FuncAnimation
+from bone_remodelling.forward_model.main import DensitySimulation
+from bone_remodelling.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
 
