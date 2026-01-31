@@ -12,18 +12,14 @@ and plotting the final density profile using pyvista.
 
 import logging
 from dataclasses import asdict
-from pathlib import Path
 
 import numpy as np
 from fenics import (  # type: ignore
-    Expression,
-    File,
     Function,
     FunctionSpace,
     LinearVariationalProblem,
     LinearVariationalSolver,
     LogLevel,
-    MeshFunction,
     TestFunction,
     UnitSquareMesh,
     VectorFunctionSpace,
@@ -86,12 +82,6 @@ class DensitySimulation:
     krylov_solver_iterations: int
     linear_solver: str
     preconditioner: str
-
-    output_dir: str
-    full_file_path: str | Path
-    output_basename: str
-    output_extension: str
-    save_data: bool
 
     def __init__(self, parameters: SimulationParameters) -> None:
         """Initialize the density simulation with parameters and setup.
@@ -243,8 +233,6 @@ class DensitySimulation:
         self.elasticity_solver.solve()
         self._update_density()
         self._update_material_properties()
-        if self.save_data:
-            self.save(self.density_function)
 
     def run(self) -> None:
         """Run the full simulation loop."""
@@ -302,38 +290,12 @@ class DensitySimulation:
         )
         return np.flipud(safe_density.reshape(self.n_rows, self.n_columns))
 
-    def save(
-        self,
-        to_save_data: Function | MeshFunction | Expression,
-        output_path: Path | str | None = None,
-    ) -> None:
-        """Save data specified to the output_dir.
+    def get_density_function(self) -> Function:
+        """Get the density function used in the simulation.
 
-        Args:
-        ----
-            to_save_data (Function | MeshFunction | Expression): Data to save, can be a Function, MeshFunction, or Expression.
-            output_path (Path | str | None): Optional path to save the data. If None, uses the default output directory.
-
-        Raises:
-        ------
-            RuntimeError: If saving fails.
+        Returns
+        -------
+            Function: The density function used in the simulation.
 
         """
-        if output_path is None:
-            output_path = Path(self.output_dir)
-            output_path.mkdir(parents=True, exist_ok=True)
-            self.full_file_path = output_path / (
-                self.output_basename + self.output_extension
-            )
-        else:
-            output_path = Path(output_path)
-            output_path.mkdir(parents=True, exist_ok=True)
-            self.full_file_path = str(output_path) + self.output_extension
-        try:
-            file = File(str(self.full_file_path))
-            file << to_save_data
-        except Exception as e:
-            logger.exception(
-                f"Failed to save the output to {self.full_file_path}: {e}",
-            )
-            raise RuntimeError(f"Failed to save the output: {e}") from e
+        return self.density_function

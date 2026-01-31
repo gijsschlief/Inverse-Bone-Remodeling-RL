@@ -35,7 +35,7 @@ def animate_density_matplotlib(
     """
     logger.info("Starting Matplotlib animation generation.")
     if not output_directory.exists():
-        output_directory.mkdir(parents=True)
+        output_directory.parent.mkdir(parents=True, exist_ok=True)
 
     density_film: np.ndarray = np.zeros(
         (simulation.time_steps, simulation.n_rows, simulation.n_columns),
@@ -68,76 +68,63 @@ def animate_density_matplotlib(
     )
     plt.tight_layout()
     try:
-        animation.save(output_directory, writer="ffmpeg")
+        animation.save(str(output_directory), writer="ffmpeg")
         logger.info(f"Matplotlib animation saved to {output_directory}")
     except ImportError:
         logger.warning("Could not save animation.")
     return animation
 
-
-def _update_pyvista_files(simulation: DensitySimulation, file_pattern: str) -> None:
-    """Update the PyVista files to ensure they are in the correct format."""
-    simulation.reset()
-    for i in range(simulation.time_steps):
-        simulation.step()
-        simulation.save(
-            to_save_data=simulation.density_function,
-            output_path=file_pattern + f"_{i}",
-        )
-        Path.rename(
-            file_pattern + f"_{i}" + "000000.vtu",
-            file_pattern + f"_{i}" + ".vtu",
-        )
-        Path.rmdir(file_pattern + f"_{i}")
-        Path.unlink(file_pattern + f"_{i}" + ".pvd")
-
-
 def animate_density_pyvista(
     simulation: DensitySimulation,
     output_directory: Path = Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation_pyvista.gif"),
-    file_pattern: str = (Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation")).as_posix(),
 ) -> None:
-    """Create an animation of the density changes over time using PyVista.
+    """Create a PyVista animation using in-memory snapshots of FEniCS data.
 
     Args:
     ----
         simulation (DensitySimulation): The simulation object to run.
         output_directory (Path): The directory where the animation will be saved.
-        file_pattern (Path): The pattern for the output files.
 
     """
     logger.info("Starting PyVista animation generation.")
-    _update_pyvista_files(simulation, file_pattern)
 
+    # 1. Setup Base PyVista Mesh from FEniCS Mesh
+    fenics_mesh = simulation.density_function.function_space().mesh()
+    coords = fenics_mesh.coordinates()
+    cells = fenics_mesh.cells()
+    cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
+    base_grid = pv.UnstructuredGrid(cells_pv, [5] * cells.shape[0], coords)
+
+    # 2. Collect snapshots of the data
+    simulation.reset()
+    snapshots = []
+    for _ in range(simulation.time_steps):
+        simulation.step()
+        frame_grid = base_grid.copy()
+        v_values = simulation.get_density_function().compute_vertex_values(fenics_mesh)
+        frame_grid.point_data["Density"] = v_values
+        snapshots.append(frame_grid)
+
+    # 3. Create Animation
+    output_directory.parent.mkdir(parents=True, exist_ok=True)
     pv.OFF_SCREEN = True
-
-    file_list = sorted(
-        Path.glob(Path(file_pattern).parent, Path(file_pattern).name + "_*.vtu"),
-        key=lambda fn: int(Path(fn).stem.split("_")[-1]),
-    )
-
-    # Initialize the Plotter
     plotter = pv.Plotter(off_screen=True)
-    plotter.open_gif(output_directory.as_posix())
+    plotter.open_gif(str(output_directory))
 
-    for step, filename in enumerate(file_list):
-        grid = pv.read(filename)
-        if not isinstance(grid, pv.UnstructuredGrid):
-            logger.warning(f"File {filename} is not an UnstructuredGrid; skipping.")
-            continue
-        if not grid.array_names:
-            logger.warning(f"No scalar arrays in {filename}; skipping.")
-            continue
+    try:
+        for step, grid in enumerate(snapshots):
+            plotter.clear()
+            render_density_pyvista_frame(
+                plotter=plotter,
+                grid=grid,
+                scalar_field_name="Density",
+                step_title=f"Step {step + 1}",
+                clim=(simulation.min_density, simulation.max_density),
+            )
+            plotter.write_frame()
+    finally:
+        plotter.close()
 
-        render_density_pyvista_frame(
-            plotter=plotter,
-            grid=grid,
-            scalar_field_name=grid.array_names[0],
-            step_title=f"Step {step + 1}",
-            clim=(simulation.min_density, simulation.max_density),
-        )
-        plotter.write_frame()
-    plotter.close()
     logger.info(f"PyVista animation saved to {output_directory}")
 
 
@@ -158,7 +145,6 @@ def main() -> None:
     parameters = SimulationParameters(
         force_profile=force_profile,
         initial_density_field=np.ones((10, 10)) * 0.87,
-        save_data=True,
     )
 
     # Alternative profile for Weinans model validation ----
@@ -175,7 +161,6 @@ def main() -> None:
     validation_parameters = SimulationParameters(  # noqa: F841
         force_profile=validation_force_profile,
         initial_density_field=np.ones((n_points, n_points)) * 0.87,
-        save_data=True,
     )
     # To run change parameters to validation_parameters ----
 
@@ -188,7 +173,6 @@ def main() -> None:
     moment_parameters = SimulationParameters(  # noqa: F841
         force_profile=moment_force_profile,
         initial_density_field=np.ones((10, 10)) * 0.87,
-        save_data=True,
     )
     # To run change parameters to moment_parameters ----
 

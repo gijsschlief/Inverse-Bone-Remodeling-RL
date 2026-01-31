@@ -57,14 +57,6 @@ class SimulationParameters:
             Type of linear solver to use.
         preconditioner : str
             Type of preconditioner to use.
-        output_dir : str
-            Directory to save output files.
-        output_basename : str
-            Base name for output files.
-        output_extension : str
-            File extension for output files.
-        save_data : bool
-            Whether to save the simulation results.
 
     Raises
     ------
@@ -110,10 +102,7 @@ class SimulationParameters:
     boundary_tolerance: float = 1e-14
 
     # I/O parameters
-    output_dir: Path = Path(__file__).parent.parent.parent / Path("data", "fenics")
-    output_basename: str = "density_simulation"
-    output_extension: str = ".pvd"
-    save_data: bool = False
+    output_dir: Path = Path(__file__).parent.parent.parent / Path("data", "fenics", "density_simulation.pvd")
 
     def __post_init__(self) -> None:  # noqa: C901, PLR0912
         """Validate the configuration parameters for the forward simulation."""
@@ -123,8 +112,6 @@ class SimulationParameters:
             raise TypeError("initial_density field must be a numpy array.")
         if not isinstance(self.dt, (int, float)) or self.dt <= 0:
             raise ValueError("dt must be a positive number.")
-        if not isinstance(self.output_dir, Path):
-            raise TypeError("Output directory must be a Path object.")
         if not isinstance(self.min_density, (int, float)):
             raise TypeError("min_density must be a number.")
         if not isinstance(self.max_density, (int, float)):
@@ -164,8 +151,6 @@ class SimulationParameters:
             logger.warning(
                 "time_steps is set to a high value, which may lead to long computation times.",
             )
-        if not isinstance(self.save_data, bool):
-            raise TypeError("save must be a boolean value.")
         if (
             not isinstance(self.convergence_tolerance, (int, float))
             or self.convergence_tolerance <= 0
@@ -175,12 +160,6 @@ class SimulationParameters:
         large_convergence_tolerance_warning = 0.1
         if self.convergence_tolerance > large_convergence_tolerance_warning:
             logger.warning("convergence tolerance is very large")
-        if not isinstance(self.output_basename, str):
-            raise TypeError("output_basename must be a string.")
-        if not isinstance(self.output_extension, str):
-            raise TypeError("file_extension must be a string.")
-        if not self.output_extension.startswith("."):
-            raise ValueError("file_extension must start with a dot (e.g., '.pvd').")
         if (
             not isinstance(self.convergence_after_steps, int)
             or self.convergence_after_steps <= 0
