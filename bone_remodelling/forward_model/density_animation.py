@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 def animate_density_matplotlib(
     simulation: DensitySimulation,
-    output_directory: Path,
+    output_directory: Path = Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation.gif"),
 ) -> FuncAnimation:
     """Create an animation of the density changes over time using Matplotlib.
 
@@ -94,8 +94,8 @@ def _update_pyvista_files(simulation: DensitySimulation, file_pattern: str) -> N
 
 def animate_density_pyvista(
     simulation: DensitySimulation,
-    output_directory: Path,
-    file_pattern: str,
+    output_directory: Path = Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation_pyvista.gif"),
+    file_pattern: str = (Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation")).as_posix(),
 ) -> None:
     """Create an animation of the density changes over time using PyVista.
 
@@ -194,19 +194,8 @@ def main() -> None:
 
     simulation = DensitySimulation(parameters)
 
-    animate_density_matplotlib(
-        simulation=simulation,
-        output_directory=Path(
-            "/home/gijs/Desktop/Thesis/data/animations/0_density_animation.gif",
-        ),
-    )
-    animate_density_pyvista(
-        simulation=simulation,
-        output_directory=Path(
-            "/home/gijs/Desktop/Thesis/data/animations/0_density_animation_pyvista.gif",
-        ),
-        file_pattern="/home/gijs/Desktop/Thesis/data/animations/density_animation",
-    )
+    animate_density_matplotlib(simulation=simulation)
+    animate_density_pyvista(simulation=simulation)
 
 
 if __name__ == "__main__":

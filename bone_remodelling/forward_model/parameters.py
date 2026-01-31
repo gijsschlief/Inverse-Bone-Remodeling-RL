@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
@@ -109,7 +110,7 @@ class SimulationParameters:
     boundary_tolerance: float = 1e-14
 
     # I/O parameters
-    output_dir: str = "data/fenics"
+    output_dir: Path = Path(__file__).parent.parent.parent / Path("data", "fenics")
     output_basename: str = "density_simulation"
     output_extension: str = ".pvd"
     save_data: bool = False
@@ -122,8 +123,8 @@ class SimulationParameters:
             raise TypeError("initial_density field must be a numpy array.")
         if not isinstance(self.dt, (int, float)) or self.dt <= 0:
             raise ValueError("dt must be a positive number.")
-        if not isinstance(self.output_dir, str):
-            raise TypeError("Output directory must be a string.")
+        if not isinstance(self.output_dir, Path):
+            raise TypeError("Output directory must be a Path object.")
         if not isinstance(self.min_density, (int, float)):
             raise TypeError("min_density must be a number.")
         if not isinstance(self.max_density, (int, float)):
