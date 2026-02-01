@@ -73,7 +73,7 @@ def diversity_metrics() -> None:
     )
     plt.show()
 
-    directory_path_triangular = Path(__file__).parent.parent / Path("data", "raw", "triangular")
+    directory_path_triangular = Path(__file__).parent.parent.parent / Path("data", "raw", "triangular")
     result_triangular = forward_data_reader(directory_path_triangular)
     force_profiles_triangular, output_densities_triangular = np.array([]), np.array([])
     if result_triangular is not None:
