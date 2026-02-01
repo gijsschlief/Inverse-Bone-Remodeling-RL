@@ -33,6 +33,7 @@ class LoadFormBuilder:
         self,
         mesh: Mesh,
         force_profile: np.ndarray,
+        force_mask: np.ndarray,
         displacement_test_function: TestFunction,
         boundary_tolerance: float = 1e-6,
     ) -> None:
@@ -42,12 +43,14 @@ class LoadFormBuilder:
         ----
             mesh (Mesh): The mesh on which the force expressions will be defined.
             force_profile (np.ndarray): The force profile to be used for building the expressions.
+            force_mask (np.ndarray): Boolean mask to define the resolution of applied forces.
             displacement_test_function (TestFunction): The test function for the displacement.
             boundary_tolerance (float): Tolerance for defining the boundaries.
 
         """
         self.mesh = mesh
         self.force_profile = force_profile
+        self.force_mask = force_mask
         self.boundary_tolerance = boundary_tolerance
         self.displacement_test_function = displacement_test_function
         self._setup_subdomains()
@@ -109,14 +112,17 @@ class LoadFormBuilder:
         """
         top_force_expression = self._build_one(
             self.force_profile[0],
+            self.force_mask[0],
             axis="x",
         )
         right_force_expression = self._build_one(
             self.force_profile[1],
+            self.force_mask[1],
             axis="y",
         )
         left_force_expression = self._build_one(
             self.force_profile[2],
+            self.force_mask[2],
             axis="y",
         )
 
@@ -127,10 +133,10 @@ class LoadFormBuilder:
         }
 
     @staticmethod
-    def _build_one(force_row: np.ndarray, axis: str) -> Expression:
+    def _build_one(force_row: np.ndarray, force_mask_row: np.ndarray, axis: str) -> Expression:
         """Build one force expression based on the force profile."""
         expression_pieces = []
-        dx = 1.0 / len(force_row)
+        dx = 1.0 / len(force_mask_row)
         for i, value in enumerate(force_row):
             if value != 0:
                 start = i * dx

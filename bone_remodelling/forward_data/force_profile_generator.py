@@ -175,6 +175,14 @@ class ForceProfileGenerator:
             profiles[i] *= scaling_factor
         return profiles
 
+    def generate_force_mask(self) -> np.ndarray:
+        """Generate a force mask based on the profile dimensions."""
+        force_mask = np.zeros((3, self._max_length), dtype=bool)
+        force_mask[0, :self._profile_sides] = True
+        force_mask[1, :self._profile_top] = True
+        force_mask[2, :self._profile_sides] = True
+        return force_mask
+
     def _energy_scaling(self, force_profile: np.ndarray, lower_energy_bound: float = 1e-12) -> float:
         """Scale force profiles to match target energy levels."""
         target_energy = self._log_uniform_sampling().item()

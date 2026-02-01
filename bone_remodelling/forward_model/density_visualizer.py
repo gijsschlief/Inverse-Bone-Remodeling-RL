@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 def plot_density_matrix(
     matrix: np.ndarray,
-    force_profile: np.ndarray | None,
-    title: str,
-    axis: Axes,
+    force_data: tuple[np.ndarray | None, np.ndarray | None] = (None, None),
+    title: str = "Density Matrix",
+    axis: Axes = plt.gca(),
     color_scale: tuple[float, float] = (0.01, 1.73),
 ) -> None:
     """Plot a density matrix with annotations.
@@ -25,7 +25,7 @@ def plot_density_matrix(
     Args:
     ----
         matrix (np.ndarray): Density matrix to plot.
-        force_profile (np.ndarray | None): Force profile corresponding to the matrix.
+        force_data (tuple[np.ndarray | None, np.ndarray | None]): Force profile and mask corresponding to the matrix.
         title (str): Title of the plot.
         axis: Matplotlib axis to plot on.
         color_scale (tuple[float, float]): Contains the minimum and maximum color scale values
@@ -60,23 +60,40 @@ def plot_density_matrix(
                     fontsize=8,
                 )
 
-    if force_profile is not None:
-        height, width = matrix.shape
-        _plot_force_arrows(axis, force_profile, width, height)
-        _plot_force_band(axis, force_profile, width, height)
+    force_profile, force_mask = force_data
+    if force_profile is not None and force_mask is not None:
+        _plot_force_arrows(axis, force_profile, force_mask, matrix.shape)
+        _plot_force_band(axis, force_profile, force_mask, matrix.shape)
 
-def _plot_force_band(axis: Axes, force_profile: np.ndarray, width: int, height: int) -> None:
+    # Define plot limits
+    height, width = matrix.shape
+    plot_size = max(width, height)
+    if width < height:
+        offset = 0.5 * (height - width)
+        axis.set_xlim(-offset -1, plot_size - offset + 1)
+        axis.set_ylim(plot_size, -plot_size*0.1 -1)
+    else:
+        axis.set_xlim(-plot_size*0.1 - 1, plot_size + 1)
+        axis.set_ylim(plot_size, -plot_size*0.1 -1)
+
+def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarray, shape: tuple[int, int]) -> None:
     """Plot a colored band above the density matrix to represent top forces."""
-    top_forces = force_profile[1, :width]
-    left_forces = force_profile[0, :height]
-    right_forces = force_profile[2, :height]
+    left_resolution = force_mask[0, :].sum()
+    top_resolution = force_mask[1, :].sum()
+    right_resolution = force_mask[2, :].sum()
+
+    left_forces = force_profile[0, :left_resolution]
+    top_forces = force_profile[1, :top_resolution]
+    right_forces = force_profile[2, :right_resolution]
+
     v_min = -np.max(np.abs(force_profile))
     v_max =  np.max(np.abs(force_profile))
 
-    band_thickness = 0.1
+    band_thickness = 0.0025*max(shape) + 0.15
     top_offset = 0.61
-    xlim = axis.get_xlim()
-    ylim = axis.get_ylim()
+
+    height = shape[0]
+    width = shape[1]
 
     axis.imshow(
         top_forces[np.newaxis, :],
@@ -110,42 +127,47 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, width: int, height: 
         alpha=0.8,
     )
 
-    axis.set_xlim(xlim)
-    axis.set_ylim(ylim)
-
 def _get_quiver_data(side: str, forces: np.ndarray, height: int, width: int, threshold: float = 1e-3) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
     mask = np.abs(forces) > threshold
     if not np.any(mask):
         return None
-    indices = np.where(mask)[0]
     f_vals = forces[mask]
-    offset = 1.5
+    offset = 1.0
 
     if side == 'top':
-        x, y = indices, np.full_like(indices, -offset)
+        x = np.linspace(0, width - 1, len(f_vals))
+        y = np.full_like(f_vals, -offset)
         u, v = np.zeros_like(f_vals), -f_vals
     elif side == 'left':
-        x, y = np.full_like(indices, -offset), height - 1 - indices
+        x = np.full_like(f_vals, -offset)
+        y = np.linspace(height - 1, 0, len(f_vals))
         u, v = -f_vals, np.zeros_like(f_vals)
     else:
-        x, y = np.full_like(indices, width -1 + offset), height - 1 - indices
+        x = np.full_like(f_vals, width -1 + offset)
+        y = np.linspace(height - 1, 0, len(f_vals))
         u, v = f_vals, np.zeros_like(f_vals)
     return x, y, u, v, f_vals
 
-def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, width: int, height: int) -> None:
+def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarray, shape: tuple[int, int]) -> None:
     """Plot all force arrows (top, left, right) using a single quiver call per side.
 
     Args:
     ----
         axis: Matplotlib axis to plot on.
         force_profile (np.ndarray): 2D array with shape (3, N) containing forces for top, left, right sides.
-        width (int): Width of the density matrix.
-        height (int): Height of the density matrix.
+        force_mask (np.ndarray): 2D boolean array with shape (3, N) indicating active forces.
+        shape (tuple[int, int]): Shape of the density matrix (height, width).
 
     """
-    left_forces  = force_profile[0, :height]
-    top_forces   = force_profile[1, :width]
-    right_forces = force_profile[2, :height]
+    left_resolution = force_mask[0, :].sum()
+    top_resolution = force_mask[1, :].sum()
+    right_resolution = force_mask[2, :].sum()
+
+    left_forces  = force_profile[0, :left_resolution]
+    top_forces   = force_profile[1, :top_resolution]
+    right_forces = force_profile[2, :right_resolution]
+
+    height, width = shape
 
     for side, forces in zip(['left', 'top', 'right'], [left_forces, top_forces, right_forces]):
         data = _get_quiver_data(side, forces, height, width)
@@ -163,10 +185,7 @@ def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, width: int, height
                 minlength=1e-12,
             )
 
-def plot_density_pyvista(
-
-    simulation: DensitySimulation,
-) -> None:
+def plot_density_pyvista(simulation: DensitySimulation) -> None:
     """Plot the density simulation using PyVista.
 
     Args:
@@ -224,17 +243,19 @@ def example_usage() -> None:
     logging.basicConfig(level=logging.INFO)
     logger.info("Starting density visualization.")
 
-    force_profile = np.random.rand(3, 50) * 10 - 5
+    force_profile = np.random.rand(3, 10) * 10 - 5
+    force_mask = np.ones((3, 10), dtype=bool)
 
     simulation_parameters = SimulationParameters(
         force_profile=force_profile,
-        initial_density_field=np.ones((50, 10)) * 0.8,
+        force_mask=force_mask,
+        initial_density_field=np.ones((10, 10)) * 0.8,
         time_steps=100,
     )
 
     plot_density_matrix(
         matrix=simulation_parameters.initial_density_field,
-        force_profile=force_profile,
+        force_data=(force_profile, force_mask),
         title="Initial Density Field",
         axis=plt.gca(),
     )

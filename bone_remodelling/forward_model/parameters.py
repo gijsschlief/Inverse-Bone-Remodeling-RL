@@ -66,6 +66,7 @@ class SimulationParameters:
     """
 
     force_profile: np.ndarray  # shape (3,n)
+    force_mask: np.ndarray  # bool of shape (3,n) to define the resolution of applied forces
     initial_density_field: np.ndarray  # shape (n,n)
 
     # material parameters based on Weinans et al. 1992
@@ -110,6 +111,8 @@ class SimulationParameters:
             raise TypeError("force_profile must be a numpy array.")
         if not isinstance(self.initial_density_field, np.ndarray):
             raise TypeError("initial_density field must be a numpy array.")
+        if not isinstance(self.force_mask, np.ndarray):
+            raise TypeError("force_mask must be a numpy array.")
         if not isinstance(self.dt, (int, float)) or self.dt <= 0:
             raise ValueError("dt must be a positive number.")
         if not isinstance(self.min_density, (int, float)):
@@ -122,16 +125,14 @@ class SimulationParameters:
             )
 
         sides_with_forces = 3
-        if self.force_profile.shape[0] != sides_with_forces or self.force_profile.shape[
-            1
-        ] != np.max(
-            self.initial_density_field.shape,
-        ):
+        if self.force_profile.shape[0] != sides_with_forces:
             raise ValueError(
-                "force_profile must have 3 rows and columns equal to the maximum of initial_density field dimensions.",
+                "force_profile must have 3 rows.",
             )
         if np.isnan(self.force_profile).any():
             raise ValueError("force_profile contains NaN values.")
+        if np.issubdtype(self.force_mask.dtype, np.bool_) is False:
+            raise ValueError("force_mask must be a boolean array.")
         if np.isnan(self.initial_density_field).any():
             raise ValueError("initial_density field contains NaN values.")
         if (

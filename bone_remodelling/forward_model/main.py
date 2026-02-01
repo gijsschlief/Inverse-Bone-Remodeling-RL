@@ -56,6 +56,7 @@ class DensitySimulation:
     """
 
     force_profile: np.ndarray
+    force_mask: np.ndarray
     initial_density_field: np.ndarray
     time_steps: int
     dt: float
@@ -110,6 +111,7 @@ class DensitySimulation:
         self.load_form_builder = LoadFormBuilder(
             mesh=self.mesh,
             force_profile=self.force_profile,
+            force_mask=self.force_mask,
             displacement_test_function=self.displacement_test_function,
             boundary_tolerance=self.boundary_tolerance,
         )

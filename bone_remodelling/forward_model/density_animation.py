@@ -137,9 +137,11 @@ def main() -> None:
         batch_seed=10,
     )
     force_profile = force_profile_generator.merger(num_samples=1).squeeze()
+    force_mask = force_profile_generator.generate_force_mask()
 
     parameters = SimulationParameters(
         force_profile=force_profile,
+        force_mask=force_mask,
         initial_density_field=np.ones((10, 10)) * 0.87,
     )
 
@@ -156,6 +158,7 @@ def main() -> None:
 
     validation_parameters = SimulationParameters(  # noqa: F841
         force_profile=validation_force_profile,
+        force_mask=force_mask,
         initial_density_field=np.ones((n_points, n_points)) * 0.87,
     )
     # To run change parameters to validation_parameters ----
@@ -168,6 +171,7 @@ def main() -> None:
 
     moment_parameters = SimulationParameters(  # noqa: F841
         force_profile=moment_force_profile,
+        force_mask=force_mask,
         initial_density_field=np.ones((10, 10)) * 0.87,
     )
     # To run change parameters to moment_parameters ----
