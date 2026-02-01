@@ -233,7 +233,7 @@ if __name__ == "__main__":
     logger.info("Generating force profiles...")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_length=10,
+        profile_top=10,
         batch_seed=1,
     )
 

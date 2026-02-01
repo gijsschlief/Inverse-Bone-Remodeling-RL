@@ -38,7 +38,7 @@ def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> np
 
 def generate_force_batches(force_max_values: list[float], batch_size: int = 20) -> list[np.ndarray]:
     """Generate batches of force profiles for given max force values."""
-    gen = ForceProfileGenerator(profile_length=10, batch_seed=42)
+    gen = ForceProfileGenerator(profile_top=10, batch_seed=42)
     batches = []
 
     for _ in force_max_values:
@@ -52,7 +52,7 @@ def run_sweep() -> None:
     initial_density = np.full((10, 10), 0.8)
 
     logger.info("Generating force profiles...")
-    generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
+    generator = ForceProfileGenerator(profile_top=10, batch_seed=42)
     force_profiles = generator.merger(num_samples=500)
 
     logger.info("Running forward model simulations...")

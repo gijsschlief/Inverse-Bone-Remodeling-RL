@@ -131,7 +131,7 @@ def main() -> None:
     logger.info("Starting density animation generation.")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_length=10,
+        profile_top=10,
         batch_seed=10,
     )
     force_profile = force_profile_generator.merger(

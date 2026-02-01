@@ -140,7 +140,7 @@ def datasweep() -> None:
     """Define a representative loadcase and run a parameter sweep. Saves results to CSV."""
     initial_density = np.full((10, 10), 0.8)
     force_profile_generator = ForceProfileGenerator(
-        profile_length=10,
+        profile_top=10,
         batch_seed=12345,
     )
     force_profiles = force_profile_generator.merger(num_samples=20, scaling=10.0)
@@ -199,7 +199,7 @@ def performance_comparison(num_samples: int = 100) -> None:
 
     initial_density = np.full((profile_length, profile_length), 0.8)
     force_profile_generator = ForceProfileGenerator(
-        profile_length=profile_length,
+        profile_top=profile_length,
         batch_seed=12345,
     )
     force_profiles = force_profile_generator.merger(num_samples=num_samples, scaling=20.0)

@@ -1,6 +1,7 @@
 """Generates random force profiles for bone remodeling simulations."""
 
 import logging
+from collections.abc import Callable
 
 import numpy as np
 
@@ -13,209 +14,211 @@ class ForceProfileGenerator:
 
     def __init__(
         self,
-        profile_length: int = 100,
+        profile_top: int = 10,
+        profile_sides: int = 10,
+        force_bounds: tuple[float, float] = (0.1, 10.0),
         batch_seed: int | None = None,
     ) -> None:
         """Initialize the force profile generator.
 
         Args:
         ----
-            profile_length (int): Length of the force profile.
+            profile_top (int): Resolution of the force profile in the top direction.
+            profile_sides (int): Resolution of the force profile in the sides direction.
+            force_bounds (tuple[float, float]): Minimum and maximum force values.
             batch_seed (int | None): Seed for random number generation. If None, uses a random seed.
 
         """
-        self._profile_length = profile_length
+        self._profile_top = profile_top
+        self._profile_sides = profile_sides
+        self._max_length = max(profile_top, profile_sides)
         self._rng = np.random.default_rng(batch_seed)
+        self._force_min = force_bounds[0]
+        self._force_max = force_bounds[1]
 
     def impulse(
         self,
-        num_samples: int,
-        force_count_max: int = 30,
-        force_max: float = 10.0,
-        force_min: float = 0.1,
     ) -> np.ndarray:
-        """Generate all random force profiles in a fully vectorized way."""
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
-        total_elements = profiles.shape[1] * profiles.shape[2]
+        """Generate random force profiles on the profile.
 
-        # Determine number of forces per sample using lognormal distribution
-        profile_count = self._log_normal_sampling(mean=0.5, sigma=0.8, size=num_samples, rng=self._rng).astype(int)
-        counts = np.clip(profile_count, 1, force_count_max)
-        total_forces = np.sum(counts)
+        Args:
+        ----
+            force_count_max (int): Maximum number of forces to apply in each profile.
+            force_max (float): Maximum absolute value of the forces.
+            force_min (float): Minimum absolute value of the forces.
 
-        # Flat indices for force assignment
-        all_indices = self._rng.choice(
-            total_elements,
-            size=total_forces,
-            replace=True,  # reuse allowed across different samples
-        )
+        """
+        total_elements = self._profile_top + 2 * self._profile_sides
+        force_profile = np.zeros((3, self._max_length), dtype=float) # 3 sides
 
-        # Random force values
-        all_forces = self._rng.uniform(force_min, force_max, size=total_forces)
-        for i in range(total_forces):
-            all_forces[i] = all_forces[i] if self._rng.choice([True, False]) else -all_forces[i]
+        force_count = self._log_normal_sampling(mean=0.5, sigma=0.8)[0].astype(int)
+        force_count = min(force_count, total_elements)
+        random_location = self._rng.choice(total_elements, size=force_count, replace=False)
+        force_magnitude = self._rng.uniform(self._force_min, self._force_max, size=force_count)
+        force_sign = self._rng.choice([-1, 1], size=force_count)
+        force_value = force_magnitude * force_sign
 
-        # Assign values back to profiles
-        flat_profiles = profiles.reshape(num_samples, -1)
-        pointer = 0
-        for i, count in enumerate(counts):
-            if count > 0:
-                flat_profiles[i, all_indices[pointer : pointer + count]] = all_forces[
-                    pointer : pointer + count
-                ]
-                pointer += int(count)
-        return profiles
-
-    def triangular(self, num_samples: int, force_max: float = 10.0, force_min: float = 0.1) -> np.ndarray:
-        """Generate triangular force profiles."""
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
-        for i in range(num_samples):
-            # Randomly choose a peak position and height
-            peak_position = self._rng.integers(0, self._profile_length)
-            peak_height = self._rng.uniform(force_min, force_max)
-            peak_height = peak_height if self._rng.choice([True, False]) else -peak_height
-            side = self._rng.choice([0, 1, 2])
-
-            # Create a triangular profile
-            for j in range(self._profile_length):
-                if j < peak_position:
-                    profiles[i, side, j] = (peak_height / peak_position) * j
-                elif j > peak_position:
-                    profiles[i, side, j] = (
-                        peak_height / (self._profile_length - 1 - peak_position)) * (self._profile_length - 1 - j)
-                else:
-                    profiles[i, side, j] = peak_height
-        return profiles
-
-    def square(self, num_samples: int, force_max: float = 10.0, force_min: float = 0.1) -> np.ndarray:
-        """Generate square force profiles."""
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
-        for i in range(num_samples):
-            position_1: int = self._rng.integers(0, self._profile_length).item()
-            position_2: int = self._rng.integers(0, self._profile_length).item()
-            start_position = min(position_1, position_2)
-            end_position = max(position_1, position_2)
-            height = self._rng.uniform(force_min, force_max)
-            height = height if self._rng.choice([True, False]) else -height
-            side = self._rng.choice([0, 1, 2])
-            profiles[i, side, start_position:end_position+1] = height
-        return profiles
-
-    def gaussian(self, num_samples: int, force_max: float = 10.0, force_min: float = 0.1) -> np.ndarray:
-        """Generate Gaussian force profiles."""
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
-        for i in range(num_samples):
-            mean_position = self._rng.integers(0, self._profile_length)
-            std_dev = self._rng.uniform(1, self._profile_length / 10)
-            height = self._rng.uniform(force_min, force_max)
-            height = height if self._rng.choice([True, False]) else -height
-            side = self._rng.choice([0, 1, 2])
-
-            x = np.arange(self._profile_length)
-            gaussian_profile = height * np.exp(
-                -((x - mean_position) ** 2) / (2 * std_dev**2),
-            )
-            profiles[i, side, :] = gaussian_profile
-        return profiles
-
-    def ramp(self, num_samples: int, force_max: float = 10.0, force_min: float = 0.1) -> np.ndarray:
-        """Generate ramp force profiles."""
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
-        for i in range(num_samples):
-            position_1 = self._rng.integers(0, self._profile_length).item()
-            position_2 = self._rng.integers(0, self._profile_length).item()
-            start_position = min(position_1, position_2)
-            end_position = max(position_1, position_2)
-            height = self._rng.uniform(force_min, force_max)
-            height = height if self._rng.choice([True, False]) else -height
-            side = self._rng.choice([0, 1, 2])
-            direction = self._rng.choice([-1, 1])
-
-            if start_position == end_position:
-                profiles[i, side, start_position] = height
-            elif direction == -1:
-                for j in range(self._profile_length):
-                    if j <= start_position or j > end_position:
-                        profiles[i, side, j] = 0
-                    elif j == end_position:
-                        profiles[i, side, j] = height
-                    else:
-                        profiles[i, side, j] = (
-                            height / (end_position - start_position)
-                        ) * (j - start_position)
+        for i in range(force_count):
+            index = random_location[i]
+            if index < self._profile_sides:
+                force_profile[0, index] = force_value[i]
+            elif index < self._profile_top + self._profile_sides:
+                top_index = index - self._profile_sides
+                force_profile[1, top_index] = force_value[i]
             else:
-                for j in range(self._profile_length):
-                    if j < start_position or j >= end_position:
-                        profiles[i, side, j] = 0
-                    elif j == start_position:
-                        profiles[i, side, j] = -height
-                    else:
-                        profiles[i, side, j] = height / (end_position - start_position) * (j - end_position)
+                right_index = index - self._profile_top - self._profile_sides
+                force_profile[2, right_index] = force_value[i]
+        return force_profile
+
+    def triangular(self) -> np.ndarray:
+        """Generate triangular force profiles."""
+        force_profile = np.zeros((3, self._max_length), dtype=float)
+
+        # Randomly choose a peak position and height
+        side = self._rng.choice([0, 1, 2])
+        profile_length = self._profile_top if side == 1 else self._profile_sides
+        peak_position = self._rng.integers(0, profile_length)
+        peak_height = self._rng.uniform(self._force_min, self._force_max)
+        peak_height = peak_height if self._rng.choice([True, False]) else -peak_height
+
+        # Create a triangular profile
+        for j in range(profile_length):
+            if j < peak_position:
+                force_profile[side, j] = (peak_height / peak_position) * j
+            elif j > peak_position:
+                force_profile[side, j] = (
+                    peak_height / (profile_length - 1 - peak_position)) * (profile_length - 1 - j)
+            else:
+                force_profile[side, j] = peak_height
+        return force_profile
+
+    def square(self) -> np.ndarray:
+        """Generate square force profiles."""
+        force_profile = np.zeros((3, self._max_length), dtype=float)
+        side = self._rng.choice([0, 1, 2])
+        profile_length = self._profile_top if side == 1 else self._profile_sides
+        position_1: int = self._rng.integers(0, profile_length).item()
+        position_2: int = self._rng.integers(0, profile_length).item()
+        start_position = min(position_1, position_2)
+        end_position = max(position_1, position_2)
+        height = self._rng.uniform(self._force_min, self._force_max)
+        height = height if self._rng.choice([True, False]) else -height
+        force_profile[side, start_position:end_position+1] = height
+        return force_profile
+
+    def gaussian(self) -> np.ndarray:
+        """Generate Gaussian force profiles."""
+        force_profile = np.zeros((3, self._max_length), dtype=float)
+
+        side = self._rng.choice([0, 1, 2])
+        profile_length = self._profile_top if side == 1 else self._profile_sides
+        mean_position = self._rng.integers(0, profile_length)
+        std_dev = self._rng.uniform(1, profile_length / 10)
+        height = self._rng.uniform(self._force_min, self._force_max)
+        height = height if self._rng.choice([True, False]) else -height
+
+        x = np.arange(profile_length)
+        gaussian_profile = height * np.exp(
+            -((x - mean_position) ** 2) / (2 * std_dev**2),
+        )
+        force_profile[side, :profile_length] = gaussian_profile
+        return force_profile
+
+    def ramp(self) -> np.ndarray:
+        """Generate ramp force profiles."""
+        profiles = np.zeros((3, self._max_length), dtype=float)
+
+        side = self._rng.choice([0, 1, 2])
+        profile_length = self._profile_top if side == 1 else self._profile_sides
+
+        position_1 = self._rng.integers(0, profile_length).item()
+        position_2 = self._rng.integers(0, profile_length).item()
+        start_position = min(position_1, position_2)
+        end_position = max(position_1, position_2)
+        height = self._rng.uniform(self._force_min, self._force_max)
+        height = height if self._rng.choice([True, False]) else -height
+        direction = self._rng.choice([-1, 1])
+
+        if start_position == end_position:
+            profiles[side, start_position] = height
+        elif direction == -1:
+            for j in range(profile_length):
+                if j <= start_position or j > end_position:
+                    profiles[side, j] = 0
+                elif j == end_position:
+                    profiles[side, j] = height
+                else:
+                    profiles[side, j] = (
+                        height / (end_position - start_position)
+                    ) * (j - start_position)
+        else:
+            for j in range(profile_length):
+                if j < start_position or j >= end_position:
+                    profiles[side, j] = 0
+                elif j == start_position:
+                    profiles[side, j] = -height
+                else:
+                    profiles[side, j] = height / (end_position - start_position) * (j - end_position)
         return profiles
 
-    def merger(self, num_samples: int, scaling: float = 10.0) -> np.ndarray:
+    def merger(self, num_samples: int, lower_energy_bound: float = 1e-12) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
-        profile_count = self._log_normal_sampling(mean=0.5, sigma=0.8, size=num_samples, rng=self._rng).astype(int)
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
+        profile_count = self._log_normal_sampling(mean=0.5, sigma=0.8, size=num_samples).astype(int)
+
+        profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
+
+        shape_generators: dict[str, Callable[[], np.ndarray]] = {
+            "triangular": self.triangular,
+            "square": self.square,
+            "gaussian": self.gaussian,
+            "impulse": self.impulse,
+            "ramp": self.ramp,
+        }
+        shape_names = list(shape_generators.keys())
+
         for i in range(num_samples):
-            if profile_count[i] == 0:
-                profile_count[i] = 1  # Ensure at least one profile is added
             for _ in range(profile_count[i]):
-                shape_type = self._rng.choice(
-                    ["triangular", "square", "gaussian", "impulse", "ramp"],
-                    p=[0.2, 0.2, 0.2, 0.2, 0.2],
-                )
-                if shape_type == "triangular":
-                    profiles[i] += self.triangular(1, scaling)[0]
-                elif shape_type == "square":
-                    profiles[i] += self.square(1, scaling)[0]
-                elif shape_type == "gaussian":
-                    profiles[i] += self.gaussian(1, scaling)[0]
-                elif shape_type == "impulse":
-                    profiles[i] += self.impulse(1, force_max=scaling)[0]
-                elif shape_type == "ramp":
-                    profiles[i] += self.ramp(1, scaling)[0]
+                shape = self._rng.choice(shape_names)
+                profiles[i] += shape_generators[shape]()
 
-            # Compute energy (L2 norm squared) and scale toward log uniform distribution
-            target_energy = self._log_uniform_sampling()
-            actual_energy = np.sum(np.square(profiles[i,0,:])) + np.sum(np.square(profiles[i,1,:])) + np.sum(np.square(profiles[i,2,:]))
-            if actual_energy == 0:
+            target_energy = self._log_uniform_sampling().item()
+            actual_energy = np.sum(profiles[i]**2)
+            if actual_energy < lower_energy_bound:
                 logger.warning(f"Sample {i} has zero energy; skipping scaling. {profiles[i]}")
                 continue
             scaling_factor = np.sqrt(target_energy / actual_energy)
             profiles[i] *= scaling_factor
         return profiles
 
-    def triangular_only(self, num_samples: int) -> np.ndarray:
+    def triangular_only(self, num_samples: int, lower_energy_bound: float = 1e-12) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
-        profiles = np.zeros((num_samples, 3, self._profile_length), dtype=float)
+        profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
         for i in range(num_samples):
-            profiles[i] += self.triangular(1, 1)[0]
+            profiles[i] += self.triangular()
 
-            # Compute energy (L2 norm squared) and scale toward log uniform distribution
-            target_energy = self._log_uniform_sampling()
+            target_energy = self._log_uniform_sampling().item()
             actual_energy = np.sum(np.square(profiles[i,0,:])) + np.sum(np.square(profiles[i,1,:])) + np.sum(np.square(profiles[i,2,:]))
-            if actual_energy == 0:
+            if actual_energy < lower_energy_bound:
                 logger.warning(f"Sample {i} has zero energy; skipping scaling. {profiles[i]}")
                 continue
             scaling_factor = np.sqrt(target_energy / actual_energy)
             profiles[i] *= scaling_factor
         return profiles
 
-    def _log_uniform_sampling(self, low: float = 1e2, high: float = 5e4, size: int = 1, rng: np.random.Generator = np.random.default_rng()) -> np.ndarray:
+    def _log_uniform_sampling(self, low: float = 1e2, high: float = 5e4, size: int = 1) -> np.ndarray:
         """Sample from a log-uniform distribution between low and high."""
         log_low = np.log(low)
         log_high = np.log(high)
-        return np.exp(rng.uniform(log_low, log_high, size=size))
+        return np.exp(self._rng.uniform(log_low, log_high, size=size))
 
-    def _log_normal_sampling(self, mean: float = 0.0, sigma: float = 1.0, size: int = 1, rng: np.random.Generator = np.random.default_rng()) -> np.ndarray:
+    def _log_normal_sampling(self, mean: float = 0.0, sigma: float = 1.0, size: int = 1) -> np.ndarray:
         """Sample from a log-normal distribution with given mean and sigma."""
-        return rng.lognormal(mean, sigma, size=size)
+        return np.clip(self._rng.lognormal(mean, sigma, size=size).astype(int), 1, None)
 
 def example_usage() -> None:
     """Use of the ForceProfileGenerator."""
-    generator = ForceProfileGenerator(profile_length=10, batch_seed=42)
-    force_profiles = generator.merger(num_samples=100_000, scaling=10.0)
+    generator = ForceProfileGenerator(profile_top=100, profile_sides=50, force_bounds=(0.1, 10.0), batch_seed=42)
+    force_profiles = generator.merger(num_samples=100_000)
     #force_profiles = generator.triangular_only(num_samples=100_000)
     force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
 
@@ -257,8 +260,8 @@ def visualise_profiles(force_profiles: np.ndarray, force_profile_energy: np.ndar
     std = np.zeros(force_profiles.shape[1] * force_profiles.shape[2])
     for i in range(force_profiles.shape[1]):
         for k in range(force_profiles.shape[2]):
-            mean[i*10 + k] = np.mean(force_profiles[:, i, k])
-            std[i*10 + k] = np.std(force_profiles[:, i, k])
+            mean[i*force_profiles.shape[2] + k] = np.mean(force_profiles[:, i, k])
+            std[i*force_profiles.shape[2] + k] = np.std(force_profiles[:, i, k])
     plt.errorbar(
         np.arange(force_profiles.shape[1] * force_profiles.shape[2]),
         mean,
