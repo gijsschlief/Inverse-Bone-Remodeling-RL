@@ -4,8 +4,7 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes, cm
-from matplotlib.axes import colors as mcolors
+from matplotlib.axes import Axes
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pyvista import Plotter, UnstructuredGrid
 
@@ -61,7 +60,7 @@ def plot_density_matrix(
                     fontsize=8,
                 )
 
-    cbar_ax = inset_axes(axis, width="3%", height="80%", loc='upper right',
+    cbar_ax = inset_axes(axis, width="3%", height="80%", loc='center right',
                          bbox_to_anchor=(0.02, 0, 1, 1),
                          bbox_transform=axis.transAxes,
                          borderpad=0)
@@ -71,15 +70,6 @@ def plot_density_matrix(
     if force_profile is not None and force_mask is not None:
         _plot_force_arrows(axis, force_profile, force_mask, matrix.shape)
         _plot_force_band(axis, force_profile, force_mask, matrix.shape)
-        v_min = -np.max(np.abs(force_profile))
-        v_max =  np.max(np.abs(force_profile))
-        sm = cm.ScalarMappable(cmap="coolwarm", norm=mcolors.Normalize(vmin=v_min, vmax=v_max))
-        sm.set_array([])
-        cbar_ax2 = inset_axes(axis, width="3%", height="80%", loc='upper left',
-                              bbox_to_anchor=(0, 0, 1, 1),
-                              bbox_transform=axis.transAxes,
-                              borderpad=0)
-        plt.colorbar(sm, cax=cbar_ax2, label='Force (Tension/Compression)')
 
     # Define plot limits
     height, width = matrix.shape
