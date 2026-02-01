@@ -171,7 +171,7 @@ def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, force_mask: np.nda
             x, y, u, v, magnitudes = data
             axis.quiver(
                 x, y, u, v, magnitudes,
-                cmap="grays",
+                cmap="coolwarm",
                 angles='xy',
                 scale_units='xy',
                 scale=np.max(np.abs(force_profile)),
