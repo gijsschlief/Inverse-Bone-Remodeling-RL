@@ -2,6 +2,7 @@
 
 import logging
 import time
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -38,7 +39,7 @@ def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> np
 
 def generate_force_batches(force_max_values: list[float], batch_size: int = 20) -> list[np.ndarray]:
     """Generate batches of force profiles for given max force values."""
-    gen = ForceProfileGenerator(profile_top=10, batch_seed=42)
+    gen = ForceProfileGenerator(profile_top_and_sides=(10, 10), batch_seed=42)
     batches = []
 
     for _ in force_max_values:
@@ -47,25 +48,27 @@ def generate_force_batches(force_max_values: list[float], batch_size: int = 20) 
 
     return batches
 
-def run_sweep() -> None:
+def run_sweep(data_path: Path) -> None:
     """Run the max force sweep simulations."""
     initial_density = np.full((10, 10), 0.8)
 
     logger.info("Generating force profiles...")
-    generator = ForceProfileGenerator(profile_top=10, batch_seed=42)
+    generator = ForceProfileGenerator(profile_top_and_sides=(10, 10), batch_seed=42)
     force_profiles = generator.merger(num_samples=500)
+    force_mask = generator.generate_force_mask()
 
     logger.info("Running forward model simulations...")
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
     simulation_parameters = SimulationParameters(
         force_profile=empty_force_profile,
+        force_mask=force_mask,
         initial_density_field=initial_density,
     )
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
-        output_dir="/home/gijs/Desktop/Thesis/data/sweeps",
+        output_dir=data_path,
         simulation_parameters=simulation_parameters,
     )
     start_time = time.time()
@@ -111,10 +114,10 @@ def plot_undersaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float],
     plt.legend()
     plt.show()
 
-def analyse_sweep() -> None:
+def analyse_sweep(data_path: Path) -> None:
     """Analyse the results of the max force sweep simulations."""
     data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/sweeps/",
+        file_path=data_path,
     )
 
     if data is None:
@@ -172,5 +175,6 @@ def analyse_sweep() -> None:
     plot_undersaturation(x, y_undersaturated, bin_centers_undersaturated, bin_means_undersaturated)
 
 if __name__ == "__main__":
-    run_sweep()
-    analyse_sweep()
+    data_path = Path(__file__).parent.parent.parent / Path("data", "sweeps", "max_force_sweep")
+    run_sweep(data_path=data_path)
+    analyse_sweep(data_path=data_path)
