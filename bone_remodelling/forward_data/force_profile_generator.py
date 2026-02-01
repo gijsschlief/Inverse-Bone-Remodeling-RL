@@ -217,7 +217,7 @@ class ForceProfileGenerator:
 
 def example_usage() -> None:
     """Use of the ForceProfileGenerator."""
-    generator = ForceProfileGenerator(profile_top=100, profile_sides=50, force_bounds=(0.1, 10.0), batch_seed=42)
+    generator = ForceProfileGenerator(profile_top=10, profile_sides=10, force_bounds=(0.1, 10.0), batch_seed=42)
     force_profiles = generator.merger(num_samples=100_000)
     #force_profiles = generator.triangular_only(num_samples=100_000)
     force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
