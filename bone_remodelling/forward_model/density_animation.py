@@ -54,7 +54,7 @@ def animate_density_matplotlib(
         ax.clear()
         plot_density_matrix(
             matrix=density_film[frame, :, :],
-            force_profile=simulation.force_profile,
+            force_data=(simulation.force_profile, simulation.force_mask),
             title=f"Step {frame + 1}",
             axis=ax,
         )

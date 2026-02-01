@@ -127,26 +127,22 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
         alpha=0.8,
     )
 
-def _get_quiver_data(side: str, forces: np.ndarray, height: int, width: int, threshold: float = 1e-3) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
-    mask = np.abs(forces) > threshold
-    if not np.any(mask):
-        return None
-    f_vals = forces[mask]
+def _get_quiver_data(side: str, forces: np.ndarray, height: int, width: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
     offset = 1.0
 
     if side == 'top':
-        x = np.linspace(0, width - 1, len(f_vals))
-        y = np.full_like(f_vals, -offset)
-        u, v = np.zeros_like(f_vals), -f_vals
+        x = np.linspace(0, width - 1, len(forces))
+        y = np.full_like(forces, -offset)
+        u, v = np.zeros_like(forces), -forces
     elif side == 'left':
-        x = np.full_like(f_vals, -offset)
-        y = np.linspace(height - 1, 0, len(f_vals))
-        u, v = -f_vals, np.zeros_like(f_vals)
+        x = np.full_like(forces, -offset)
+        y = np.linspace(height - 1, 0, len(forces))
+        u, v = -forces, np.zeros_like(forces)
     else:
-        x = np.full_like(f_vals, width -1 + offset)
-        y = np.linspace(height - 1, 0, len(f_vals))
-        u, v = f_vals, np.zeros_like(f_vals)
-    return x, y, u, v, f_vals
+        x = np.full_like(forces, width -1 + offset)
+        y = np.linspace(height - 1, 0, len(forces))
+        u, v = forces, np.zeros_like(forces)
+    return x, y, u, v, forces
 
 def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarray, shape: tuple[int, int]) -> None:
     """Plot all force arrows (top, left, right) using a single quiver call per side.
