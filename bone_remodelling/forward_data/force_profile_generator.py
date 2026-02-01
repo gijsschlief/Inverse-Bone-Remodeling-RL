@@ -65,7 +65,10 @@ class ForceProfileGenerator:
         return force_profile
 
     def _get_random_side(self) -> tuple[int, int]:
-        side = self._rng.choice([0, 1, 2])
+        """Randomly select a side based on the number of elements and return its length."""
+        total_elements = self._profile_top + 2 * self._profile_sides
+        weights = [self._profile_sides / total_elements, self._profile_top / total_elements, self._profile_sides / total_elements]
+        side = self._rng.choice([0, 1, 2], p=weights)
         length = self._profile_top if side == 1 else self._profile_sides
         return side, length
 
@@ -159,12 +162,7 @@ class ForceProfileGenerator:
                 shape = self._rng.choice(shape_names)
                 profiles[i] += shape_generators[shape]()
 
-            target_energy = self._log_uniform_sampling().item()
-            actual_energy = np.sum(profiles[i]**2)
-            if actual_energy < lower_energy_bound:
-                logger.warning(f"Sample {i} has zero energy; skipping scaling. {profiles[i]}")
-                continue
-            scaling_factor = np.sqrt(target_energy / actual_energy)
+            scaling_factor = self._energy_scaling(profiles[i], lower_energy_bound)
             profiles[i] *= scaling_factor
         return profiles
 
@@ -173,15 +171,18 @@ class ForceProfileGenerator:
         profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
         for i in range(num_samples):
             profiles[i] += self.triangular()
-
-            target_energy = self._log_uniform_sampling().item()
-            actual_energy = np.sum(profiles[i]**2)
-            if actual_energy < lower_energy_bound:
-                logger.warning(f"Sample {i} has zero energy; skipping scaling. {profiles[i]}")
-                continue
-            scaling_factor = np.sqrt(target_energy / actual_energy)
+            scaling_factor = self._energy_scaling(profiles[i], lower_energy_bound)
             profiles[i] *= scaling_factor
         return profiles
+
+    def _energy_scaling(self, force_profile: np.ndarray, lower_energy_bound: float = 1e-12) -> float:
+        """Scale force profiles to match target energy levels."""
+        target_energy = self._log_uniform_sampling().item()
+        actual_energy = np.sum(force_profile**2)
+        if actual_energy < lower_energy_bound:
+            logger.warning(f"Force profile has zero energy; skipping scaling. {force_profile}")
+            return 1.0
+        return np.sqrt(target_energy / actual_energy)
 
     def _log_uniform_sampling(self, size: int = 1) -> np.ndarray:
         """Sample from a log-uniform distribution between low and high."""
