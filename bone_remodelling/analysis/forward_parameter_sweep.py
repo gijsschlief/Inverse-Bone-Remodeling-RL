@@ -136,34 +136,32 @@ def run_parameter_sweep(base_params: SimulationParameters, force_profiles: np.nd
             logger.info(f"  → runtime={runtime:.2f}s, L2 error={average_l2_error:.3e}")
     logger.info(f"\nSweep complete. Results written to: {output_csv}")
 
-def datasweep() -> None:
+def datasweep(data_path: Path) -> None:
     """Define a representative loadcase and run a parameter sweep. Saves results to CSV."""
     initial_density = np.full((10, 10), 0.8)
     force_profile_generator = ForceProfileGenerator(
-        profile_top=10,
+        profile_top_and_sides=(10, 10),
         batch_seed=12345,
     )
-    force_profiles = force_profile_generator.merger(num_samples=20, scaling=10.0)
+    force_mask = force_profile_generator.generate_force_mask()
+    force_profiles = force_profile_generator.merger(num_samples=20)
 
-    simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], initial_density_field=initial_density)
-    output_csv = Path("parameter_sweep_results_final.csv")
+    simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], force_mask=force_mask, initial_density_field=initial_density)
     density_references = run_reference_simulation(simulation_base_parameters, force_profiles)
-    run_parameter_sweep(simulation_base_parameters, force_profiles, density_references, output_csv)
+    run_parameter_sweep(simulation_base_parameters, force_profiles, density_references, data_path)
 
-def pareto_plot() -> None:
+def pareto_plot(data_path: Path) -> None:
     """Generate a Pareto plot from the CSV results."""
-    df1 = pd.read_csv("/home/gijs/Desktop/Thesis/data/sweeps/parameter_sweep_results_final2.csv")
-    df2 = pd.read_csv("/home/gijs/Desktop/Thesis/data/sweeps/parameter_sweep_results_final3.csv")
-    df = pd.concat([df1, df2], ignore_index=True)
+    sweep_data_frame = pd.read_csv(data_path)
 
     # Remove failed runs
-    df = df.dropna(subset=["runtime_s", "l2_error"])
-    df = df[df["l2_error"] > 0]
+    sweep_data_frame = sweep_data_frame.dropna(subset=["runtime_s", "l2_error"])
+    sweep_data_frame = sweep_data_frame[sweep_data_frame["l2_error"] > 0]
 
     pareto = []
-    for _i, row_i in df.iterrows():
+    for _i, row_i in sweep_data_frame.iterrows():
         dominated = False
-        for _j, row_j in df.iterrows():
+        for _j, row_j in sweep_data_frame.iterrows():
             if (
                 (row_j["runtime_s"] <= row_i["runtime_s"]) and
                 (row_j["l2_error"] <= row_i["l2_error"]) and
@@ -178,7 +176,7 @@ def pareto_plot() -> None:
     pareto = sorted(pareto, key=lambda x: x["runtime_s"])
     pareto_df = pd.DataFrame(pareto)
     logger.info(f"Pareto-optimal points on sweep:\n{pareto_df}")
-    plt.scatter(df["runtime_s"], df["l2_error"], s=10)
+    plt.scatter(sweep_data_frame["runtime_s"], sweep_data_frame["l2_error"], s=10)
     plt.xlabel("Runtime (s)")
     plt.ylabel("Relative L2 error")
     plt.yscale("log")
@@ -199,12 +197,13 @@ def performance_comparison(num_samples: int = 100) -> None:
 
     initial_density = np.full((profile_length, profile_length), 0.8)
     force_profile_generator = ForceProfileGenerator(
-        profile_top=profile_length,
+        profile_top_and_sides=(profile_length, profile_length),
         batch_seed=12345,
     )
-    force_profiles = force_profile_generator.merger(num_samples=num_samples, scaling=20.0)
+    force_profiles = force_profile_generator.merger(num_samples=num_samples)
+    force_mask = force_profile_generator.generate_force_mask()
 
-    simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], initial_density_field=initial_density)
+    simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], force_mask=force_mask, initial_density_field=initial_density)
 
     # Selected parameter sets from sweep
     parameter_reference = replace(
@@ -256,6 +255,7 @@ def performance_comparison(num_samples: int = 100) -> None:
         logger.info(f"  → Example profile: {density[0]}")
 
 if __name__ == "__main__":
-    #datasweep()
-    pareto_plot()
-    #performance_comparison(num_samples=5)
+    data_path = Path(__file__).parent.parent.parent / Path("data", "sweeps", "parameter_sweep.csv")
+    datasweep(data_path=data_path)
+    pareto_plot(data_path=data_path)
+    performance_comparison(num_samples=5)
