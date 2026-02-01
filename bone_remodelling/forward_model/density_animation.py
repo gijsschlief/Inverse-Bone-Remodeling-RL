@@ -131,13 +131,12 @@ def main() -> None:
     logger.info("Starting density animation generation.")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_top=10,
+        profile_top_and_sides=(10, 10),
+        force_bounds=(0.1, 10.0),
+        energy_bounds=(1e2, 5e4),
         batch_seed=10,
     )
-    force_profile = force_profile_generator.merger(
-        num_samples=1,
-        scaling=20,
-    ).squeeze()
+    force_profile = force_profile_generator.merger(num_samples=1).squeeze()
 
     parameters = SimulationParameters(
         force_profile=force_profile,
