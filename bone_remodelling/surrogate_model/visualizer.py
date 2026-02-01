@@ -56,6 +56,7 @@ def plot_surrogate_model(
     min_true_value = np.min(true_matrices)
 
     figures = []
+    force_mask = np.ones_like(force_profiles[0], dtype=bool) if force_profiles is not None else None
     for idx in random_indices:
         predicted_matrix = predicted_matrices[idx]
         actual_matrix = true_matrices[idx]
@@ -65,14 +66,14 @@ def plot_surrogate_model(
         figure, axes = plt.subplots(1, 3, figsize=(18, 6))
         plot_density_matrix(
             actual_matrix,
-            force_profiles[idx] if force_profiles is not None else None,
+            (force_profiles[idx], force_mask) if force_profiles is not None else None,
             "Original Density Matrix",
             axes[0],
             (min_true_value, max_true_value),
         )
         plot_density_matrix(
             predicted_matrix,
-            force_profiles[idx] if force_profiles is not None else None,
+            (force_profiles[idx], force_mask) if force_profiles is not None else None,
             "Predicted Density Matrix",
             axes[1],
             (min_true_value, max_true_value),
@@ -175,11 +176,10 @@ def main() -> None:
     gradient_example = np.arange(100).reshape(10, 10)
     plot_density_matrix(
         gradient_example / 100,
-        None,
+        (None, None),
         "Test Matrix",
         plt.gca(),
-        color_scale_min=0,
-        color_scale_max=1,
+        color_scale = (0, 1),
     )
     plt.show()
 

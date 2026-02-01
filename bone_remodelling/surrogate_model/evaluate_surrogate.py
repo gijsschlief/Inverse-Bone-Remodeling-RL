@@ -62,6 +62,7 @@ def run_model_evaluation(
         return
 
     # Normalize the validation data if normalization parameters are available
+    x_test_unnormalized = np.zeros_like(x_test)
     if x_mean is not None and x_std is not None:
         x_test_unnormalized = x_test.copy()
         x_train, _, _ = normalize_data(x_train, x_mean, x_std)
@@ -180,8 +181,8 @@ def plot_worst_prediction(
 
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth")
-    data_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
+    model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
+    data_path = Path(__file__).parent.parent.parent / Path("data", "raw")
     run_model_evaluation(
         model_path=model_path,
         data_path=data_path,

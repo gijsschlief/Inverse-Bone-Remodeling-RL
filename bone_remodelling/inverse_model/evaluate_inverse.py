@@ -122,7 +122,7 @@ def run_inverse_model_evaluation(
 
     # Calculate similarity metrics
     surrogate_forwarder = SurrogateForwarder(
-        surrogate_model_path=Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"),
+        surrogate_model_path=model_path,
         density_shape=(10, 10),
         model_class=ReversedSurrogateModel,
     )
@@ -200,18 +200,19 @@ def plot_inverse_model(
     # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
     min_true_value: float = 0.01
     max_true_value: float = 1.74
+    force_mask = np.ones_like(original_force_profile, dtype=bool)
 
     figure, axes = plt.subplots(1, 3, figsize=(18, 6))
     plot_density_matrix(
         actual_matrix,
-        original_force_profile,
+        (original_force_profile, force_mask),
         "Original Density Matrix",
         axes[0],
         (min_true_value, max_true_value),
     )
     plot_density_matrix(
         predicted_matrix,
-        predicted_force_profile,
+        (predicted_force_profile, force_mask),
         "Predicted Density Matrix",
         axes[1],
         (min_true_value, max_true_value),
@@ -228,8 +229,8 @@ def plot_inverse_model(
     return figure
 
 if __name__ == "__main__":
-    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
-    data_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
+    model_path = Path(__file__).parent.parent.parent / Path("data", "inverse_model", "trained_model.pth")
+    data_path = Path(__file__).parent.parent.parent / Path("data", "raw", "triangular")
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = InverseModel().to(device)
     run_inverse_model_evaluation(

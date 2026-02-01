@@ -349,8 +349,8 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    model_path = Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data.pth")
-    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
+    model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
+    data_file_path = Path(__file__).parent.parent.parent / Path("data", "raw")
 
     for i in range(2, 6): # USE FOR ENSEMBLE TRAINING
         main(data_file_path, model_path, normalize=True, random_state=i)

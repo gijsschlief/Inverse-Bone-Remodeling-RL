@@ -95,7 +95,7 @@ class SurrogateModelLoader:
 
 
 def load_surrogate_model(
-    model_path: str | Path = "data/models/trained_model.pth",
+    model_path: Path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth"),
     model_class: type[torch.nn.Module] = SurrogateModel,
 ) -> tuple[
     torch.nn.Module | None,
@@ -108,7 +108,7 @@ def load_surrogate_model(
 
     Args:
     ----
-        model_path (str): Path to the .pth file containing the model weights.
+        model_path (Path): Path to the .pth file containing the model weights.
         model_class (type[torch.nn.Module]): The class of the model to be loaded.
 
     Returns:

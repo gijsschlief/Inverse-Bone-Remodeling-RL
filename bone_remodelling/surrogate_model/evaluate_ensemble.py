@@ -6,7 +6,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
-from bone_remodelling.forward_data.visualizer import plot_density_matrix
+from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
 from bone_remodelling.surrogate_model.ensemble import (
     load_ensemble_models,
     predict_with_ensemble,
@@ -41,16 +41,17 @@ def plot_ensemble(
         force_profiles (np.ndarray): The force profiles used for prediction.
 
     """
+    force_mask = np.ones_like(force_profiles, dtype=bool)
     axes = plt.subplots(2, 2, figsize=(12, 12))[1]
     plot_density_matrix(
         matrix=mean_pred,
-        force_profile=force_profiles,
+        force_data=(force_profiles, force_mask),
         title="Ensemble Mean Prediction",
         axis=axes[0, 0],
     )
     plot_density_matrix(
         matrix=true_matrices,
-        force_profile=force_profiles,
+        force_data=(force_profiles, force_mask),
         title="True Density",
         axis=axes[0, 1],
     )
@@ -62,7 +63,7 @@ def plot_ensemble(
     )
     plot_density_matrix(
         matrix=std_pred,
-        force_profile=force_profiles,
+        force_data=(force_profiles, force_mask),
         title="Prediction Uncertainty (Std Dev)",
         axis=axes[1, 1],
         color_scale=(0, 0.5),
@@ -72,7 +73,7 @@ def plot_ensemble(
 
 
 def main(
-    model_paths: list[Path],
+    model_paths: Path,
     model_class: type[SurrogateModel],
     model_loader: type[SurrogateModelLoader],
     data_file_path: Path,
@@ -149,14 +150,8 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    model_paths = [
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_1.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_2.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_3.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_4.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_new_data_5.pth"),
-    ]
-    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
+    model_paths = Path(__file__).parent.parent.parent / Path("data", "surrogate_model", "ensemble")
+    data_file_path = Path(__file__).parent.parent.parent / Path("data", "raw")
 
     main(
         model_paths,

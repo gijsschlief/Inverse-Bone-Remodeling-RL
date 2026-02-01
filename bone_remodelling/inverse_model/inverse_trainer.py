@@ -102,6 +102,7 @@ def train_model(
 
     best_val_loss = float("inf")
     epochs_no_improve = 0
+    best_model_state = None
 
     for epoch in range(train_parameters.epochs):
         model.train()
@@ -195,6 +196,7 @@ def combined_loss(predictions: torch.Tensor, targets: torch.Tensor) -> torch.Ten
 
 def evaluate_model(
     model: InverseModel,
+    model_path: Path,
     x_validation: torch.Tensor,
     y_validation: torch.Tensor,
 ) -> None:
@@ -223,13 +225,7 @@ def evaluate_model(
     ])
 
     # Load the trained forward ensemble models (force → density)
-    model_paths = [
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_1.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_2.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_3.pth"),
-        Path("/home/gijs/Desktop/Thesis/data/models/trained_model_4.pth"),
-    ]
-    ensemble_models, x_means, x_stds, y_means, y_stds = load_ensemble_models(model_paths, model_class=ReversedSurrogateModel,
+    ensemble_models, x_means, x_stds, y_means, y_stds = load_ensemble_models(model_path, model_class=ReversedSurrogateModel,
         model_loader=SurrogateModelLoader)
 
     # Predict densities from the estimated force profiles
@@ -347,6 +343,7 @@ def newer_data(unconverted_data: np.ndarray) -> np.ndarray:
 def main(
     data_file_path: Path,
     model_path: Path,
+    surrogate_path: Path,
     *,
     normalize: bool = True,
     random_state: int = 0,
@@ -444,7 +441,7 @@ def main(
 
     logger.info("Evaluating model on validation set.")
 
-    evaluate_model(model, x_val, y_val)
+    evaluate_model(model, surrogate_path, x_val, y_val)
     logger.info("Training and evaluation complete.")
 
 
@@ -455,10 +452,11 @@ if __name__ == "__main__":
         datefmt="%Y-%m-%d %H:%M:%S",
     )
 
-    model_path = Path("/home/gijs/Desktop/Thesis/data/inverse_model/trained_model.pth")
-    data_file_path = Path("/home/gijs/Desktop/Thesis/data/raw/triangular/")
+    surrogate_path = Path(__file__).parent.parent.parent / Path("data", "surrogate_model")
+    model_path = Path(__file__).parent.parent.parent / Path("data", "inverse_model", "inverse_model.pth")
+    data_file_path = Path(__file__).parent.parent.parent / Path("data", "raw", "triangular")
 
-    main(data_file_path, model_path, normalize=False, random_state=1)
+    main(data_file_path, model_path, surrogate_path, normalize=False, random_state=1)
 
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)
