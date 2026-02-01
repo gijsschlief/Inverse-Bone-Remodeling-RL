@@ -60,12 +60,6 @@ def plot_density_matrix(
                     fontsize=8,
                 )
 
-    cbar_ax = inset_axes(axis, width="3%", height="80%", loc='center right',
-                         bbox_to_anchor=(0.02, 0, 1, 1),
-                         bbox_transform=axis.transAxes,
-                         borderpad=0)
-    plt.colorbar(axis.images[0], cax=cbar_ax, label='Density')
-
     force_profile, force_mask = force_data
     if force_profile is not None and force_mask is not None:
         _plot_force_arrows(axis, force_profile, force_mask, matrix.shape)
