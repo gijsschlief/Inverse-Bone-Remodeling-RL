@@ -4,7 +4,9 @@ import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.axes import Axes
+from matplotlib.axes import Axes, cm
+from matplotlib.axes import colors as mcolors
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pyvista import Plotter, UnstructuredGrid
 
 from bone_remodelling.forward_model.main import DensitySimulation
@@ -44,8 +46,7 @@ def plot_density_matrix(
     axis.set_xlabel("Columns")
     axis.set_ylabel("Rows")
 
-    # Annotate matrix values
-    # Only annotate if the matrix is not too large
+    # Annotate matrix values if small
     max_annotate_size = 10
     if matrix.shape[0] <= max_annotate_size and matrix.shape[1] <= max_annotate_size:
         for i in range(matrix.shape[0]):
@@ -60,10 +61,25 @@ def plot_density_matrix(
                     fontsize=8,
                 )
 
+    cbar_ax = inset_axes(axis, width="3%", height="80%", loc='upper right',
+                         bbox_to_anchor=(0.02, 0, 1, 1),
+                         bbox_transform=axis.transAxes,
+                         borderpad=0)
+    plt.colorbar(axis.images[0], cax=cbar_ax, label='Density')
+
     force_profile, force_mask = force_data
     if force_profile is not None and force_mask is not None:
         _plot_force_arrows(axis, force_profile, force_mask, matrix.shape)
         _plot_force_band(axis, force_profile, force_mask, matrix.shape)
+        v_min = -np.max(np.abs(force_profile))
+        v_max =  np.max(np.abs(force_profile))
+        sm = cm.ScalarMappable(cmap="coolwarm", norm=mcolors.Normalize(vmin=v_min, vmax=v_max))
+        sm.set_array([])
+        cbar_ax2 = inset_axes(axis, width="3%", height="80%", loc='upper left',
+                              bbox_to_anchor=(0, 0, 1, 1),
+                              bbox_transform=axis.transAxes,
+                              borderpad=0)
+        plt.colorbar(sm, cax=cbar_ax2, label='Force (Tension/Compression)')
 
     # Define plot limits
     height, width = matrix.shape
@@ -89,7 +105,7 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     v_min = -np.max(np.abs(force_profile))
     v_max =  np.max(np.abs(force_profile))
 
-    band_thickness = 0.0025*max(shape) + 0.15
+    band_thickness = 0.005*max(shape) + 0.10
     top_offset = 0.61
 
     height = shape[0]

@@ -142,7 +142,7 @@ def main() -> None:
     parameters = SimulationParameters(
         force_profile=force_profile,
         force_mask=force_mask,
-        initial_density_field=np.ones((60, 60)) * 0.87,
+        initial_density_field=np.ones((200, 200)) * 0.87,
     )
 
     # Alternative profile for Weinans model validation ----
