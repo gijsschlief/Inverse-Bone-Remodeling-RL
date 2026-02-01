@@ -1,6 +1,7 @@
 """Visualize force profiles on top of density matrices."""
 
 import logging
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -12,8 +13,6 @@ from bone_remodelling.forward_data.reader import forward_data_reader  # type: ig
 from bone_remodelling.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
 )
-
-logger = logging.getLogger(__name__)
 
 logger = logging.getLogger(__name__)
 
@@ -192,9 +191,19 @@ def analyse_raw_data() -> None:
         logger.error("Missing force or density data.")
         return
 
+    triangular_data = forward_data_reader(Path(__file__).parent.parent.parent / Path("data", "raw", "triangular"))
+    if triangular_data is None:
+        logger.error("Failed to load the forward model data.")
+        return
+    _, triangular_force_profiles, triangular_final_output_densities = triangular_data
+
+    if triangular_force_profiles is None or triangular_final_output_densities is None:
+        logger.error("Missing triangular force or density data.")
+        return
+
     force_mask = np.ones_like(force_profiles[0], dtype=bool)
 
-    visualize_force_comparison(force_profiles, force_profiles)
+    visualize_force_comparison(force_profiles, triangular_force_profiles)
 
     _, axes = plt.subplots(2, 2, figsize=(12, 12))
     for i in range(4):
