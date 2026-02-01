@@ -131,10 +131,10 @@ def main() -> None:
     logger.info("Starting density animation generation.")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_top_and_sides=(50, 25),
+        profile_top_and_sides=(10, 10),
         force_bounds=(0.1, 10.0),
-        energy_bounds=(1e4, 5e6), #previous (1e2, 5e4)
-        batch_seed=3,
+        energy_bounds=(1e3, 5e4),
+        batch_seed=1,
     )
     force_profile = force_profile_generator.merger(num_samples=1).squeeze()
     force_mask = force_profile_generator.generate_force_mask()
@@ -142,7 +142,7 @@ def main() -> None:
     parameters = SimulationParameters(
         force_profile=force_profile,
         force_mask=force_mask,
-        initial_density_field=np.ones((20, 10)) * 0.87,
+        initial_density_field=np.ones((60, 60)) * 0.87,
     )
 
     # Alternative profile for Weinans model validation ----
@@ -179,7 +179,7 @@ def main() -> None:
     simulation = DensitySimulation(parameters=parameters)
 
     animate_density_matplotlib(simulation=simulation)
-    animate_density_pyvista(simulation=simulation)
+    #animate_density_pyvista(simulation=simulation)
 
 
 if __name__ == "__main__":
