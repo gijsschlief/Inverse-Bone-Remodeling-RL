@@ -37,18 +37,11 @@ class ForceProfileGenerator:
         self._force_max = force_bounds[1]
         self._energy_bounds = energy_bounds
 
+
     def impulse(
         self,
     ) -> np.ndarray:
-        """Generate random force profiles on the profile.
-
-        Args:
-        ----
-            force_count_max (int): Maximum number of forces to apply in each profile.
-            force_max (float): Maximum absolute value of the forces.
-            force_min (float): Minimum absolute value of the forces.
-
-        """
+        """Generate random force profiles on the profile."""
         total_elements = self._profile_top + 2 * self._profile_sides
         force_profile = np.zeros((3, self._max_length), dtype=float) # 3 sides
 
@@ -71,33 +64,15 @@ class ForceProfileGenerator:
                 force_profile[2, right_index] = force_value[i]
         return force_profile
 
-    def triangular_old(self) -> np.ndarray:
-        """Generate triangular force profiles."""
-        force_profile = np.zeros((3, self._max_length), dtype=float)
-
-        # Randomly choose a peak position and height
+    def _get_random_side(self) -> tuple[int, int]:
         side = self._rng.choice([0, 1, 2])
-        profile_length = self._profile_top if side == 1 else self._profile_sides
-        peak_position = self._rng.integers(0, profile_length)
-        peak_height = self._rng.uniform(self._force_min, self._force_max)
-        peak_height = peak_height if self._rng.choice([True, False]) else -peak_height
-
-        # Create a triangular profile
-        for j in range(profile_length):
-            if j < peak_position:
-                force_profile[side, j] = (peak_height / peak_position) * j
-            elif j > peak_position:
-                force_profile[side, j] = (
-                    peak_height / (profile_length - 1 - peak_position)) * (profile_length - 1 - j)
-            else:
-                force_profile[side, j] = peak_height
-        return force_profile
+        length = self._profile_top if side == 1 else self._profile_sides
+        return side, length
 
     def triangular(self) -> np.ndarray:
-        """Generate triangular force profiles without loops or div-by-zero risk."""
+        """Generate triangular force profiles."""
         force_profile = np.zeros((3, self._max_length), dtype=float)
-        side = self._rng.choice([0, 1, 2])
-        profile_length = self._profile_top if side == 1 else self._profile_sides
+        side, profile_length = self._get_random_side()
 
         peak_position = self._rng.integers(0, profile_length)
         peak_height = self._rng.uniform(self._force_min, self._force_max)
@@ -112,8 +87,7 @@ class ForceProfileGenerator:
     def square(self) -> np.ndarray:
         """Generate square force profiles."""
         force_profile = np.zeros((3, self._max_length), dtype=float)
-        side = self._rng.choice([0, 1, 2])
-        profile_length = self._profile_top if side == 1 else self._profile_sides
+        side, profile_length = self._get_random_side()
         position_1: int = self._rng.integers(0, profile_length).item()
         position_2: int = self._rng.integers(0, profile_length).item()
         start_position = min(position_1, position_2)
@@ -127,8 +101,7 @@ class ForceProfileGenerator:
         """Generate Gaussian force profiles."""
         force_profile = np.zeros((3, self._max_length), dtype=float)
 
-        side = self._rng.choice([0, 1, 2])
-        profile_length = self._profile_top if side == 1 else self._profile_sides
+        side, profile_length = self._get_random_side()
         mean_position = self._rng.integers(0, profile_length)
         std_dev = self._rng.uniform(1, profile_length / 10)
         height = self._rng.uniform(self._force_min, self._force_max)
@@ -145,9 +118,7 @@ class ForceProfileGenerator:
         """Generate ramp force profiles."""
         force_profile = np.zeros((3, self._max_length), dtype=float)
 
-        side = self._rng.choice([0, 1, 2])
-        profile_length = self._profile_top if side == 1 else self._profile_sides
-
+        side, profile_length = self._get_random_side()
         position_1 = self._rng.integers(0, profile_length).item()
         position_2 = self._rng.integers(0, profile_length).item()
         start_position = min(position_1, position_2)
