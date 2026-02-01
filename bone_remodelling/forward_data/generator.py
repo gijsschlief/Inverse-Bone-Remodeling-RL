@@ -9,7 +9,7 @@ os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
 
-
+import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from multiprocessing import cpu_count, get_context
 from pathlib import Path
@@ -29,6 +29,7 @@ from bone_remodelling.forward_model.parameters import (
 
 set_log_level(LogLevel.ERROR)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 _worker_sim: DensitySimulation
 _profile_length: int
@@ -100,7 +101,7 @@ class TrainingDataGenerator:
             raise ValueError(f"Output directory {self.output_dir} does not exist.")
         if not isinstance(self.simulation_parameters, SimulationParameters):
             raise TypeError(
-                "simulation_parmaeters must be of type SimulationParameters.",
+                "simulation_parameters must be of type SimulationParameters.",
             )
 
     def generate_parallel(
@@ -134,7 +135,7 @@ class TrainingDataGenerator:
         init_args = (self.simulation_parameters,)
         results = []
 
-        ctx = get_context("fork")
+        ctx = get_context("fork" if os.name != "nt" else "spawn")
         with ProcessPoolExecutor(
             mp_context=ctx,
             max_workers=num_workers,
@@ -224,27 +225,36 @@ class TrainingDataGenerator:
             serialized_data["error"] = error
         return serialized_data
 
+def main(samples: int, force_type: str) -> None:
+    """Generate training data for bone remodeling simulations.
 
-if __name__ == "__main__":
-    import time
+    Args:
+    ----
+        samples (int): Number of samples to generate.
+        force_type (str): Type of force profile to generate ('merger' or 'triangular').
 
+    """
     initial_density = np.full((10, 10), 0.87)
-
-    logger.setLevel(logging.INFO)
     logger.info("Generating force profiles...")
 
     force_profile_generator = ForceProfileGenerator(
         profile_top_and_sides=(10, 10),
         batch_seed=1,
     )
-
-    force_profiles = force_profile_generator.merger(
-        num_samples=1_000,
-    )
-    #force_profiles = force_profile_generator.triangular_only(
-    #    num_samples=40_000,
-    #)
     force_mask = force_profile_generator.generate_force_mask()
+
+    force_profiles = None
+    if force_type == "merger":
+        force_profiles = force_profile_generator.merger(
+            num_samples=samples,
+        )
+    elif force_type == "triangular":
+        force_profiles = force_profile_generator.triangular_only(
+            num_samples=samples,
+        )
+    if force_mask is None or force_profiles is None:
+        logger.error("Failed to generate force profiles or force mask.")
+        return
 
     logger.info("Running forward model simulations...")
 
@@ -260,12 +270,20 @@ if __name__ == "__main__":
         simulation_parameters=simulation_parameters,
     )
     start_time = time.time()
-    _ = data_generator.generate_parallel(
-        max_chunk_size=500,
-        force_profile_name="final_run",
-    )
-    # _ = data_generator.generate_serial()
+    try:
+        _ = data_generator.generate_parallel(
+            max_chunk_size=500,
+            force_profile_name="final_run",
+        )
+    except Exception as e:  # noqa: BLE001
+        logger.warning("An error occurred during parallel data generation", exc_info = True)
+        logger.warning("Continuing with serialised data generation instead (note: significantly slower)")
+        _ = data_generator.generate_serial()
     stop_time = time.time()
-
     elapsed_time = stop_time - start_time
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+
+if __name__ == "__main__":
+    samples = 1_000_000
+    force_type = "triangular"
+    main(samples, force_type)
