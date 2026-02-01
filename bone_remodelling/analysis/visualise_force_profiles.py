@@ -1,10 +1,13 @@
-"""Visualization of Forward Model Data."""
+"""Visualize force profiles on top of density matrices."""
 
 import logging
 
 import matplotlib.pyplot as plt
 import numpy as np
 
+from bone_remodelling.forward_data.force_profile_generator import (
+    ForceProfileGenerator,
+)
 from bone_remodelling.forward_data.reader import forward_data_reader  # type: ignore
 from bone_remodelling.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
@@ -12,6 +15,47 @@ from bone_remodelling.forward_model.density_visualizer import (
 
 logger = logging.getLogger(__name__)
 
+logger = logging.getLogger(__name__)
+
+def visualise_profiles(force_profiles: np.ndarray, force_profile_energy: np.ndarray) -> None:
+    """Visualise generated force profiles."""
+    plt.figure(1)
+    plt.subplot(2, 2, 1)
+    plt.hist(force_profiles.flatten(), bins=200)
+    plt.title("Distribution of Force Profiles")
+    plt.yscale("log")
+    plt.xlabel("Force Profile Value")
+    plt.ylabel("Frequency")
+
+    # Logarithmic histogram of energy values
+    plt.subplot(2, 2, 2)
+    bins = np.logspace(-2, 5, 200).tolist()
+    plt.hist(force_profile_energy, bins=bins)
+    plt.title("Distribution of Force Profile Energy")
+    plt.xscale("log")
+    plt.xlabel("Force Profile Energy Value")
+    plt.ylabel("Frequency")
+
+    # Test location distribution of forces
+    plt.subplot(2, 2, 3)
+    mean = np.zeros(force_profiles.shape[1] * force_profiles.shape[2])
+    std = np.zeros(force_profiles.shape[1] * force_profiles.shape[2])
+    for i in range(force_profiles.shape[1]):
+        for k in range(force_profiles.shape[2]):
+            mean[i*force_profiles.shape[2] + k] = np.mean(force_profiles[:, i, k])
+            std[i*force_profiles.shape[2] + k] = np.std(force_profiles[:, i, k])
+    plt.errorbar(
+        np.arange(force_profiles.shape[1] * force_profiles.shape[2]),
+        mean,
+        yerr=std,
+        fmt="o",
+        ecolor="red",
+        capsize=2,
+    )
+    plt.title("Mean and Std Dev of Force Profile Locations")
+    plt.xlabel("Force Profile Index")
+    plt.ylabel("Mean Force Value")
+    plt.show()
 
 def visualize_force_comparison(
     force_profiles_1: np.ndarray,
@@ -116,51 +160,48 @@ def visualize_force_comparison(
     axes_array[1].set_ylabel("Frequency")
     axes_array[1].legend()
     axes_array[1].grid(visible=True)
-
     plt.show()
 
+def analyse_force_generator() -> None:
+    """Generate and visualise force profiles."""
+    generator = ForceProfileGenerator(profile_top_and_sides=(10, 10), force_bounds=(0.1, 10.0), energy_bounds=(1e2, 5e4), batch_seed=42)
+    force_profiles = generator.merger(num_samples=100_000)
+    #force_profiles = generator.triangular_only(num_samples=100_000)
+    force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
 
-def main() -> None:
+    # Find empty profiles
+    empty_profiles = np.where(force_profile_energy == 0)[0]
+    if len(empty_profiles) > 0:
+        logger.warning(f"Found {len(empty_profiles)} empty force profiles at indices: {empty_profiles}")
+
+    logger.info(f"Generated profiles like: {force_profiles[0]} and {force_profiles[1]}")
+    max_force_value = np.max(np.abs(force_profiles))
+    logger.info(f"Maximum force value across all profiles: {max_force_value}")
+
+    visualise_profiles(force_profiles, force_profile_energy)
+
+def analyse_raw_data() -> None:
     """Load and visualize forward model data."""
-    from pathlib import Path
-
-    Path(__file__).parent.parent.parent / Path("data", "raw")
-
-    data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/",
-    )
+    data = forward_data_reader()
     if data is None:
         logger.error("Failed to load the forward model data.")
         return
-
     _, force_profiles, final_output_densities = data
 
     if force_profiles is None or final_output_densities is None:
         logger.error("Missing force or density data.")
         return
 
-    old_data = forward_data_reader(
-        file_path="/home/gijs/Desktop/Thesis/data/raw/triangular/",
-    )
-    if old_data is None:
-        logger.error("Failed to load the forward model data.")
-        return
-
-    _, old_force_profiles, old_final_output_densities = old_data
     force_mask = np.ones_like(force_profiles[0], dtype=bool)
 
-    if old_force_profiles is None or old_final_output_densities is None:
-        logger.error("Missing force or density data.")
-        return
-
-    visualize_force_comparison(force_profiles, old_force_profiles)
+    visualize_force_comparison(force_profiles, force_profiles)
 
     _, axes = plt.subplots(2, 2, figsize=(12, 12))
     for i in range(4):
-        random_index = np.random.randint(0, len(old_final_output_densities))
+        random_index = np.random.randint(0, len(final_output_densities))
         plot_density_matrix(
-            matrix=old_final_output_densities[random_index],
-            force_data=(old_force_profiles[random_index], force_mask),
+            matrix=final_output_densities[random_index],
+            force_data=(force_profiles[random_index], force_mask),
             axis=axes[i // 2, i % 2],
             title=f"Data at: {random_index}",
         )
@@ -168,4 +209,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    analyse_force_generator()
+    analyse_raw_data()

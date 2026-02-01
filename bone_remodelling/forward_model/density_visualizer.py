@@ -5,7 +5,6 @@ import logging
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.axes import Axes
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from pyvista import Plotter, UnstructuredGrid
 
 from bone_remodelling.forward_model.main import DensitySimulation
