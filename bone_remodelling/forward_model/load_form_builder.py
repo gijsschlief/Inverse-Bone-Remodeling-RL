@@ -111,18 +111,18 @@ class LoadFormBuilder:
         based on the provided force profile.
         """
         top_force_expression = self._build_one(
-            self.force_profile[0],
-            self.force_mask[0],
+            self.force_profile[1],
+            self.force_mask[1],
             axis="x",
         )
         right_force_expression = self._build_one(
-            self.force_profile[1],
-            self.force_mask[1],
+            self.force_profile[2],
+            self.force_mask[2],
             axis="y",
         )
         left_force_expression = self._build_one(
-            self.force_profile[2],
-            self.force_mask[2],
+            self.force_profile[0],
+            self.force_mask[0],
             axis="y",
         )
 
