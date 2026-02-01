@@ -70,7 +70,7 @@ class ForceProfileGenerator:
                 force_profile[2, right_index] = force_value[i]
         return force_profile
 
-    def triangular(self) -> np.ndarray:
+    def triangular_old(self) -> np.ndarray:
         """Generate triangular force profiles."""
         force_profile = np.zeros((3, self._max_length), dtype=float)
 
@@ -90,6 +90,22 @@ class ForceProfileGenerator:
                     peak_height / (profile_length - 1 - peak_position)) * (profile_length - 1 - j)
             else:
                 force_profile[side, j] = peak_height
+        return force_profile
+
+    def triangular(self) -> np.ndarray:
+        """Generate triangular force profiles without loops or div-by-zero risk."""
+        force_profile = np.zeros((3, self._max_length), dtype=float)
+        side = self._rng.choice([0, 1, 2])
+        profile_length = self._profile_top if side == 1 else self._profile_sides
+
+        peak_position = self._rng.integers(0, profile_length)
+        peak_height = self._rng.uniform(self._force_min, self._force_max)
+        peak_height = peak_height if self._rng.choice([True, False]) else -peak_height
+        x = np.arange(profile_length)
+        xp = [0, peak_position, profile_length - 1]
+        fp = [0, peak_height, 0]
+
+        force_profile[side, :profile_length] = np.interp(x, xp, fp)
         return force_profile
 
     def square(self) -> np.ndarray:
@@ -126,7 +142,7 @@ class ForceProfileGenerator:
 
     def ramp(self) -> np.ndarray:
         """Generate ramp force profiles."""
-        profiles = np.zeros((3, self._max_length), dtype=float)
+        force_profile = np.zeros((3, self._max_length), dtype=float)
 
         side = self._rng.choice([0, 1, 2])
         profile_length = self._profile_top if side == 1 else self._profile_sides
@@ -137,29 +153,19 @@ class ForceProfileGenerator:
         end_position = max(position_1, position_2)
         height = self._rng.uniform(self._force_min, self._force_max)
         height = height if self._rng.choice([True, False]) else -height
-        direction = self._rng.choice([-1, 1])
 
         if start_position == end_position:
-            profiles[side, start_position] = height
-        elif direction == -1:
-            for j in range(profile_length):
-                if j <= start_position or j > end_position:
-                    profiles[side, j] = 0
-                elif j == end_position:
-                    profiles[side, j] = height
-                else:
-                    profiles[side, j] = (
-                        height / (end_position - start_position)
-                    ) * (j - start_position)
-        else:
-            for j in range(profile_length):
-                if j < start_position or j >= end_position:
-                    profiles[side, j] = 0
-                elif j == start_position:
-                    profiles[side, j] = -height
-                else:
-                    profiles[side, j] = height / (end_position - start_position) * (j - end_position)
-        return profiles
+            if end_position < profile_length - 1:
+                end_position += 1
+            else:
+                start_position -= 1
+
+        x = np.arange(profile_length)[start_position:end_position+1]
+        xp = [start_position, end_position]
+        fp = [0, height] if self._rng.choice([True, False]) else [height, 0]
+        ramp = np.interp(x, xp, fp)
+        force_profile[side, start_position:end_position+1] = ramp
+        return force_profile
 
     def merger(self, num_samples: int, lower_energy_bound: float = 1e-12) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
@@ -197,7 +203,7 @@ class ForceProfileGenerator:
             profiles[i] += self.triangular()
 
             target_energy = self._log_uniform_sampling().item()
-            actual_energy = np.sum(np.square(profiles[i,0,:])) + np.sum(np.square(profiles[i,1,:])) + np.sum(np.square(profiles[i,2,:]))
+            actual_energy = np.sum(profiles[i]**2)
             if actual_energy < lower_energy_bound:
                 logger.warning(f"Sample {i} has zero energy; skipping scaling. {profiles[i]}")
                 continue
