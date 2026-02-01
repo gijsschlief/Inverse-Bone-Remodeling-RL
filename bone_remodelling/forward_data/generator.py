@@ -275,7 +275,7 @@ def main(samples: int, force_type: str) -> None:
             max_chunk_size=500,
             force_profile_name="final_run",
         )
-    except Exception as e:  # noqa: BLE001
+    except Exception:  # noqa: BLE001
         logger.warning("An error occurred during parallel data generation", exc_info = True)
         logger.warning("Continuing with serialised data generation instead (note: significantly slower)")
         _ = data_generator.generate_serial()
