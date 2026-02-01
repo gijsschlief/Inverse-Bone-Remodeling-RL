@@ -14,27 +14,28 @@ class ForceProfileGenerator:
 
     def __init__(
         self,
-        profile_top: int = 10,
-        profile_sides: int = 10,
+        profile_top_and_sides: tuple[int, int] = (10, 10),
         force_bounds: tuple[float, float] = (0.1, 10.0),
+        energy_bounds: tuple[float, float] = (1e2, 5e4),
         batch_seed: int | None = None,
     ) -> None:
         """Initialize the force profile generator.
 
         Args:
         ----
-            profile_top (int): Resolution of the force profile in the top direction.
-            profile_sides (int): Resolution of the force profile in the sides direction.
+            profile_top_and_sides (tuple[int, int]): Resolution of the force profile on the top and sides.
             force_bounds (tuple[float, float]): Minimum and maximum force values.
+            energy_bounds (tuple[float, float]): Minimum and maximum energy values for scaling.
             batch_seed (int | None): Seed for random number generation. If None, uses a random seed.
 
         """
-        self._profile_top = profile_top
-        self._profile_sides = profile_sides
-        self._max_length = max(profile_top, profile_sides)
+        self._profile_top = profile_top_and_sides[0]
+        self._profile_sides = profile_top_and_sides[1]
+        self._max_length = max(profile_top_and_sides)
         self._rng = np.random.default_rng(batch_seed)
         self._force_min = force_bounds[0]
         self._force_max = force_bounds[1]
+        self._energy_bounds = energy_bounds
 
     def impulse(
         self,
@@ -211,10 +212,10 @@ class ForceProfileGenerator:
             profiles[i] *= scaling_factor
         return profiles
 
-    def _log_uniform_sampling(self, low: float = 1e2, high: float = 5e4, size: int = 1) -> np.ndarray:
+    def _log_uniform_sampling(self, size: int = 1) -> np.ndarray:
         """Sample from a log-uniform distribution between low and high."""
-        log_low = np.log(low)
-        log_high = np.log(high)
+        log_low = np.log(self._energy_bounds[0])
+        log_high = np.log(self._energy_bounds[1])
         return np.exp(self._rng.uniform(log_low, log_high, size=size))
 
     def _log_normal_sampling(self, mean: float = 0.0, sigma: float = 1.0, size: int = 1) -> np.ndarray:
@@ -223,7 +224,7 @@ class ForceProfileGenerator:
 
 def example_usage() -> None:
     """Use of the ForceProfileGenerator."""
-    generator = ForceProfileGenerator(profile_top=10, profile_sides=10, force_bounds=(0.1, 10.0), batch_seed=42)
+    generator = ForceProfileGenerator(profile_top_and_sides=(10, 10), force_bounds=(0.1, 10.0), energy_bounds=(1e2, 5e4), batch_seed=42)
     force_profiles = generator.merger(num_samples=100_000)
     #force_profiles = generator.triangular_only(num_samples=100_000)
     force_profile_energy = np.sum(force_profiles**2, axis=(1, 2))
