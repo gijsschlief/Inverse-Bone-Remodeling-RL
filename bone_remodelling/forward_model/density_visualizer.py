@@ -35,7 +35,7 @@ def plot_density_matrix(
 
     axis.imshow(
         matrix,
-        cmap="r",
+        cmap="viridis",
         interpolation="nearest",
         vmin=min_color_scale,
         vmax=max_color_scale,
