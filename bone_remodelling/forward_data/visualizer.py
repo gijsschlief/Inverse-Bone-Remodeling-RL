@@ -122,6 +122,10 @@ def visualize_force_comparison(
 
 def main() -> None:
     """Load and visualize forward model data."""
+    from pathlib import Path
+
+    Path(__file__).parent.parent.parent / Path("data", "raw")
+
     data = forward_data_reader(
         file_path="/home/gijs/Desktop/Thesis/data/raw/",
     )
@@ -143,6 +147,7 @@ def main() -> None:
         return
 
     _, old_force_profiles, old_final_output_densities = old_data
+    force_mask = np.ones_like(force_profiles[0], dtype=bool)
 
     if old_force_profiles is None or old_final_output_densities is None:
         logger.error("Missing force or density data.")
@@ -154,8 +159,8 @@ def main() -> None:
     for i in range(4):
         random_index = np.random.randint(0, len(old_final_output_densities))
         plot_density_matrix(
-            old_final_output_densities[random_index],
-            force_profile=old_force_profiles[random_index],
+            matrix=old_final_output_densities[random_index],
+            force_data=(old_force_profiles[random_index], force_mask),
             axis=axes[i // 2, i % 2],
             title=f"Data at: {random_index}",
         )

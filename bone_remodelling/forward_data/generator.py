@@ -77,17 +77,18 @@ class TrainingDataGenerator:
     def __init__(
         self,
         force_profiles: np.ndarray,
-        output_dir: str,
         simulation_parameters: SimulationParameters,
+        output_dir: Path = Path(__file__).parent.parent.parent / Path("data", "raw"),
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         self.force_profiles: np.ndarray = force_profiles
         self.num_samples = force_profiles.shape[0]
         self.output_dir: Path = Path(output_dir)
+        if not self.output_dir.exists():
+            self.output_dir.mkdir(parents=True, exist_ok=True)
         self.simulation_parameters = simulation_parameters
 
         self._validate_input()
-        self.output_dir.mkdir(parents=True, exist_ok=True)
 
     def _validate_input(self) -> None:
         """Validate the input parameters."""
@@ -233,28 +234,29 @@ if __name__ == "__main__":
     logger.info("Generating force profiles...")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_top=10,
+        profile_top_and_sides=(10, 10),
         batch_seed=1,
     )
 
     force_profiles = force_profile_generator.merger(
-        num_samples=100_000,
+        num_samples=1_000,
     )
     #force_profiles = force_profile_generator.triangular_only(
     #    num_samples=40_000,
     #)
+    force_mask = force_profile_generator.generate_force_mask()
 
     logger.info("Running forward model simulations...")
 
     empty_force_profile = np.zeros((3, np.max(initial_density.shape)))
     simulation_parameters = SimulationParameters(
         force_profile=empty_force_profile,
+        force_mask=force_mask,
         initial_density_field=initial_density,
     )
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
-        output_dir="/home/gijs/Desktop/Thesis/data/raw",
         simulation_parameters=simulation_parameters,
     )
     start_time = time.time()

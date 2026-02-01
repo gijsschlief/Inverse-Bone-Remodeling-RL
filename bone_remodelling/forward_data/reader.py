@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def forward_data_reader(  # noqa: PLR0911
-    file_path: Union[Path, str, Sequence[Union[str, Path]]],
+    file_path: Union[Path, str, Sequence[Union[str, Path]]] = Path(__file__).parent.parent.parent / Path("data", "raw"),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     """Read and parse forward model data from a JSON file or multiple JSON files in a directory.
 
@@ -242,8 +242,7 @@ def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
 
 
 if __name__ == "__main__":
-    directory_path = Path("/home/gijs/Desktop/Thesis/data/raw/")
-    result = forward_data_reader(directory_path)
+    result = forward_data_reader()
     if result is not None:
         _, force_profiles, output_densities = result
         logger.info(f"Force Profiles Shape: {force_profiles.shape}")
@@ -262,12 +261,13 @@ if __name__ == "__main__":
     )
     avg_output_densities = output_densities.mean(axis=0)
     avg_force_profiles = force_profiles.mean(axis=0)
+    force_mask = np.ones_like(avg_force_profiles, dtype=bool)
     std_force_profiles = force_profiles.std(axis=0)
     std_output_densities = output_densities.std(axis=0)
 
     plot_density_matrix(
         matrix=avg_output_densities,
-        force_profile=avg_force_profiles,
+        force_data=(avg_force_profiles, force_mask),
         title="Location average of output densities - SL dataset",
         axis=plt.gca(),
     )
