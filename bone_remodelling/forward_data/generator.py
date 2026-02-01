@@ -243,7 +243,7 @@ def main(samples: int, force_type: str) -> None:
     )
     force_mask = force_profile_generator.generate_force_mask()
 
-    force_profiles = None
+    force_profiles, directory = None, Path(__file__).parent.parent.parent / Path("data", "raw")
     if force_type == "merger":
         force_profiles = force_profile_generator.merger(
             num_samples=samples,
@@ -252,6 +252,7 @@ def main(samples: int, force_type: str) -> None:
         force_profiles = force_profile_generator.triangular_only(
             num_samples=samples,
         )
+        directory = directory / Path("triangular")
     if force_mask is None or force_profiles is None:
         logger.error("Failed to generate force profiles or force mask.")
         return
@@ -268,6 +269,7 @@ def main(samples: int, force_type: str) -> None:
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
         simulation_parameters=simulation_parameters,
+        output_dir=directory,
     )
     start_time = time.time()
     try:
@@ -284,6 +286,6 @@ def main(samples: int, force_type: str) -> None:
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 if __name__ == "__main__":
-    samples = 1_000_000
+    samples = 1_000
     force_type = "triangular"
     main(samples, force_type)
