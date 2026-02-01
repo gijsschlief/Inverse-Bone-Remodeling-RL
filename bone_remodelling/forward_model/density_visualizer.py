@@ -98,7 +98,7 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     axis.imshow(
         top_forces[np.newaxis, :],
         extent=(-0.5, width - 0.5, - top_offset, band_thickness -top_offset),
-        cmap="seismic",
+        cmap="coolwarm",
         aspect="auto",
         vmin=v_min,
         vmax=v_max,
@@ -109,7 +109,7 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     axis.imshow(
         left_forces[:, np.newaxis],
         extent=(band_thickness -left_offset, -left_offset, -0.5, height - 0.5),
-        cmap="seismic",
+        cmap="coolwarm",
         aspect="auto",
         vmin=v_min,
         vmax=v_max,
@@ -120,7 +120,7 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     axis.imshow(
         right_forces[:, np.newaxis],
         extent=(width - band_thickness - right_offset, width - right_offset, -0.5, height - 0.5),
-        cmap="seismic",
+        cmap="coolwarm",
         aspect="auto",
         vmin=v_min,
         vmax=v_max,
@@ -171,7 +171,7 @@ def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, force_mask: np.nda
             x, y, u, v, magnitudes = data
             axis.quiver(
                 x, y, u, v, magnitudes,
-                cmap="binary",
+                cmap="grays",
                 angles='xy',
                 scale_units='xy',
                 scale=np.max(np.abs(force_profile)),
