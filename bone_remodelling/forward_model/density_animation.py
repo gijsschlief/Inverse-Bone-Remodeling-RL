@@ -142,12 +142,12 @@ def main() -> None:
     parameters = SimulationParameters(
         force_profile=force_profile,
         force_mask=force_mask,
-        initial_density_field=np.ones((200, 200)) * 0.87,
+        initial_density_field=np.ones((20, 20)) * 0.87,
     )
 
     # Alternative profile for Weinans model validation ----
     validation_force_maginitude = -25 # -5 for previous parameters
-    n_points = 40
+    n_points = 100
     scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
 
     validation_force_profile = np.array([
@@ -159,7 +159,7 @@ def main() -> None:
     validation_parameters = SimulationParameters(  # noqa: F841
         force_profile=validation_force_profile,
         force_mask=force_mask,
-        initial_density_field=np.ones((n_points, n_points)) * 0.87,
+        initial_density_field=np.ones((10, 10)) * 0.87,
     )
     # To run change parameters to validation_parameters ----
 
