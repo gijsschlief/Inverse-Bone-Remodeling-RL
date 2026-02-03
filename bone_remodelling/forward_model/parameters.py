@@ -102,9 +102,6 @@ class SimulationParameters:
     krylov_solver_tolerance: float = 1e-10
     boundary_tolerance: float = 1e-14
 
-    # I/O parameters
-    output_dir: Path = Path(__file__).parent.parent.parent / Path("data", "fenics", "density_simulation.pvd")
-
     def __post_init__(self) -> None:  # noqa: C901, PLR0912
         """Validate the configuration parameters for the forward simulation."""
         if not isinstance(self.force_profile, np.ndarray):

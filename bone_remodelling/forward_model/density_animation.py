@@ -18,24 +18,26 @@ from bone_remodelling.forward_model.density_visualizer import (
 )
 from bone_remodelling.forward_model.main import DensitySimulation
 from bone_remodelling.forward_model.parameters import SimulationParameters
+from bone_remodelling.parameters import ConfigurationParameters
 
 logger = logging.getLogger(__name__)
 
 
 def animate_density_matplotlib(
     simulation: DensitySimulation,
-    output_directory: Path = Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation.gif"),
+    data_directory: Path,
 ) -> FuncAnimation:
     """Create an animation of the density changes over time using Matplotlib.
 
     Args:
     ----
         simulation (DensitySimulation): The simulation object to run.
-        output_directory (Path): The directory where the animation will be saved.
+        data_directory (Path): The data directory where the animation will be saved.
 
     """
     logger.info("Starting Matplotlib animation generation.")
-    if not output_directory.exists():
+    output_directory: Path = Path(data_directory) / Path("animations", "density_animation.gif")
+    if not output_directory.parent.exists():
         output_directory.parent.mkdir(parents=True, exist_ok=True)
 
     density_film: np.ndarray = np.zeros(
@@ -77,17 +79,20 @@ def animate_density_matplotlib(
 
 def animate_density_pyvista(
     simulation: DensitySimulation,
-    output_directory: Path = Path(__file__).parent.parent.parent / Path("data", "animations", "density_animation_pyvista.gif"),
+    data_directory: Path,
 ) -> None:
     """Create a PyVista animation using in-memory snapshots of FEniCS data.
 
     Args:
     ----
         simulation (DensitySimulation): The simulation object to run.
-        output_directory (Path): The directory where the animation will be saved.
+        data_directory (Path): The data directory where the animation will be saved.
 
     """
     logger.info("Starting PyVista animation generation.")
+    output_directory: Path = Path(data_directory) / Path("animations", "density_animation_pyvista.gif")
+    if not output_directory.parent.exists():
+        output_directory.parent.mkdir(parents=True, exist_ok=True)
 
     fenics_mesh = simulation.density_function.function_space().mesh()
     coords = fenics_mesh.coordinates()
@@ -96,7 +101,6 @@ def animate_density_pyvista(
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
     base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
-    output_directory.parent.mkdir(parents=True, exist_ok=True)
     pyvista_plotter = Plotter(off_screen=True)
     pyvista_plotter.open_gif(str(output_directory))
     step = 0
@@ -124,63 +128,72 @@ def animate_density_pyvista(
 
     logger.info(f"PyVista animation saved to {output_directory}")
 
+def build_force_profile_and_mask(
+    config: ConfigurationParameters,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Build the force profile and force mask based on the configuration parameters.
 
-def main() -> None:
-    """Run the density animations to create to GIFS."""
-    logging.basicConfig(level=logging.INFO)
-    logger.info("Starting density animation generation.")
+    Args:
+    ----
+        config (ConfigurationParameters): The configuration parameters.
 
+    Returns:
+    -------
+        tuple[np.ndarray, np.ndarray]: The constructed force profile and force mask.
+
+    """
     force_profile_generator = ForceProfileGenerator(
-        profile_top_and_sides=(10, 10),
-        force_bounds=(0.1, 10.0),
-        energy_bounds=(1e3, 5e4),
-        batch_seed=1,
-    )
+            profile_top_and_sides=(config.force_top_resolution, config.force_side_resolution),
+            batch_seed=config.seed,
+        )
     force_profile = force_profile_generator.merger(num_samples=1).squeeze()
     force_mask = force_profile_generator.generate_force_mask()
+    return force_profile, force_mask
 
-    parameters = SimulationParameters(
-        force_profile=force_profile,
-        force_mask=force_mask,
-        initial_density_field=np.ones((20, 20)) * 0.87,
-    )
+def run(config: ConfigurationParameters, type: str = "random") -> None:
+    """Run the density animations to create to GIFS."""
+    logger.info("Starting density animation generation.")
+    initial_density = np.ones((config.mesh_top_resolution, config.mesh_side_resolution)) * config.start_density
+    force_profile, force_mask = build_force_profile_and_mask(config=config)
 
-    # Alternative profile for Weinans model validation ----
-    validation_force_maginitude = -25 # -5 for previous parameters
-    n_points = 100
-    scale_factors = np.linspace(1.8, 0, n_points+1)[:-1]
+    if type == "random":
+        parameters = SimulationParameters(
+            force_profile=force_profile,
+            force_mask=force_mask,
+            initial_density_field=initial_density,
+            min_density=config.min_density,
+            max_density=config.max_density,
+        )
+    elif type == "validation":
+        force_maginitude = -25 # Compressive force in Newtons
+        scale_factors = np.linspace(1.0, 0, config.mesh_top_resolution+1)[:-1]
 
-    validation_force_profile = np.array([
-        scale_factors * validation_force_maginitude,
-        np.zeros(n_points),
-        np.zeros(n_points),
-    ])
+        validation_force_profile = np.array([
+            scale_factors * force_maginitude,
+            np.zeros(config.mesh_side_resolution),
+            np.zeros(config.mesh_side_resolution),
+        ])
 
-    validation_parameters = SimulationParameters(  # noqa: F841
-        force_profile=validation_force_profile,
-        force_mask=force_mask,
-        initial_density_field=np.ones((10, 10)) * 0.87,
-    )
-    # To run change parameters to validation_parameters ----
-
-    # Check the moment theory about the pillar.
-    moment_force_profile = np.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                      [0, 0, 0, 0, 0, 0, 0, 0, -5, 5],
-                                      [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                     ])
-
-    moment_parameters = SimulationParameters(  # noqa: F841
-        force_profile=moment_force_profile,
-        force_mask=force_mask,
-        initial_density_field=np.ones((10, 10)) * 0.87,
-    )
-    # To run change parameters to moment_parameters ----
+        parameters = SimulationParameters(
+            force_profile=validation_force_profile,
+            force_mask=force_mask,
+            initial_density_field=initial_density,
+            min_density=config.min_density,
+            max_density=config.max_density,
+        )
+    else:
+        raise ValueError(f"Unknown animation type: {type}")
 
     simulation = DensitySimulation(parameters=parameters)
 
-    animate_density_matplotlib(simulation=simulation)
-    #animate_density_pyvista(simulation=simulation)
+    animate_density_matplotlib(simulation=simulation, data_directory=config.output_dir)
+    animate_density_pyvista(simulation=simulation, data_directory=config.output_dir)
 
 
 if __name__ == "__main__":
-    main()
+    # Developer convenience entry point.
+    # For reproducible runs, use the unified CLI (main.py).
+    config = ConfigurationParameters(
+        output_dir=Path(__file__).resolve().parent.parent,
+    )
+    run(config=config)

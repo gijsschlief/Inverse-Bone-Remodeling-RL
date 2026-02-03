@@ -208,5 +208,6 @@ def example_usage() -> None:
     force_profiles = generator.merger(num_samples=100_000)
     logger.info(f"Generated force profiles shape: {force_profiles.shape}")
 
+
 if __name__ == "__main__":
     example_usage()
