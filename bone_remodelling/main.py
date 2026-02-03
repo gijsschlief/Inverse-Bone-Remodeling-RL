@@ -26,13 +26,10 @@ def build_configuration_parameters() -> ConfigurationParameters:
         The configuration parameters for bone remodelling simulations.
 
     """
-    config = ConfigurationParameters(
-        output_dir=Path(__file__).resolve().parent / "data"
-    )
-
-    output_dir = config.output_dir
+    output_dir = Path(__file__).resolve().parent.parent / "data"
+    output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
-    return config
+    return ConfigurationParameters(output_dir=output_dir)
 
 def main() -> None:
     """Handle CLI arguments and execute the appropriate module."""
@@ -41,7 +38,7 @@ def main() -> None:
         "module",
         type=str,
         choices=["animation", "inverse_model", "data_processing"],
-        help="The module to run.",
+        help="The module to run. Choices are: animation, inverse_model, data_processing.",
     )
     args, remaining_args = parser.parse_known_args()
 
@@ -51,8 +48,8 @@ def main() -> None:
 
     # Dispatch to the appropriate module based on the argument
     if args.module == "animation":
-        from bone_remodelling.forward_model.density_animation import run as forward_main  # noqa: I001, PLC0415
-        forward_main(configuration_parameters)
+        from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
+        generate_animation(configuration_parameters, remaining_args)
 
     elif args.module == "inverse_model":
         from bone_remodelling.inverse_model.cli import main as inverse_main

@@ -1,5 +1,6 @@
 """Create an animation of density changes over time using the forward model simulation."""
 
+import argparse
 import logging
 from pathlib import Path
 
@@ -101,7 +102,7 @@ def animate_density_pyvista(
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
     base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
-    pyvista_plotter = Plotter(off_screen=True)
+    pyvista_plotter = Plotter(off_screen=True) # type: ignore
     pyvista_plotter.open_gif(str(output_directory))
     step = 0
 
@@ -150,6 +151,18 @@ def build_force_profile_and_mask(
     force_mask = force_profile_generator.generate_force_mask()
     return force_profile, force_mask
 
+def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
+    """CLI entry point for density animation generation."""
+    parser = argparse.ArgumentParser(description="Generate density animations.")
+    parser.add_argument(
+        "--type",
+        choices=["random", "validation"],
+        default="random",
+        help="Type of animation to generate.",
+    )
+    args = parser.parse_args(remaining_args)
+    run(config=config, type=args.type)
+
 def run(config: ConfigurationParameters, type: str = "random") -> None:
     """Run the density animations to create to GIFS."""
     logger.info("Starting density animation generation.")
@@ -194,6 +207,6 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(
-        output_dir=Path(__file__).resolve().parent.parent,
+        output_dir=Path(__file__).resolve().parent.parent.parent / Path("data"),
     )
     run(config=config)
