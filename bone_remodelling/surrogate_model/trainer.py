@@ -3,6 +3,7 @@
 import logging
 import time
 from pathlib import Path
+from xml.parsers.expat import model
 
 import numpy as np
 import torch
@@ -102,6 +103,7 @@ def train_model(
     start_time = time.time()
     best_model_state = None
     batch_count = len(model.create_dataloader(x_train, y_train, batch_size=train_parameters.batch_size))
+    
 
     for epoch in range(train_parameters.epochs):
         model.train()
@@ -230,7 +232,7 @@ def rescramble_for_ensemble(
         tuple[np.ndarray, np.ndarray]: Rescrambled training input features and target labels.
 
     """
-    np.random.seed(random_state)
+    np.random.default_rng(random_state)
     x_train_and_val = np.concatenate((x_train, x_val), axis=0)
     y_train_and_val = np.concatenate((y_train, y_val), axis=0)
     perm = np.random.permutation(x_train_and_val.shape[0])
@@ -337,6 +339,28 @@ def main(
         logger.info("Training and evaluation complete.")
     else:
         logger.warning("Test data is missing. Skipping test evaluation.")
+
+def cli(
+    configuration_parameters: ConfigurationParameters,
+    cli_args: list[str],
+) -> None:
+    """CLI entry point for training the surrogate model.
+
+    Args:
+    ----
+        configuration_parameters (ConfigurationParameters): Configuration parameters including output directory.
+        cli_args (list[str]): Additional CLI arguments (not used here).
+
+    """
+    data_file_path = configuration_parameters.output_dir / Path("raw")
+    model_path = configuration_parameters.output_dir / Path("models", "surrogate.pth")
+    main(data_file_path, model_path, normalize=True, random_state=1)
+
+
+
+
+
+
 
 if __name__ == "__main__":
     config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
