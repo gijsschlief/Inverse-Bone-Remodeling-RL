@@ -1,10 +1,10 @@
 """Callback to save the reward curve during training."""
 
 import logging
+from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.path import Path
 from stable_baselines3.common.callbacks import BaseCallback
 
 from bone_remodelling.rl_model.metrics import MetricsContainer
@@ -107,11 +107,12 @@ if __name__ == "__main__":
     import random
 
     metrics = MetricsContainer()
+    figure_path = Path(__file__).parent.parent.parent / Path("data", "figures", "test_reward_curve.png")
     for i in range(0, 500_000, 25):
         metrics.episode_indices.append(i // 25)
         metrics.episode_end_timesteps.append(i)
         metrics.episode_rewards.append(random.uniform(-100, 100))
     metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
     metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    callback = RewardSavingCallback(metrics, out_path=Path("/home/gijs/Desktop/Thesis/data/figures/test_reward_curve.png"), smoothing_window=1000, verbose=1)
+    callback = RewardSavingCallback(metrics, out_path=figure_path, smoothing_window=1000, verbose=1)
     callback._on_training_end()
