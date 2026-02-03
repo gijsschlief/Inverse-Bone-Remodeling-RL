@@ -211,23 +211,6 @@ class TrainingDataGenerator:
             json.dump(results, f, indent=4)
         logger.info(f"Training data saved to {filepath}")
 
-    @staticmethod
-    def serialize_data(
-        serial_number: int,
-        force_profile: np.ndarray,
-        result: np.ndarray,
-        error: str | None = None,
-    ) -> dict:
-        """Serialize the data for a single sample."""
-        serialized_data = {
-            "serial_number": serial_number,
-            "force_profile": force_profile.tolist(),
-            "final_output_density": result.tolist(),
-        }
-        if error is not None:
-            serialized_data["error"] = error
-        return serialized_data
-
 def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     """CLI entry point for training data generation."""
     parser = argparse.ArgumentParser(description="Generate training data for bone remodeling simulations.")
