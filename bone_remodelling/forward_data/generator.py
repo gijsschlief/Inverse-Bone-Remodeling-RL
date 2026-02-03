@@ -82,12 +82,12 @@ class TrainingDataGenerator:
         self,
         force_profiles: np.ndarray,
         simulation_parameters: SimulationParameters,
-        data_dir: Path,
+        output_dir: Path,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         self.force_profiles: np.ndarray = force_profiles
         self.num_samples = force_profiles.shape[0]
-        self.output_dir: Path = data_dir.resolve() / Path("raw")
+        self.output_dir: Path = output_dir.resolve()
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.simulation_parameters = simulation_parameters
@@ -277,7 +277,7 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
         simulation_parameters=simulation_parameters,
-        data_dir=directory,
+        output_dir=directory,
     )
     start_time = time.time()
     try:

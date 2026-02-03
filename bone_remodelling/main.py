@@ -58,6 +58,8 @@ def main() -> None:
     else:
         raise RuntimeError(f"Unknown module: {args.module}")
 
+# TODO: Create a logfile which contains outputs of the log for each run.
+# TODO: Append on the fly datageneration
 
 
 if __name__ == "__main__":
