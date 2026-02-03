@@ -4,6 +4,8 @@ import logging
 import random
 from dataclasses import dataclass
 
+import matplotlib.axes
+import matplotlib.figure
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -22,7 +24,7 @@ def plot_surrogate_model(
     sample_count: int = 3,
     *,
     show_plot: bool = True,
-) -> list[plt.Figure]:
+) -> list[matplotlib.figure.Figure]:
     """Compare the surrogate model's predictions with the actual validation data.
 
     Args:
@@ -66,14 +68,14 @@ def plot_surrogate_model(
         figure, axes = plt.subplots(1, 3, figsize=(18, 6))
         plot_density_matrix(
             actual_matrix,
-            (force_profiles[idx], force_mask) if force_profiles is not None else None,
+            (force_profiles[idx], force_mask) if force_profiles is not None else (None, None),
             "Original Density Matrix",
             axes[0],
             (min_true_value, max_true_value),
         )
         plot_density_matrix(
             predicted_matrix,
-            (force_profiles[idx], force_mask) if force_profiles is not None else None,
+            (force_profiles[idx], force_mask) if force_profiles is not None else (None, None),
             "Predicted Density Matrix",
             axes[1],
             (min_true_value, max_true_value),
@@ -106,7 +108,7 @@ def plot_difference_matrix(
     predicted_matrix: np.ndarray,
     actual_matrix: np.ndarray,
     title: str,
-    axis: plt.Axes,
+    axis: matplotlib.axes.Axes,
     plotting_parameters: PlottingParameters = PlottingParameters(),
 ) -> None:
     """Plot the difference between predicted and actual matrices as percentage with a diverging colormap.
