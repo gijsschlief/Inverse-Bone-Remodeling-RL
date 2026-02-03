@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.surrogate_model.loss_function import combined_loss
 from bone_remodelling.surrogate_model.neural_networks.neural_network import (
@@ -283,10 +284,8 @@ def main(
         y_train_np, y_mean, y_std = normalize_data(y_train_np)
         y_val_np, _, _ = normalize_data(y_val_np, y_mean, y_std)
         y_test_np, _, _ = normalize_data(y_test_np, y_mean, y_std)
-
-        logger.info(
-            f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}",
-        )
+        save_normalization_params(model_path.with_suffix(".npz"), x_mean, x_std, y_mean, y_std)
+        logger.info(f"Normalization parameters: x_mean={x_mean}, x_std={x_std}, y_mean={y_mean}, y_std={y_std}")
     else:
         logger.info("Skipping normalization.")
 
@@ -298,6 +297,8 @@ def main(
     y_test_tensor = torch.tensor(y_test_np, dtype=torch.float32)
 
     logger.info("Preparing tensors...")
+    x_train, x_val, x_test = None, None, None
+    y_train, y_val, y_test = None, None, None
     x_train, y_train = convert_tensors(x_train_tensor, y_train_tensor, device)
     if x_val_tensor is not None and y_val_tensor is not None:
         x_val, y_val = convert_tensors(x_val_tensor, y_val_tensor, device)
@@ -307,53 +308,40 @@ def main(
     model = ReversedSurrogateModel().to(device)
     logger.info(f"Model architecture:\n{model}")
 
-    logger.info(
-        f"Training on {len(x_train)} samples, validating on {len(x_val) if x_val is not None else 0} samples.",
-    )
+    logger.info(f"Training on {len(x_train)} samples, validating on {len(x_val) if x_val is not None else 0} samples.")
+
+    if x_val is None or y_val is None:
+        logger.warning("Validation data is missing. Training will proceed without validation.")
+        x_val = torch.empty(0, 3, 10, device=device)
+        y_val = torch.empty(0, 10, 10, device=device)
     train_model(
         model,
-        [x_train, x_val],
-        [y_train, y_val],
+        (x_train, x_val),
+        (y_train, y_val),
         train_parameters=SurrogateTrainParameters(
             device=device,
         ),
     )
 
     model_path = save_model_safely(model, model_path)
-    if normalize:
-        save_normalization_params(
-            model_path.with_suffix(".npz"),
-            x_mean,
-            x_std,
-            y_mean,
-            y_std,
-        )
     logger.info(f"Model saved to {model_path}")
 
     #model.plot_loss()
 
     logger.info("Evaluating model normalised on validation set.")
-
     evaluate_model(model, x_val, y_val)
 
-    logger.info("Evaluating model normalised on test set.")
-    evaluate_model(model, x_test, y_test)
-
-    logger.info("Training and evaluation complete.")
-
+    if x_test is not None and y_test is not None:
+        logger.info("Evaluating model normalised on test set.")
+        evaluate_model(model, x_test, y_test)
+        logger.info("Training and evaluation complete.")
+    else:
+        logger.warning("Test data is missing. Skipping test evaluation.")
 
 if __name__ == "__main__":
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s: %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S",
-    )
-
-    model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
-    data_file_path = Path(__file__).parent.parent.parent / Path("data", "raw")
-
-    for i in range(2, 6): # USE FOR ENSEMBLE TRAINING
-        main(data_file_path, model_path, normalize=True, random_state=i)
-
+    config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
+    model_path = config.output_dir / Path("models", "surrogate.pth")
+    data_file_path = config.output_dir / Path("raw")
+    main(data_file_path, model_path, normalize=True, random_state=1)
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)
