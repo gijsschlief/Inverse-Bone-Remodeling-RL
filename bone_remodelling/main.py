@@ -37,8 +37,8 @@ def main() -> None:
     parser.add_argument(
         "module",
         type=str,
-        choices=["animation", "inverse_model", "data_processing"],
-        help="The module to run. Choices are: animation, inverse_model, data_processing.",
+        choices=["animation", "generate_data", "data_processing"],
+        help="The module to run. Choices are: animation, generate_data, data_processing.",
     )
     args, remaining_args = parser.parse_known_args()
 
@@ -51,13 +51,9 @@ def main() -> None:
         from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
         generate_animation(configuration_parameters, remaining_args)
 
-    elif args.module == "inverse_model":
-        from bone_remodelling.inverse_model.cli import main as inverse_main
-        inverse_main(configuration_parameters, remaining_args)
-
-    elif args.module == "data_processing":
-        from bone_remodelling.data_processing.cli import main as data_main  # noqa: PLC0415
-        data_main(configuration_parameters, remaining_args)
+    elif args.module == "generate_data":
+        from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
+        generate_data(configuration_parameters, remaining_args)
 
     else:
         raise RuntimeError(f"Unknown module: {args.module}")

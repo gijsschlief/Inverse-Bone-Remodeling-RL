@@ -1,9 +1,12 @@
 """Data generator for bone remodeling simulations."""
 
+import argparse
 import datetime
 import json
 import logging
 import os
+
+from bone_remodelling.parameters import ConfigurationParameters
 
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
@@ -79,12 +82,12 @@ class TrainingDataGenerator:
         self,
         force_profiles: np.ndarray,
         simulation_parameters: SimulationParameters,
-        output_dir: Path = Path(__file__).parent.parent.parent / Path("data", "raw"),
+        data_dir: Path,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         self.force_profiles: np.ndarray = force_profiles
         self.num_samples = force_profiles.shape[0]
-        self.output_dir: Path = Path(output_dir)
+        self.output_dir: Path = data_dir.resolve() / Path("raw")
         if not self.output_dir.exists():
             self.output_dir.mkdir(parents=True, exist_ok=True)
         self.simulation_parameters = simulation_parameters
@@ -225,25 +228,45 @@ class TrainingDataGenerator:
             serialized_data["error"] = error
         return serialized_data
 
-def main(samples: int, force_type: str) -> None:
+def cli(config: ConfigurationParameters, argv: list[str]) -> None:
+    """CLI entry point for training data generation."""
+    parser = argparse.ArgumentParser(description="Generate training data for bone remodeling simulations.")
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=1000,
+        help="Number of samples to generate.",
+    )
+    parser.add_argument(
+        "--force_type",
+        type=str,
+        choices=["merger", "triangular"],
+        default="triangular",
+        help="Type of force profile to generate ('merger' or 'triangular').",
+    )
+    args = parser.parse_args(argv)
+    run(config, samples=args.samples, force_type=args.force_type)
+
+def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
     """Generate training data for bone remodeling simulations.
 
     Args:
     ----
+        config (ConfigurationParameters): Configuration parameters for the simulation.
         samples (int): Number of samples to generate.
         force_type (str): Type of force profile to generate ('merger' or 'triangular').
 
     """
-    initial_density = np.full((10, 10), 0.87)
+    initial_density = np.full((config.mesh_top_resolution, config.mesh_side_resolution), config.start_density)
     logger.info("Generating force profiles...")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_top_and_sides=(10, 10),
-        batch_seed=1,
+        profile_top_and_sides=(config.force_top_resolution, config.force_side_resolution),
+        batch_seed=config.seed,
     )
     force_mask = force_profile_generator.generate_force_mask()
 
-    force_profiles, directory = None, Path(__file__).parent.parent.parent / Path("data", "raw")
+    force_profiles, directory = None, config.output_dir / Path("raw")
     if force_type == "merger":
         force_profiles = force_profile_generator.merger(
             num_samples=samples,
@@ -264,12 +287,14 @@ def main(samples: int, force_type: str) -> None:
         force_profile=empty_force_profile,
         force_mask=force_mask,
         initial_density_field=initial_density,
+        min_density=config.min_density,
+        max_density=config.max_density,
     )
 
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
         simulation_parameters=simulation_parameters,
-        output_dir=directory,
+        data_dir=directory,
     )
     start_time = time.time()
     try:
@@ -286,6 +311,11 @@ def main(samples: int, force_type: str) -> None:
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
 if __name__ == "__main__":
+    # Developer convenience entry point.
+    # For reproducible runs, use the unified CLI (main.py).
+    config = ConfigurationParameters(
+        output_dir=Path(__file__).resolve().parent.parent.parent / Path("data"),
+    )
     samples = 1_000
     force_type = "triangular"
-    main(samples, force_type)
+    run(config, samples, force_type)
