@@ -4,6 +4,7 @@ import logging
 import time
 from copy import deepcopy
 
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
@@ -15,6 +16,7 @@ from bone_remodelling.surrogate_model.optimiser_scheduler_dataloader import (
     build_optimizer,
 )
 from bone_remodelling.surrogate_model.train_parameters import SurrogateTrainParameters
+from bone_remodelling.surrogate_model.visualizer import plot_loss
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,8 @@ class SurrogateModelTrainer:
 
         self.best_val_loss = float("inf")
 
+        plt.ion()
+        fig, ax = plt.subplots(figsize=(10, 6))
         self.training_losses: list[float] = []
         self.validation_losses: list[float] = []
         self.learning_rates: list[float] = []
@@ -105,6 +109,12 @@ class SurrogateModelTrainer:
                 epochs_no_improve,
             )
             self.log_training_progress(epoch)
+            plot_loss(
+                self.training_losses,
+                self.validation_losses,
+                self.learning_rates,
+                axes=ax,
+            )
             if early_stop:
                 logger.info(
                     f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs).",
@@ -112,6 +122,8 @@ class SurrogateModelTrainer:
                 break
 
         self.reload_and_save_best_model()
+        plt.ioff()
+        plt.show()
 
     def warn_unexpected_loss(self, loss: torch.Tensor) -> None:
         """Check if the loss is a good value (not NaN, Inf, or non-finite)."""

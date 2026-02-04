@@ -6,7 +6,6 @@ from dataclasses import dataclass
 import matplotlib.axes
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
 
 from bone_remodelling.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
@@ -15,25 +14,40 @@ from bone_remodelling.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
 
-def plot_loss(train_losses: list[float], val_losses: list[torch.Tensor] | None = None) -> None:
-    """Plot the training and validation loss history."""
-    if not train_losses:
-        logger.error("No training history found.")
+def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates: list[float], axes: matplotlib.axes.Axes) -> None:
+    """Plot the training and validation loss history with learning rate overlay."""
+    if not train_losses or not val_losses or not learning_rates:
+        logger.error("One or more training history lists are empty.")
         return
 
-    plt.figure(figsize=(10, 5))
-    plt.plot(train_losses, label="Train Loss")
-    if val_losses:
-        float_val_losses = [loss.item() for loss in val_losses]
-        plt.plot(float_val_losses, label="Validation Loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.yscale("log")
-    plt.title("Training and Validation Loss (Log Scale)")
-    plt.legend()
-    plt.grid(visible=True, which="both", linestyle="--", linewidth=0.5)
-    plt.tight_layout()
-    plt.show()
+    # Remove the previous axes content
+    fig = axes.figure
+    for ax in fig.get_axes():
+        if ax is not axes:
+            ax.remove()
+    axes.clear()
+
+    # Plot Losses on the primary Y-axis
+    line1, = axes.plot(train_losses, label="Train Loss", color="tab:blue")
+    line2, = axes.plot(val_losses, label="Validation Loss", color="tab:orange")
+    axes.set_yscale("log")
+    axes.set_ylabel("Loss")
+    axes.grid(visible=True, which="both", linestyle="--", alpha=0.3)
+
+    # Create secondary Y-axis for Learning Rate
+    ax2 = axes.twinx()
+    line3, = ax2.plot(learning_rates, color="gray", linestyle=":", label="Learning Rate", alpha=0.7)
+    ax2.set_yscale("log")
+    ax2.set_ylabel("Learning Rate", color="gray")
+    ax2.grid(visible=False)
+
+    # Combine legends from both axes
+    lines = [line1, line2, line3]
+    legend_labels = [str(line.get_label()) for line in lines]
+    axes.legend(lines, legend_labels, loc="upper right")
+    axes.set_title("Training Progress: Loss & Learning Rate", fontsize=12, fontweight='bold')
+    axes.figure.canvas.draw()
+    plt.pause(0.001)
 
 @dataclass
 class PlottingParameters:
