@@ -21,7 +21,7 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
         return
 
     # Build and clear the plot
-    fig = plt.figure(num=1, figsize=(10, 6), clear=True)
+    fig = plt.figure(num=1, clear=True)
     axes = fig.add_subplot(1, 1, 1)
 
     # Plot Losses on the primary Y-axis
@@ -45,8 +45,7 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
     axes.set_title("Training Progress: Loss & Learning Rate", fontsize=12, fontweight='bold')
     axes.set_xlabel("Epoch")
     plt.tight_layout()
-    plt.draw()
-    plt.pause(0.001)
+    plt.show(block=False)
 
 @dataclass
 class PlottingParameters:
