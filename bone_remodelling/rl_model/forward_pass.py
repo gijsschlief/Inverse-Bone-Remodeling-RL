@@ -19,7 +19,7 @@ from bone_remodelling.surrogate_model.loader import (
     SurrogateModelLoader,
     load_surrogate_model,
 )
-from bone_remodelling.surrogate_model.neural_networks.neural_network import (
+from bone_remodelling.surrogate_model.neural_network import (
     SurrogateModel,
 )
 from bone_remodelling.surrogate_model.normalizor import (

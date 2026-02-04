@@ -6,15 +6,14 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from bone_remodelling.surrogate_model.neural_networks.neural_network import (
+from bone_remodelling.surrogate_model.neural_network import (
     SurrogateModel,
 )
-from bone_remodelling.surrogate_model.normalizor import load_normalization_params
 
 logger = logging.getLogger(__name__)
 
 
-class SurrogateModelLoader:
+class SurrogatePredictor:
     """Class to load a surrogate model from a .pth file.
 
     This class handles the loading of a PyTorch model from a specified path and provides
@@ -24,19 +23,11 @@ class SurrogateModelLoader:
     ----------
         model_path (str): Path to the .pth file containing the model weights.
         model_class (Type[torch.nn.Module]): The class of the model to be loaded.
-        model (Optional[torch.nn.Module]): The loaded model instance, if auto_load is True.
-        auto_load (bool): Whether to automatically load the model upon initialization.
 
     Methods
     -------
-        load() -> None:
-            Loads the model from the specified path.
-        forward(data_points: torch.Tensor) -> torch.Tensor:
-            Runs forward estimation on the given data points.
-        __call__(x: torch.Tensor) -> torch.Tensor:
-            Calls the forward method of the model.
-        __init__(model_path: str, model_class: Type[torch.nn.Module], auto_load: bool = True) -> None:
-            Initializes the loader with the path to the model and the model class.
+        predict(x_raw: np.ndarray) -> np.ndarray:
+            Run forward estimation on the given data points.
 
     """
 
@@ -44,8 +35,6 @@ class SurrogateModelLoader:
         self,
         model_path: Path,
         model_class: type[torch.nn.Module],
-        *,
-        auto_load: bool = True,
     ) -> None:
         """Initialize the loader with the path to the model and the model class.
 
@@ -53,112 +42,163 @@ class SurrogateModelLoader:
         ----
             model_path (str): Path to the .pth file containing the model weights.
             model_class (torch.nn.Module): The class of the model to be loaded.
-            auto_load (bool): Whether to automatically load the model upon initialization.
 
         """
         self.model_path = model_path
-        self.model_class = model_class
-        self.model: torch.nn.Module | None = None
+        self.model: torch.nn.Module = model_class()
 
-        if auto_load:
-            self.load()
+        self.x_mean: np.ndarray | None = None
+        self.x_std: np.ndarray | None = None
+        self.y_mean: np.ndarray | None = None
+        self.y_std: np.ndarray | None = None
 
-    def load(self) -> None:
-        """Load the surrogate model from the .pth file."""
-        self.model = self.model_class()
-        self.model.load_state_dict(
-            torch.load(self.model_path, map_location="cpu", weights_only=False),
-        )
-        self.model.eval()  # Set the model to evaluation mode
+        self.load_state_dictionary()
+        self.load_normalization_params()
 
-    def forward(self, data_points: torch.Tensor) -> torch.Tensor:
+    def __call__(self, x_raw: np.ndarray) -> np.ndarray:
+        """Call the object like a function: predictor(data)."""
+        return self.predict(x_raw)
+
+    def __repr__(self) -> str:
+        """Show content of the SurrogatePredictor."""
+        return f"SurrogatePredictor(model={self.model_path.name}, normalized={self.x_mean is not None})"
+
+    def load_state_dictionary(self) -> None:
+        """Load the state dictionary and set model to evaluation model."""
+        self.model.load_state_dict(torch.load(self.model_path, map_location="cpu", weights_only=False))
+        self.model.eval()
+
+    def load_normalization_params(self) -> None:
+        """Load normalization parameters associated with the model.
+
+        Args:
+        ----
+            model_path (Path): Path to the .pth file containing the model weights.
+
+        """
+        normalization_path = self.model_path.with_suffix(".npz")
+        if normalization_path.exists():
+            data = np.load(normalization_path)
+            self.x_mean = data.get("X_mean")
+            self.x_std = data.get("X_std")
+            self.y_mean = data.get("y_mean")
+            self.y_std = data.get("y_std")
+
+    def predict(self, x_raw: np.ndarray) -> np.ndarray:
         """Run forward estimation on the given data points.
 
         Args:
         ----
-            data_points (torch.Tensor): Input data points for the model.
+            x_raw (torch.Tensor): Input data points for the model.
 
         Returns:
         -------
             torch.Tensor: Model predictions.
 
         """
-        if self.model is None:
-            raise ValueError("Model is not loaded. Call load_model() first.")
-
-        with torch.no_grad():  # Disable gradient computation for inference
-            return self.model(data_points)
-
-    def __call__(self, x: torch.Tensor) -> torch.Tensor:
-        """Call the forward method of the model."""
-        return self.forward(x)
-
-
-def load_surrogate_model(
-    model_path: Path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth"),
-    model_class: type[torch.nn.Module] = SurrogateModel,
-) -> tuple[
-    torch.nn.Module | None,
-    np.ndarray | None,
-    np.ndarray | None,
-    np.ndarray | None,
-    np.ndarray | None,
-]:
-    """Load data, preprocess it, load the surrogate model, and evaluate its performance.
-
-    Args:
-    ----
-        model_path (Path): Path to the .pth file containing the model weights.
-        model_class (type[torch.nn.Module]): The class of the model to be loaded.
-
-    Returns:
-    -------
-        tuple[torch.nn.Module | None, np.ndarray | None, np.ndarray | None, np.ndarray | None, np.ndarray | None]:
-            The loaded model and normalization parameters (if available).
-
-    """
-    if isinstance(model_path, str):
-        model_path = Path(model_path)
-
-    # Check if the model path is valid
-    if not model_path.is_absolute():
-        code_dir = (
-            Path(__file__).resolve().parent.parent.parent
-        )  # Resolve Thesis_code directory dynamically
-        model_path = code_dir / model_path
-        if not model_path.is_absolute():
-            logger.error(
-                f"Failed to resolve absolute path for model file: {model_path}",
+        if self.x_mean is None or self.x_std is None:
+            x_normalised = torch.tensor(x_raw, dtype=torch.float32)
+        else:
+            x_normalised = self.normalize_input(
+                x_raw,
+                self.x_mean,
+                self.x_std,
             )
-            raise ValueError(
-                f"Failed to resolve absolute path for model file: {model_path}",
+            x_normalised = torch.tensor(x_normalised, dtype=torch.float32)
+        with torch.no_grad():
+            y_normalised = self.model.forward(x_normalised)
+        if self.y_mean is None or self.y_std is None:
+            return y_normalised.numpy()
+        return self.unnormalize_output(
+            y_normalised.numpy(),
+            self.y_mean,
+            self.y_std,
+        )
+
+    @staticmethod
+    def normalize_input(
+        x_raw: np.ndarray,
+        x_mean: np.ndarray,
+        x_std: np.ndarray,
+    ) -> torch.Tensor:
+        """Normalize input data.
+
+        Args:
+        ----
+            x_raw (np.ndarray): Raw input data.
+            x_mean (np.ndarray): Mean for normalization.
+            x_std (np.ndarray): Standard deviation for normalization.
+
+        Returns:
+        -------
+            torch.Tensor: Normalized input data.
+
+        """
+        x_normalized = (x_raw - x_mean) / x_std
+        return torch.tensor(x_normalized, dtype=torch.float32)
+
+    @staticmethod
+    def unnormalize_output(
+        y_normalized: np.ndarray,
+        y_mean: np.ndarray,
+        y_std: np.ndarray,
+    ) -> np.ndarray:
+        """Unnormalize output data.
+
+        Args:
+        ----
+            y_normalized (np.ndarray): Normalized output data.
+            y_mean (np.ndarray): Mean for unnormalization.
+            y_std (np.ndarray): Standard deviation for unnormalization.
+
+        Returns:
+        -------
+            np.ndarray: Unnormalized output data.
+
+        """
+        return y_normalized * y_std + y_mean
+
+
+def load_surrogate_models(
+    model_folder: Path,
+    model_class: type[SurrogateModel],
+) -> list[SurrogatePredictor]:
+    """Load any number of surrogate models from a specified folder."""
+    logger.info(f"Loading all models from {model_folder}")
+
+    predictors: list[SurrogatePredictor] = []
+    for model_path in model_folder.glob("*.pth"):
+        if not model_path.is_file() or model_path.stat().st_size == 0:
+            logger.warning(f"Skipping invalid file: {model_path}")
+            continue
+
+        try:
+            predictor = SurrogatePredictor(
+                model_path=model_path,
+                model_class=model_class,
             )
-    if not model_path.is_file():
-        logger.error(f"Model file does not exist: {model_path}")
-        raise FileNotFoundError(f"Model file does not exist: {model_path}")
-    if model_path.suffix != ".pth":
-        logger.error(f"Invalid model file format: {model_path}. Expected a .pth file.")
-        raise ValueError(
-            f"Invalid model file format: {model_path}. Expected a .pth file.",
-        )
-    if not model_path.is_absolute():
-        logger.error(f"Model file path is not absolute: {model_path}")
-        raise ValueError(f"Model file path is not absolute: {model_path}")
-    logger.info(f"Loading model from {model_path} with class {model_class.__name__}")
+            predictors.append(predictor)
+        except (RuntimeError, ValueError) as e:
+            logger.warning(f"Failed to load model from {model_path}: {e}")
 
-    # Load the surrogate model
-    model_loader = SurrogateModelLoader(model_path=model_path, model_class=model_class)
+    return predictors
 
-    # If the model has normalization parameters, load them
-    if model_path.with_suffix(".npz").exists():
-        x_mean, x_std, y_mean, y_std = load_normalization_params(
-            path=model_path.with_suffix(".npz"),
-        )
-        return model_loader.model, x_mean, x_std, y_mean, y_std
+def predict_with_surrogates(
+    predictors: list[SurrogatePredictor],
+    x: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Predict using surrogate models and returns a list of the mean scores and the standard deviations."""
+    if not predictors:
+            raise ValueError("The list of predictors is empty. Cannot perform inference.")
 
-    return model_loader.model, None, None, None, None
+    predictions = np.array([predictor(x) for predictor in predictors])
+    mean_prediction = np.mean(predictions, axis=0)
+    std_prediction = np.std(predictions, axis=0)
+    return mean_prediction, std_prediction
+
 
 
 if __name__ == "__main__":
-    model = load_surrogate_model()
-    logger.info(f"Loaded model: {model}")
+    model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
+    predictor = SurrogatePredictor(model_path, SurrogateModel)
+    logger.info(f"Loaded model: {predictor}")

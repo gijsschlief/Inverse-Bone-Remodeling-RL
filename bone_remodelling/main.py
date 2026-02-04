@@ -56,8 +56,12 @@ def main() -> None:
         generate_data(configuration_parameters, remaining_args)
 
     elif args.module == "surrogate_training":
-        from bone_remodelling.surrogate_model.trainer import cli as surrogate_training  # noqa: I001, PLC0415
+        from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: I001, PLC0415
         surrogate_training(configuration_parameters, remaining_args)
+
+    elif args.module == "surrogate_evaluation":
+        from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
+        surrogate_evaluation(configuration_parameters)
 
     else:
         raise RuntimeError(f"Unknown module: {args.module}")

@@ -1,13 +1,12 @@
 """Visualize the surrogate model's predictions against actual validation data."""
 
 import logging
-import random
 from dataclasses import dataclass
 
 import matplotlib.axes
-import matplotlib.figure
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 
 from bone_remodelling.forward_model.density_visualizer import (
     plot_density_matrix,  # type: ignore
@@ -16,84 +15,25 @@ from bone_remodelling.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
 
+def plot_loss(train_losses: list[float], val_losses: list[torch.Tensor] | None = None) -> None:
+    """Plot the training and validation loss history."""
+    if not train_losses:
+        logger.error("No training history found.")
+        return
 
-def plot_surrogate_model(
-    predicted_matrices: np.ndarray,
-    true_matrices: np.ndarray,
-    force_profiles: np.ndarray | None = None,
-    sample_count: int = 3,
-    *,
-    show_plot: bool = True,
-) -> list[matplotlib.figure.Figure]:
-    """Compare the surrogate model's predictions with the actual validation data.
-
-    Args:
-    ----
-        predicted_matrices (np.ndarray): Predicted density matrices from the surrogate model.
-        true_matrices (np.ndarray): Actual density matrices from the validation set.
-        force_profiles (np.ndarray, None): Force profiles corresponding to the matrices.
-        sample_count (int): Number of random samples to visualize. Default is 3.
-        show_plot (bool): Whether to display the plots. Default is True.
-
-    """
-    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
-        true_matrices,
-        np.ndarray,
-    ):
-        raise ValueError(
-            "Both predicted_matrices and true_matrices must be numpy.ndarray objects.",
-        )
-    if predicted_matrices.shape != true_matrices.shape:
-        raise ValueError(
-            "predicted_matrices and true_matrices must have the same shape.",
-        )
-    if sample_count <= 0 or sample_count > len(true_matrices):
-        raise ValueError(
-            "sample_count must be a positive integer less than or equal to the number of validation samples.",
-        )
-
-    random_indices = random.sample(range(len(true_matrices)), sample_count)
-
-    max_true_value = np.max(true_matrices)
-    min_true_value = np.min(true_matrices)
-
-    figures = []
-    force_mask = np.ones_like(force_profiles[0], dtype=bool) if force_profiles is not None else None
-    for idx in random_indices:
-        predicted_matrix = predicted_matrices[idx]
-        actual_matrix = true_matrices[idx]
-
-
-        # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
-        figure, axes = plt.subplots(1, 3, figsize=(18, 6))
-        plot_density_matrix(
-            actual_matrix,
-            (force_profiles[idx], force_mask) if force_profiles is not None else (None, None),
-            "Original Density Matrix",
-            axes[0],
-            (min_true_value, max_true_value),
-        )
-        plot_density_matrix(
-            predicted_matrix,
-            (force_profiles[idx], force_mask) if force_profiles is not None else (None, None),
-            "Predicted Density Matrix",
-            axes[1],
-            (min_true_value, max_true_value),
-        )
-        plot_difference_matrix(
-            predicted_matrix,
-            actual_matrix,
-            "Difference Matrix (Predicted - Actual) as Percentage",
-            axes[2],
-        )
-
-        figures.append(figure)
-        plt.tight_layout()
-
-        if show_plot:
-            plt.show()
-    return figures
-
+    plt.figure(figsize=(10, 5))
+    plt.plot(train_losses, label="Train Loss")
+    if val_losses:
+        float_val_losses = [loss.item() for loss in val_losses]
+        plt.plot(float_val_losses, label="Validation Loss")
+    plt.xlabel("Epoch")
+    plt.ylabel("Loss")
+    plt.yscale("log")
+    plt.title("Training and Validation Loss (Log Scale)")
+    plt.legend()
+    plt.grid(visible=True, which="both", linestyle="--", linewidth=0.5)
+    plt.tight_layout()
+    plt.show()
 
 @dataclass
 class PlottingParameters:
@@ -102,7 +42,6 @@ class PlottingParameters:
     color_scale_min: float = -100
     color_scale_max: float = 100
     color_bar: bool = False
-
 
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
@@ -162,29 +101,74 @@ def plot_difference_matrix(
     if plotting_parameters.color_bar:
         plt.colorbar(difference_image, ax=axis, fraction=0.046, pad=0.04)
 
+def plot_surrogate(
+    mean_pred: np.ndarray,
+    std_pred: np.ndarray,
+    true_matrices: np.ndarray,
+    force_profiles: np.ndarray,
+) -> None:
+    """Plot the surrogate model predictions against the true values.
 
-def main() -> None:
+    Args:
+    ----
+        mean_pred (np.ndarray): The mean predictions from the surrogate model.
+        std_pred (np.ndarray): The standard deviation of the predictions from the surrogate model.
+        true_matrices (np.ndarray): The true values to compare against.
+        force_profiles (np.ndarray): The force profiles used for prediction.
+
+    """
+    force_mask = np.ones_like(force_profiles, dtype=bool)
+    axes = plt.subplots(2, 2, figsize=(12, 12))[1]
+    plot_density_matrix(
+        matrix=mean_pred,
+        force_data=(force_profiles, force_mask),
+        title="Surrogate Model Mean Prediction",
+        axis=axes[0, 0],
+    )
+    plot_density_matrix(
+        matrix=true_matrices,
+        force_data=(force_profiles, force_mask),
+        title="True Density",
+        axis=axes[0, 1],
+    )
+    plot_difference_matrix(
+        predicted_matrix=mean_pred,
+        actual_matrix=true_matrices,
+        title="Difference",
+        axis=axes[1, 0],
+    )
+    plot_density_matrix(
+        matrix=std_pred,
+        force_data=(force_profiles, force_mask),
+        title="Prediction Uncertainty (Std Dev)",
+        axis=axes[1, 1],
+        color_scale=(0, 0.5),
+    )
+    plt.tight_layout()
+    plt.show()
+
+def demonstrate_visualization() -> None:
     """Demonstrate the surrogate model visualization using example data."""
-    predicted_matrices = np.random.randn(5, 10, 10)
-    true_matrices = np.random.randn(5, 10, 10)
-    plot_surrogate_model(
-        predicted_matrices=predicted_matrices,
+    predicted_matrices = np.random.randn(10, 10)
+    true_matrices = np.random.randn(10, 10)
+    plot_surrogate(
+        mean_pred=predicted_matrices,
+        std_pred=np.zeros_like(predicted_matrices),
         true_matrices=true_matrices,
-        force_profiles=np.random.randn(5, 3, 10),
-        sample_count=1,
+        force_profiles=np.random.randn(3, 10),
     )
 
     # TEST IF THE RIGHT WAY IS UP
     gradient_example = np.arange(100).reshape(10, 10)
+    ax = plt.subplots(figsize=(5, 5))[1]
     plot_density_matrix(
         gradient_example / 100,
         (None, None),
         "Test Matrix",
-        plt.gca(),
+        ax,
         color_scale = (0, 1),
     )
     plt.show()
 
-
 if __name__ == "__main__":
-    main()
+    demonstrate_visualization()

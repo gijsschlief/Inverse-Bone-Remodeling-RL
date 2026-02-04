@@ -59,7 +59,7 @@ class InverseModel(torch.nn.Module):
 
     def __str__(self) -> str:
         """Return a string representation of the model."""
-        return f"LargeSurrogateModel(\n  {self.fc})"
+        return f"InverseModel(\n  {self.fc})"
 
     def __repr__(self) -> str:
         """Return a string representation of the model."""

@@ -4,41 +4,33 @@ import logging
 from pathlib import Path
 
 import numpy as np
-from torch.nn.modules.module import Module
 
 from bone_remodelling.forward_data.reader import forward_data_reader
-from bone_remodelling.surrogate_model.evaluator import (
-    average_similarity_score,
-    validate_surrogate_model,
+from bone_remodelling.parameters import ConfigurationParameters
+from bone_remodelling.rl_model.reward_calculation import calculate_similarity
+from bone_remodelling.surrogate_model.loader import (
+    load_surrogate_models,
+    predict_with_surrogates,
 )
-from bone_remodelling.surrogate_model.loader import load_surrogate_model
-from bone_remodelling.surrogate_model.neural_networks.neural_network import (
+from bone_remodelling.surrogate_model.neural_network import (
     SurrogateModel,
-)
-from bone_remodelling.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,
-)
-from bone_remodelling.surrogate_model.normalizor import (
-    normalize_data,
-    unnormalize_data,
 )
 from bone_remodelling.surrogate_model.sanitizer import sanitize_data
 from bone_remodelling.surrogate_model.splitter import splitting
-from bone_remodelling.surrogate_model.visualizer import plot_surrogate_model
+from bone_remodelling.surrogate_model.visualizer import plot_surrogate
 
 logger = logging.getLogger(__name__)
 
 
-def run_model_evaluation(
-    model_path: Path,
+def surrogates_evaluation(
     data_path: Path,
     model_class: type[SurrogateModel],
     random_state: int = 0,
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
-    model, x_mean, x_std, y_mean, y_std = _load_model(model_path, model_class)
-
-    data = forward_data_reader(data_path)
+    np.random.seed(random_state)
+    raw_path = data_path / Path("raw")
+    data = forward_data_reader(raw_path)
     if data is None:
         logger.error("Failed to load the forward model data.")
         return
@@ -47,6 +39,7 @@ def run_model_evaluation(
     if force_profiles is None or final_output_densities is None:
         logger.error("Failed to load the data.")
         return
+
     force_profiles, final_output_densities = sanitize_data(
         force_profiles,
         final_output_densities,
@@ -57,135 +50,53 @@ def run_model_evaluation(
         final_output_densities,
         random_state=random_state,
     )
-    if x_val is None or y_val is None:
-        logger.error("Failed to split the data into validation sets.")
-        return
 
-    # Normalize the validation data if normalization parameters are available
-    x_test_unnormalized = np.zeros_like(x_test)
-    if x_mean is not None and x_std is not None:
-        x_test_unnormalized = x_test.copy()
-        x_train, _, _ = normalize_data(x_train, x_mean, x_std)
-        x_val, _, _ = normalize_data(x_val, x_mean, x_std)
-        x_test, _, _ = normalize_data(x_test, x_mean, x_std)
+    # Load surrogate models
+    surrogate_path = data_path / Path("models")
+    predictors = load_surrogate_models(surrogate_path, model_class)
 
-    if y_mean is not None and y_std is not None:
-        y_train, _, _ = normalize_data(y_train, y_mean, y_std)
-        y_val, _, _ = normalize_data(y_val, y_mean, y_std)
-        y_test, _, _ = normalize_data(y_test, y_mean, y_std)
-        output_normalized = True
-    else:
-        output_normalized = False
+    # Run the predictors on the three sets
+    y_train_predicted, _ = predict_with_surrogates(predictors, x_train)
+    y_val_predicted, _ = predict_with_surrogates(predictors, x_val)
+    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test)
 
-    predicted_matrices, true_matrices = validate_surrogate_model(model, x_test, y_test)
+    # Calculate average similarity scores
+    train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method="ssim") for i in range(len(y_train_predicted))]
+    logger.info(f"Train SSIM: {np.mean(train_ssim):.4f}")
 
-    if output_normalized and y_mean is not None and y_std is not None:
-        predicted_matrices = unnormalize_data(predicted_matrices, y_mean, y_std)
-        true_matrices = unnormalize_data(true_matrices, y_mean, y_std)
-        if hasattr(predicted_matrices, "detach"):
-            predicted_matrices = predicted_matrices.detach().cpu().numpy()
-        if hasattr(true_matrices, "detach"):
-            true_matrices = true_matrices.detach().cpu().numpy()
+    val_ssim = [calculate_similarity(y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method="ssim") for i in range(len(y_val_predicted))]
+    logger.info(f"Validation SSIM: {np.mean(val_ssim):.4f}")
 
-    plot_worst_prediction(true_matrices, predicted_matrices, x_test_unnormalized)
+    test_ssim = [calculate_similarity(y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method="ssim") for i in range(len(y_test_predicted))]
+    logger.info(f"Test SSIM: {np.mean(test_ssim):.4f}")
 
-    average_similarity = average_similarity_score(
-        predicted_matrices,
-        true_matrices,
-        baseline=0.1,
-        threshold=0.5,
-        method="ssim",
+    # Visualize some results from the test set
+    worst_index = np.argmin(test_ssim)
+    plot_surrogate(
+        y_test_predicted[worst_index].squeeze(),
+        y_test_std[worst_index].squeeze(),
+        y_test[worst_index],
+        x_test[worst_index],
     )
 
-    logger.info(f"The average similarity (unnormalized) = {average_similarity}")
-
-    for _ in range(100):
-        k = np.random.randint(0, len(x_test_unnormalized))
-        sample_similarity = average_similarity_score(
-        predicted_matrices[k].squeeze(),
-        true_matrices[k],
-        baseline=0.1,
-        threshold=0.5,
-        method="ssim",
+    for k in np.random.choice(len(x_test), size=5, replace=False):
+        plot_surrogate(
+            y_test_predicted[k].squeeze(),
+            y_test_std[k].squeeze(),
+            y_test[k],
+            x_test[k],
         )
-        logger.info(f"Sample {k} similarity = {sample_similarity}")
-        plot_surrogate_model(
-            predicted_matrices=predicted_matrices[k : k + 1],
-            true_matrices=true_matrices[k : k + 1],
-            force_profiles=x_test_unnormalized[k : k + 1],
-            sample_count=1,
-            show_plot=True,
-        )
-    return
 
-
-def _load_model(
-    model_path: Path,
-    model_class: type[Module],
-) -> tuple[Module, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    model_and_normalization_params = load_surrogate_model(
-        model_path,
-        model_class,
+def cli(config: ConfigurationParameters) -> None:
+    """Command-line interface for surrogate model evaluation."""
+    surrogates_evaluation(
+        data_path=config.output_dir,
+        model_class=SurrogateModel,
+        random_state=config.seed,
     )
-    if model_and_normalization_params is None:
-        raise RuntimeError(
-            "Failed to load the surrogate model and normalization parameters.",
-        )
-    model, x_mean, x_std, y_mean, y_std = model_and_normalization_params
-    if model is None:
-        raise RuntimeError("Failed to load the surrogate model.")
-    if x_mean is None or x_std is None or y_mean is None or y_std is None:
-        raise RuntimeError("Normalization parameters are missing.")
-    return model, x_mean, x_std, y_mean, y_std
-
-
-def plot_worst_prediction(
-    true_matrices: np.ndarray,
-    predicted_matrices: np.ndarray,
-    force_profiles: np.ndarray,
-    count: int = 1,
-) -> None:
-    """Find the samples with the largest differences and plot it.
-
-    Args:
-    ----
-        true_matrices (np.ndarray): The true matrices of shape (N, 10, 10).
-        predicted_matrices (np.ndarray): The predicted matrices of shape (N, 10, 10).
-        force_profiles (np.ndarray): The force profiles of shape (N, 3, 10).
-        count (int): The number of samples to plot with the largest differences.
-
-    """
-    offset = predicted_matrices - true_matrices
-    largest_differences = np.abs(offset).mean(axis=(1, 2)).argsort()[::-1]
-
-    logger.info(f"Largest differences in predicted matrices: {largest_differences}")
-
-    bad_prediction = predicted_matrices[largest_differences[:count]]
-    bad_originals = true_matrices[largest_differences[:count]]
-    bad_forces = force_profiles[largest_differences[:count]]
-    worst_similarities = average_similarity_score(
-        bad_prediction,
-        bad_originals,
-        baseline=0.1,
-        threshold=0.5,
-        method="ssim",
-        )
-    logger.info(f"Sample {largest_differences[:count]} has the : {worst_similarities}")
-    plot_surrogate_model(
-        predicted_matrices=bad_prediction,
-        true_matrices=bad_originals,
-        force_profiles=bad_forces,
-        sample_count=count,
-        show_plot=True,
-    )
-
 
 if __name__ == "__main__":
-    model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
-    data_path = Path(__file__).parent.parent.parent / Path("data", "raw")
-    run_model_evaluation(
-        model_path=model_path,
-        data_path=data_path,
-        model_class=ReversedSurrogateModel,
-        random_state=1, # VERY IMPORTANT IT IS THE SAME AS THE MODEL TO PREVENT LEAKAGE!
-    )
+    # Developer convenience entry point.
+    # For reproducible runs, use the unified CLI (main.py).
+    config = ConfigurationParameters()
+    surrogates_evaluation(data_path=config.output_dir, model_class=SurrogateModel, random_state=config.seed)
