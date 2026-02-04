@@ -7,6 +7,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from matplotlib.axes import Axes
 
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
 from bone_remodelling.surrogate_model.loss_function import combined_loss
@@ -66,12 +67,12 @@ class SurrogateModelTrainer:
         self.best_val_loss = float("inf")
 
         plt.ion()
-        fig, ax = plt.subplots(figsize=(10, 6))
+        _, loss_axes = plt.subplots(figsize=(10, 6))
         self.training_losses: list[float] = []
         self.validation_losses: list[float] = []
         self.learning_rates: list[float] = []
 
-        epochs_no_improve = 0
+        epoch, epochs_no_improve = 0, 0
         self.best_model_state: dict[str, torch.Tensor] | None = None
         batch_count = len(self.dataloader)
         self.best_model_state = deepcopy(self.predicter.model.state_dict())
@@ -109,19 +110,25 @@ class SurrogateModelTrainer:
                 epochs_no_improve,
             )
             self.log_training_progress(epoch)
-            plot_loss(
-                self.training_losses,
-                self.validation_losses,
-                self.learning_rates,
-                axes=ax,
-            )
-            if early_stop:
-                logger.info(
-                    f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs).",
+            if not plt.fignum_exists(1):
+                plt.ion()
+                _, loss_axes = plt.subplots(figsize=(10, 6))
+            if epoch % 5 == 0:
+                plot_loss(
+                    self.training_losses,
+                    self.validation_losses,
+                    self.learning_rates,
+                    axes=loss_axes,
                 )
+            if early_stop:
+                logger.info(f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs).")
                 break
+        self.end_training(loss_axes)
 
+    def end_training(self, axes: Axes) -> None:
+        """End the training process, reload the best model, save it and show the final loss plot."""
         self.reload_and_save_best_model()
+        plot_loss(self.training_losses, self.validation_losses, self.learning_rates, axes=axes)
         plt.ioff()
         plt.show()
 
