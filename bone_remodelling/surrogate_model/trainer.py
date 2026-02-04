@@ -7,7 +7,7 @@ from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from matplotlib.axes import Axes
+from matplotlib.figure import Figure
 
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
 from bone_remodelling.surrogate_model.loss_function import combined_loss
@@ -70,7 +70,7 @@ class SurrogateModelTrainer:
         self.validation_losses: list[float] = []
         self.learning_rates: list[float] = []
 
-        epoch, epochs_no_improve, loss_axes = 0, 0, None
+        epoch, epochs_no_improve, loss_figure = 0, 0, None
         self.best_model_state: dict[str, torch.Tensor] | None = None
         batch_count = len(self.dataloader)
         self.best_model_state = deepcopy(self.predicter.model.state_dict())
@@ -109,25 +109,25 @@ class SurrogateModelTrainer:
             )
             self.log_training_progress(epoch)
             if (epoch + 1) % 5 == 0:
-                if loss_axes is None or not hasattr(loss_axes.figure, 'number'):
-                    _, loss_axes = plt.subplots(figsize=(10, 6))
+                if loss_figure is None or not hasattr(loss_figure, 'number'):
+                    loss_figure = plt.figure(num=1, figsize=(10, 6))
                 plot_loss(
                     self.training_losses,
                     self.validation_losses,
                     self.learning_rates,
-                    axes=loss_axes,
+                    axes=loss_figure.gca(),
                 )
             if early_stop:
                 logger.info(f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs).")
                 break
-        self.end_training(loss_axes)
+        self.end_training(loss_figure)
 
-    def end_training(self, axes: Axes | None) -> None:
+    def end_training(self, loss_figure: Figure | None) -> None:
         """End the training process, reload the best model, save it and show the final loss plot."""
         self.reload_and_save_best_model()
-        if axes is None or not hasattr(axes.figure, 'number'):
-            _, axes = plt.subplots(figsize=(10, 6))
-        plot_loss(self.training_losses, self.validation_losses, self.learning_rates, axes=axes)
+        if loss_figure is None or not hasattr(loss_figure, 'number'):
+            loss_figure = plt.figure(num=1, figsize=(10, 6))
+        plot_loss(self.training_losses, self.validation_losses, self.learning_rates, axes=loss_figure.gca())
 
     def warn_unexpected_loss(self, loss: torch.Tensor) -> None:
         """Check if the loss is a good value (not NaN, Inf, or non-finite)."""
