@@ -66,13 +66,11 @@ class SurrogateModelTrainer:
 
         self.best_val_loss = float("inf")
 
-        plt.ion()
-        _, loss_axes = plt.subplots(figsize=(10, 6))
         self.training_losses: list[float] = []
         self.validation_losses: list[float] = []
         self.learning_rates: list[float] = []
 
-        epoch, epochs_no_improve = 0, 0
+        epoch, epochs_no_improve, loss_axes = 0, 0, None
         self.best_model_state: dict[str, torch.Tensor] | None = None
         batch_count = len(self.dataloader)
         self.best_model_state = deepcopy(self.predicter.model.state_dict())
@@ -110,10 +108,10 @@ class SurrogateModelTrainer:
                 epochs_no_improve,
             )
             self.log_training_progress(epoch)
-            if not plt.fignum_exists(1):
-                plt.ion()
-                _, loss_axes = plt.subplots(figsize=(10, 6))
-            if epoch % 5 == 0:
+            if (epoch + 1) % 5 == 0:
+                if loss_axes is None or not hasattr(loss_axes.figure, 'number'):
+                    plt.ion()
+                    _, loss_axes = plt.subplots(figsize=(10, 6))
                 plot_loss(
                     self.training_losses,
                     self.validation_losses,
@@ -125,9 +123,11 @@ class SurrogateModelTrainer:
                 break
         self.end_training(loss_axes)
 
-    def end_training(self, axes: Axes) -> None:
+    def end_training(self, axes: Axes | None) -> None:
         """End the training process, reload the best model, save it and show the final loss plot."""
         self.reload_and_save_best_model()
+        if axes is None or not hasattr(axes.figure, 'number'):
+            _, axes = plt.subplots(figsize=(10, 6))
         plot_loss(self.training_losses, self.validation_losses, self.learning_rates, axes=axes)
         plt.ioff()
         plt.show()
