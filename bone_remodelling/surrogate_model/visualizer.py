@@ -14,18 +14,15 @@ from bone_remodelling.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
 
-def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates: list[float], axes: matplotlib.axes.Axes) -> None:
+def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates: list[float]) -> None:
     """Plot the training and validation loss history with learning rate overlay."""
     if not train_losses or not val_losses or not learning_rates:
         logger.error("One or more training history lists are empty.")
         return
 
-    # Remove the previous axes content
-    fig = axes.figure
-    for ax in fig.get_axes():
-        if ax is not axes:
-            ax.remove()
-    axes.clear()
+    # Build and clear the plot
+    axes = plt.figure(num=1, figsize=(10, 6)).gca()
+    axes.cla()
 
     # Plot Losses on the primary Y-axis
     line1, = axes.plot(train_losses, label="Train Loss", color="tab:blue")
@@ -48,7 +45,8 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
     axes.set_title("Training Progress: Loss & Learning Rate", fontsize=12, fontweight='bold')
     axes.set_xlabel("Epoch")
     plt.tight_layout()
-    plt.show()
+    plt.draw()
+    plt.pause(0.001)
 
 @dataclass
 class PlottingParameters:
