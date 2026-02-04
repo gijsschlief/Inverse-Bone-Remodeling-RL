@@ -46,8 +46,9 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
     legend_labels = [str(line.get_label()) for line in lines]
     axes.legend(lines, legend_labels, loc="upper right")
     axes.set_title("Training Progress: Loss & Learning Rate", fontsize=12, fontweight='bold')
-    axes.figure.canvas.draw_idle()
-    plt.pause(0.1)
+    axes.set_xlabel("Epoch")
+    plt.tight_layout()
+    plt.show()
 
 @dataclass
 class PlottingParameters:

@@ -110,7 +110,6 @@ class SurrogateModelTrainer:
             self.log_training_progress(epoch)
             if (epoch + 1) % 5 == 0:
                 if loss_axes is None or not hasattr(loss_axes.figure, 'number'):
-                    plt.ion()
                     _, loss_axes = plt.subplots(figsize=(10, 6))
                 plot_loss(
                     self.training_losses,
@@ -129,8 +128,6 @@ class SurrogateModelTrainer:
         if axes is None or not hasattr(axes.figure, 'number'):
             _, axes = plt.subplots(figsize=(10, 6))
         plot_loss(self.training_losses, self.validation_losses, self.learning_rates, axes=axes)
-        plt.ioff()
-        plt.show()
 
     def warn_unexpected_loss(self, loss: torch.Tensor) -> None:
         """Check if the loss is a good value (not NaN, Inf, or non-finite)."""
