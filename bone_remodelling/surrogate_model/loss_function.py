@@ -20,12 +20,15 @@ def ssim_loss(estimated_output: Tensor, reference_output: Tensor) -> Tensor:
     estimated_output = estimated_output.unsqueeze(1)
     reference_output = reference_output.unsqueeze(1)
 
-    return 1 - ssim(
+    data_range = (reference_output.max() - reference_output.min()).item()
+    ssim_value = ssim(
         estimated_output,
         reference_output,
         win_size=3,
-        data_range=reference_output.max() - reference_output.min(),
+        data_range=data_range, # type: ignore
+        size_average=True,
     )
+    return 1.0 - ssim_value # type: ignore
 
 
 def combined_loss(
