@@ -21,8 +21,8 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
         return
 
     # Build and clear the plot
-    axes = plt.figure(num=1, figsize=(10, 6)).gca()
-    axes.cla()
+    fig = plt.figure(num=1, figsize=(10, 6), clear=True)
+    axes = fig.add_subplot(1, 1, 1)
 
     # Plot Losses on the primary Y-axis
     line1, = axes.plot(train_losses, label="Train Loss", color="tab:blue")
