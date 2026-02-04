@@ -46,6 +46,7 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
     axes.set_xlabel("Epoch")
     plt.tight_layout()
     plt.show(block=False)
+    plt.pause(0.1)
 
 @dataclass
 class PlottingParameters:

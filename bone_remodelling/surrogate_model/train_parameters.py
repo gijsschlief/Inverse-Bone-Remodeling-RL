@@ -23,6 +23,7 @@ class SurrogateTrainParameters:
     log_interval: int = 10
     log_all_for_first_epochs: int = 10
     shuffle_data: bool = True
+    plot_interval: int = 5
 
     def __post_init__(self) -> None:
         """Ensure that the model path exists."""

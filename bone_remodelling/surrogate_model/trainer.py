@@ -106,15 +106,20 @@ class SurrogateModelTrainer:
                 epochs_no_improve,
             )
             self.log_training_progress(epoch)
-            plot_loss(
-                self.training_losses,
-                self.validation_losses,
-                self.learning_rates,
-            )
+            if (epoch + 1) % self.train_parameters.plot_interval == 0:
+                plot_loss(
+                    self.training_losses,
+                    self.validation_losses,
+                    self.learning_rates,
+                )
             if early_stop:
                 logger.info(f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs).")
                 break
         self.reload_and_save_best_model()
+        plot_loss(
+                self.training_losses,
+                self.validation_losses,
+                self.learning_rates)
 
     def warn_unexpected_loss(self, loss: torch.Tensor) -> None:
         """Check if the loss is a good value (not NaN, Inf, or non-finite)."""
