@@ -9,6 +9,7 @@ import torch
 from bone_remodelling.surrogate_model.neural_network import (
     SurrogateModel,
 )
+from bone_remodelling.surrogate_model.train_parameters import SurrogateTrainParameters
 
 logger = logging.getLogger(__name__)
 
@@ -33,27 +34,25 @@ class SurrogatePredictor:
 
     def __init__(
         self,
-        model_path: Path,
         model_class: type[torch.nn.Module],
+        train_parameters: SurrogateTrainParameters,
     ) -> None:
         """Initialize the loader with the path to the model and the model class.
 
         Args:
         ----
-            model_path (str): Path to the .pth file containing the model weights.
-            model_class (torch.nn.Module): The class of the model to be loaded.
+            model_class (Type[torch.nn.Module]): The class of the model to be loaded.
+            train_parameters (SurrogateTrainParameters): Training parameters including model path and device.
 
         """
-        self.model_path = model_path
         self.model: torch.nn.Module = model_class()
+        self.train_parameters = train_parameters
+        self.model.to(self.train_parameters.device)
 
         self.x_mean: np.ndarray | None = None
         self.x_std: np.ndarray | None = None
         self.y_mean: np.ndarray | None = None
         self.y_std: np.ndarray | None = None
-
-        self.load_state_dictionary()
-        self.load_normalization_params()
 
     def __call__(self, x_raw: np.ndarray) -> np.ndarray:
         """Call the object like a function: predictor(data)."""
@@ -61,11 +60,16 @@ class SurrogatePredictor:
 
     def __repr__(self) -> str:
         """Show content of the SurrogatePredictor."""
-        return f"SurrogatePredictor(model={self.model_path.name}, normalized={self.x_mean is not None})"
+        return f"SurrogatePredictor(model={self.train_parameters.model_path.name}, normalized={self.x_mean is not None})"
+
+    def load_model(self) -> None:
+        """Load the model from the specified path."""
+        self.load_state_dictionary()
+        self.load_normalization_params()
 
     def load_state_dictionary(self) -> None:
         """Load the state dictionary and set model to evaluation model."""
-        self.model.load_state_dict(torch.load(self.model_path, map_location="cpu", weights_only=False))
+        self.model.load_state_dict(torch.load(self.train_parameters.model_path, map_location=self.train_parameters.device, weights_only=False))
         self.model.eval()
 
     def load_normalization_params(self) -> None:
@@ -76,87 +80,146 @@ class SurrogatePredictor:
             model_path (Path): Path to the .pth file containing the model weights.
 
         """
-        normalization_path = self.model_path.with_suffix(".npz")
-        if normalization_path.exists():
-            data = np.load(normalization_path)
-            self.x_mean = data.get("X_mean")
-            self.x_std = data.get("X_std")
-            self.y_mean = data.get("y_mean")
-            self.y_std = data.get("y_std")
+        normalization_path = self.train_parameters.model_path.with_suffix(".npz")
+
+        if not normalization_path.exists():
+                    logger.warning(f"Normalization file not found at {normalization_path}. Using defaults.")
+                    return
+
+        with np.load(normalization_path) as data:
+            self.x_mean = data.get("x_mean").copy() if "x_mean" in data else None
+            self.x_std = data.get("x_std").copy() if "x_std" in data else None
+            self.y_mean = data.get("y_mean").copy() if "y_mean" in data else None
+            self.y_std = data.get("y_std").copy() if "y_std" in data else None
+
+    def load_history(self) -> dict[str, np.ndarray]:
+        """Load training history associated with the model.
+
+        Returns
+        -------
+            dict[str, np.ndarray]: A dictionary containing training history arrays.
+
+        """
+        history_path = self.train_parameters.model_path.with_suffix(".npz")
+
+        if not history_path.exists():
+            logger.warning(f"History file not found at {history_path}. Returning empty history.")
+            return {}
+
+        with np.load(history_path) as data:
+            return {key: data[key].copy() for key in data.files if key not in {"x_mean", "x_std", "y_mean", "y_std"}}
 
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         """Run forward estimation on the given data points.
 
         Args:
         ----
-            x_raw (torch.Tensor): Input data points for the model.
+            x_raw (np.ndarray): Input data points for the model.
 
         Returns:
         -------
-            torch.Tensor: Model predictions.
+            np.ndarray: Model predictions.
 
         """
         if self.x_mean is None or self.x_std is None:
-            x_normalised = torch.tensor(x_raw, dtype=torch.float32)
+            x_normalised = torch.tensor(x_raw, dtype=torch.float32).to(self.train_parameters.device)
         else:
-            x_normalised = self.normalize_input(
-                x_raw,
-                self.x_mean,
-                self.x_std,
-            )
-            x_normalised = torch.tensor(x_normalised, dtype=torch.float32)
+            x_normalised_array = self.normalize_input(x_raw)
+            x_normalised = torch.tensor(x_normalised_array, dtype=torch.float32).to(self.train_parameters.device)
         with torch.no_grad():
-            y_normalised = self.model.forward(x_normalised)
+            y_normalised = self.model(x_normalised)
         if self.y_mean is None or self.y_std is None:
-            return y_normalised.numpy()
-        return self.unnormalize_output(
-            y_normalised.numpy(),
-            self.y_mean,
-            self.y_std,
-        )
+            return y_normalised.cpu().numpy()
+        return self.unnormalize_output(y_normalised.cpu().numpy())
 
-    @staticmethod
-    def normalize_input(
+    def set_input_normalize(
+        self,
         x_raw: np.ndarray,
-        x_mean: np.ndarray,
-        x_std: np.ndarray,
-    ) -> torch.Tensor:
-        """Normalize input data.
-
-        Args:
-        ----
-            x_raw (np.ndarray): Raw input data.
-            x_mean (np.ndarray): Mean for normalization.
-            x_std (np.ndarray): Standard deviation for normalization.
-
-        Returns:
-        -------
-            torch.Tensor: Normalized input data.
-
-        """
-        x_normalized = (x_raw - x_mean) / x_std
-        return torch.tensor(x_normalized, dtype=torch.float32)
-
-    @staticmethod
-    def unnormalize_output(
-        y_normalized: np.ndarray,
-        y_mean: np.ndarray,
-        y_std: np.ndarray,
     ) -> np.ndarray:
-        """Unnormalize output data.
+        """Set normalization parameters and normalize input data."""
+        self.x_mean = np.mean(x_raw, axis=0)
+        self.x_std = np.std(x_raw, axis=0) + 1e-8  # Prevent division by zero
+        return (x_raw - self.x_mean) / self.x_std
 
-        Args:
-        ----
-            y_normalized (np.ndarray): Normalized output data.
-            y_mean (np.ndarray): Mean for unnormalization.
-            y_std (np.ndarray): Standard deviation for unnormalization.
+    def set_output_normalize(
+        self,
+        y_raw: np.ndarray,
+    ) -> np.ndarray:
+        """Set normalization parameters and normalize output data."""
+        self.y_mean = np.mean(y_raw, axis=0)
+        self.y_std = np.std(y_raw, axis=0) + 1e-8  # Prevent division by zero
+        return (y_raw - self.y_mean) / self.y_std
 
-        Returns:
-        -------
-            np.ndarray: Unnormalized output data.
+    def normalize_input(
+        self,
+        x_raw: np.ndarray,
+    ) -> np.ndarray:
+        """Normalize input data."""
+        if self.x_mean is None or self.x_std is None:
+            logger.warning("Input normalization parameters are not set. Returning raw input.")
+            return x_raw
+        return (x_raw - self.x_mean) / self.x_std
 
-        """
-        return y_normalized * y_std + y_mean
+    def normalize_output(
+        self,
+        y_raw: np.ndarray,
+    ) -> np.ndarray:
+        """Normalize output data."""
+        if self.y_mean is None or self.y_std is None:
+            logger.warning("Output normalization parameters are not set. Returning raw output.")
+            return y_raw
+        return (y_raw - self.y_mean) / self.y_std
+
+    def unnormalize_input(
+        self,
+        x_normalized: np.ndarray,
+    ) -> np.ndarray:
+        """Unnormalize input data."""
+        if self.x_mean is None or self.x_std is None:
+            logger.warning("Input normalization parameters are not set. Returning normalized input.")
+            return x_normalized
+        return x_normalized * self.x_std + self.x_mean
+
+    def unnormalize_output(
+        self,
+        y_normalized: np.ndarray,
+    ) -> np.ndarray:
+        """Unnormalize output data."""
+        if self.y_mean is None or self.y_std is None:
+            logger.warning("Output normalization parameters are not set. Returning normalized output.")
+            return y_normalized
+        return y_normalized * self.y_std + self.y_mean
+
+    def save_model_with_versioning(self, path: Path, history: dict[str, list[float]] | None = None) -> None:
+        """Save the model to a file, ensuring no overwriting of existing files."""
+        try:
+            if self.train_parameters.model_path.exists():
+                base_path = self.train_parameters.model_path.with_suffix("")
+                ext = self.train_parameters.model_path.suffix
+                counter = 1
+                while Path(f"{base_path}_{counter}{ext}").exists():
+                    counter += 1
+                path = Path(f"{base_path}_{counter}{ext}")
+        except OSError as e:
+            logger.warning(f"Safely saving model failed ({e}), overwriting existing file.")
+        self.store_model_parameters(path, history=history)
+
+    def store_model_parameters(self, path: Path, history: dict[str, list[float]] | None = None) -> None:
+        """Store the model parameters to the specified path."""
+        torch.save(self.model.state_dict(), path)
+        save_dict: dict[str, np.ndarray] = {}
+        if self.x_mean is not None:
+            save_dict['x_mean'] = self.x_mean
+        if self.x_std is not None:
+            save_dict['x_std'] = self.x_std
+        if self.y_mean is not None:
+            save_dict['y_mean'] = self.y_mean
+        if self.y_std is not None:
+            save_dict['y_std'] = self.y_std
+        if history is not None:
+            for key, values in history.items():
+                save_dict[key] = np.array(values)
+        np.savez_compressed(file=path.with_suffix(".npz"), **save_dict) # type: ignore
 
 
 def load_surrogate_models(
@@ -167,6 +230,8 @@ def load_surrogate_models(
     logger.info(f"Loading all models from {model_folder}")
 
     predictors: list[SurrogatePredictor] = []
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+
     for model_path in model_folder.glob("*.pth"):
         if not model_path.is_file() or model_path.stat().st_size == 0:
             logger.warning(f"Skipping invalid file: {model_path}")
@@ -174,8 +239,11 @@ def load_surrogate_models(
 
         try:
             predictor = SurrogatePredictor(
-                model_path=model_path,
                 model_class=model_class,
+                train_parameters=SurrogateTrainParameters(
+                    model_path=model_path,
+                    device=torch.device(device),
+                ),
             )
             predictors.append(predictor)
         except (RuntimeError, ValueError) as e:
@@ -200,5 +268,12 @@ def predict_with_surrogates(
 
 if __name__ == "__main__":
     model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
-    predictor = SurrogatePredictor(model_path, SurrogateModel)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    predictor = SurrogatePredictor(
+        model_class=SurrogateModel,
+        train_parameters=SurrogateTrainParameters(
+            model_path=model_path,
+            device=torch.device(device),
+        ),
+    )
     logger.info(f"Loaded model: {predictor}")

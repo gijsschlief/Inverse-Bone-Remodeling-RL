@@ -7,41 +7,6 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 
-def sanitize_matrices(
-    predicted_matrices: np.ndarray,
-    true_matrices: np.ndarray,
-) -> tuple[np.ndarray, np.ndarray]:
-    """Sanitize the predicted and true matrices by filtering out any entries that contain NaN values."""
-    if not isinstance(predicted_matrices, np.ndarray) or not isinstance(
-        true_matrices,
-        np.ndarray,
-    ):
-        logger.error(
-            "Both predicted_matrices and true_matrices must be lists of numpy arrays.",
-        )
-        raise ValueError(
-            "Both predicted_matrices and true_matrices must be lists of numpy arrays.",
-        )
-
-    filtered_predicted = []
-    filtered_true = []
-    nan_count = 0
-
-    for pred, true in zip(predicted_matrices, true_matrices):
-        if not np.isnan(pred).any() and not np.isnan(true).any():
-            filtered_predicted.append(pred)
-            filtered_true.append(true)
-        else:
-            nan_count += 1
-
-    if nan_count > 0:
-        logger.error(
-            f"Found {nan_count} entries with NaN values in predicted or true matrices. These entries were filtered out.",
-        )
-
-    return np.array(filtered_predicted), np.array(filtered_true)
-
-
 def sanitize_data(
     x_data: np.ndarray,
     y_data: np.ndarray,

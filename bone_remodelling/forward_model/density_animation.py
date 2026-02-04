@@ -161,9 +161,9 @@ def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
         help="Type of animation to generate.",
     )
     args = parser.parse_args(remaining_args)
-    run(config=config, type=args.type)
+    run_animation(config=config, type=args.type)
 
-def run(config: ConfigurationParameters, type: str = "random") -> None:
+def run_animation(config: ConfigurationParameters, type: str = "random") -> None:
     """Run the density animations to create to GIFS."""
     logger.info("Starting density animation generation.")
     initial_density = np.ones((config.mesh_top_resolution, config.mesh_side_resolution)) * config.start_density
@@ -209,4 +209,4 @@ if __name__ == "__main__":
     config = ConfigurationParameters(
         output_dir=Path(__file__).resolve().parent.parent.parent / Path("data"),
     )
-    run(config=config)
+    run_animation(config=config)
