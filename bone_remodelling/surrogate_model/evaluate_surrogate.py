@@ -52,7 +52,7 @@ def surrogates_evaluation(
     )
 
     # Load surrogate models
-    surrogate_path = data_path / Path("models")
+    surrogate_path = data_path / Path("surrogate_models")
     predictors = load_surrogate_models(surrogate_path, model_class)
 
     # Run the predictors on the three sets
@@ -87,7 +87,7 @@ def surrogates_evaluation(
             x_test[k],
         )
 
-def cli(config: ConfigurationParameters) -> None:
+def cli(config: ConfigurationParameters, args: list[str]) -> None:
     """Command-line interface for surrogate model evaluation."""
     surrogates_evaluation(
         data_path=config.output_dir,
@@ -98,5 +98,5 @@ def cli(config: ConfigurationParameters) -> None:
 if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
-    config = ConfigurationParameters()
+    config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
     surrogates_evaluation(data_path=config.output_dir, model_class=SurrogateModel, random_state=config.seed)

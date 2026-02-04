@@ -37,8 +37,8 @@ def main() -> None:
     parser.add_argument(
         "module",
         type=str,
-        choices=["animation", "generate_data", "data_processing"],
-        help="The module to run. Choices are: animation, generate_data, data_processing.",
+        choices=["animation", "generate_data", "surrogate_training", "surrogate_evaluation"],
+        help="The module to run. Choices are: animation, generate_data, surrogate_training, surrogate_evaluation.",
     )
     args, remaining_args = parser.parse_known_args()
 
@@ -61,7 +61,7 @@ def main() -> None:
 
     elif args.module == "surrogate_evaluation":
         from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
-        surrogate_evaluation(configuration_parameters)
+        surrogate_evaluation(configuration_parameters, remaining_args)
 
     else:
         raise RuntimeError(f"Unknown module: {args.module}")

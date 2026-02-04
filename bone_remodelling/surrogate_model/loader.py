@@ -263,17 +263,3 @@ def predict_with_surrogates(
     mean_prediction = np.mean(predictions, axis=0)
     std_prediction = np.std(predictions, axis=0)
     return mean_prediction, std_prediction
-
-
-
-if __name__ == "__main__":
-    model_path = Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth")
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    predictor = SurrogatePredictor(
-        model_class=SurrogateModel,
-        train_parameters=SurrogateTrainParameters(
-            model_path=model_path,
-            device=torch.device(device),
-        ),
-    )
-    logger.info(f"Loaded model: {predictor}")

@@ -105,7 +105,7 @@ def cli(
 
     """
     data_file_path = configuration_parameters.output_dir / Path("raw")
-    model_path = configuration_parameters.output_dir / Path("models", "surrogate.pth")
+    model_path = configuration_parameters.output_dir / Path("surrogate_models")
 
     parser = argparse.ArgumentParser(description="Train the surrogate model.")
     parser.add_argument(
@@ -122,7 +122,7 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
-    model_path = config.output_dir / Path("models", "surrogate.pth")
+    model_path = config.output_dir / Path("surrogate_models")
     data_file_path = config.output_dir / Path("raw")
     run_surrogate_training(data_file_path, model_path, random_state=config.seed, ensemble_seed=config.seed)
     logger.info("All training runs completed.")
