@@ -1,8 +1,6 @@
 """Data generator for bone remodeling simulations."""
 
 import argparse
-import datetime
-import json
 import logging
 import os
 
@@ -22,6 +20,9 @@ from fenics import LogLevel, set_log_level
 
 from bone_remodelling.forward_data.force_profile_generator import (
     ForceProfileGenerator,
+)
+from bone_remodelling.forward_data.forward_data_manager import (
+    ForwardDataManager,
 )
 from bone_remodelling.forward_model.main import (
     DensitySimulation,
@@ -46,34 +47,22 @@ def init_worker(simulation_parameters: SimulationParameters) -> None:
     _profile_length = simulation_parameters.force_profile.shape[1]
 
 
-def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> list[dict]:
+def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Run a batch of simulations in a worker process."""
-    results = []
+    force_profiles = []
+    final_densities = []
+
     for i, force_profile in worker_args:
         try:
             _worker_sim.reset()
             _worker_sim.update_force_profile(force_profile)
             _worker_sim.run()
             density = _worker_sim.get_density()
-            results.append(
-                {
-                    "serial_number": i + 1,
-                    "force_profile": force_profile.tolist(),
-                    "final_output_density": density.tolist(),
-                },
-            )
+            force_profiles.append(force_profile)
+            final_densities.append(density)
         except (RuntimeError, ValueError) as e:  # noqa: PERF203
             logger.error(f"Error processing sample {i + 1}: {e}")
-            results.append(
-                {
-                    "serial_number": i + 1,
-                    "force_profile": force_profile.tolist(),
-                    "final_output_density": None,
-                    "error": str(e),
-                },
-            )
-    return results
-
+    return force_profiles, final_densities
 
 class TrainingDataGenerator:
     """Class for generating training data for bone remodeling simulations."""
@@ -82,14 +71,12 @@ class TrainingDataGenerator:
         self,
         force_profiles: np.ndarray,
         simulation_parameters: SimulationParameters,
-        output_dir: Path,
+        forward_data_manager: ForwardDataManager,
     ) -> None:
         """Initialize the TrainingDataGenerator."""
         self.force_profiles: np.ndarray = force_profiles
         self.num_samples = force_profiles.shape[0]
-        self.output_dir: Path = output_dir.resolve()
-        if not self.output_dir.exists():
-            self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.forward_data_manager = forward_data_manager
         self.simulation_parameters = simulation_parameters
 
         self._validate_input()
@@ -98,20 +85,12 @@ class TrainingDataGenerator:
         """Validate the input parameters."""
         if not isinstance(self.force_profiles, np.ndarray):
             raise TypeError("force_profiles must be of type numpy ndarray.")
-        if not isinstance(self.output_dir, Path):
-            raise TypeError("output_dir must be of type Path")
-        if not self.output_dir.exists():
-            raise ValueError(f"Output directory {self.output_dir} does not exist.")
         if not isinstance(self.simulation_parameters, SimulationParameters):
             raise TypeError(
                 "simulation_parameters must be of type SimulationParameters.",
             )
 
-    def generate_parallel(
-        self,
-        max_chunk_size: int = 100,
-        force_profile_name: str = "Undefined",
-    ) -> list[dict]:
+    def generate_parallel(self, max_chunk_size: int = 100) -> None:
         """Generate training data in parallel."""
         num_workers = min(cpu_count(), self.num_samples)
         all_indices = list(range(self.num_samples))
@@ -136,7 +115,6 @@ class TrainingDataGenerator:
         ]
 
         init_args = (self.simulation_parameters,)
-        results = []
 
         ctx = get_context("fork" if os.name != "nt" else "spawn")
         with ProcessPoolExecutor(
@@ -151,19 +129,17 @@ class TrainingDataGenerator:
 
             completed_samples = 0
             for fut in as_completed(futures):
-                batch_results = fut.result()
-                results.extend(batch_results)
-                completed_samples += len(batch_results)
+                batch_force_profiles, batch_final_densities = fut.result()
+                self.forward_data_manager.save_data(batch_force_profiles, batch_final_densities)
+                completed_samples += len(batch_force_profiles)
                 pct = completed_samples / self.num_samples * 100
                 bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
                 logger.info(f"Progress: [{bar}] {pct:5.1f}%")
 
-        self._save_results(results, force_profile_name)
-        return results
-
-    def generate_serial(self, force_profile_name: str = "Undefined") -> list[dict]:
+    def generate_serial(self, save_threshold: int = 1000) -> None:
         """Generate training data serially."""
-        results = []
+        force_profiles = []
+        final_densities = []
 
         simulation = DensitySimulation(parameters=self.simulation_parameters)
         for i, profile in enumerate(self.force_profiles):
@@ -172,44 +148,20 @@ class TrainingDataGenerator:
                 simulation.update_force_profile(profile)
                 simulation.run()
                 density = simulation.get_density()
-                results.append(
-                    {
-                        "serial_number": i + 1,
-                        "force_profile": profile.tolist(),
-                        "final_output_density": density.tolist(),
-                    },
-                )
+                force_profiles.append(profile)
+                final_densities.append(density)
             except (RuntimeError, ValueError) as e:
                 logger.error(f"Error processing sample {i + 1}: {e}")
-                results.append(
-                    {
-                        "serial_number": i + 1,
-                        "force_profile": profile.tolist(),
-                        "final_output_density": None,
-                        "error": str(e),
-                    },
-                )
             # Progress bar
             pct = (i + 1) / self.num_samples * 100
             bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
             logger.info(f"Progress: [{bar}] {pct:5.1f}%")
-
-        self._save_results(results, force_profile_name)
-        return results
-
-    def _save_results(self, results: list[dict], force_profile_name: str) -> None:
-        """Save the results to a JSON file."""
-        timestamp = datetime.datetime.now(tz=datetime.timezone.utc).strftime(
-            "%m%d_%H%M",
-        )
-        filepath = (
-            self.output_dir
-            / f"training_{force_profile_name}_{self.num_samples}_samples_{timestamp}.json"
-        )
-
-        with Path.open(filepath, "w") as f:
-            json.dump(results, f, indent=4)
-        logger.info(f"Training data saved to {filepath}")
+            if len(force_profiles) >= save_threshold:
+                self.forward_data_manager.save_data(force_profiles, final_densities)
+                force_profiles = []
+                final_densities = []
+        if force_profiles:
+            self.forward_data_manager.save_data(force_profiles, final_densities)
 
 def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     """CLI entry point for training data generation."""
@@ -259,6 +211,8 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
             num_samples=samples,
         )
         directory = directory / Path("triangular")
+    forward_data_manager = ForwardDataManager(storage_path=directory)
+
     if force_mask is None or force_profiles is None:
         logger.error("Failed to generate force profiles or force mask.")
         return
@@ -277,18 +231,15 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
         simulation_parameters=simulation_parameters,
-        output_dir=directory,
+        forward_data_manager=forward_data_manager,
     )
     start_time = time.time()
     try:
-        _ = data_generator.generate_parallel(
-            max_chunk_size=500,
-            force_profile_name="final_run",
-        )
+        data_generator.generate_parallel(max_chunk_size=500)
     except Exception:  # noqa: BLE001
         logger.warning("An error occurred during parallel data generation", exc_info = True)
         logger.warning("Continuing with serialised data generation instead (note: significantly slower)")
-        _ = data_generator.generate_serial()
+        data_generator.generate_serial()
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")

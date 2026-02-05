@@ -13,12 +13,12 @@ class SurrogateTrainParameters:
     model_path: Path
     device: torch.device
     epochs: int = 1_000
-    batch_size: int = 32
+    batch_size: int = 256
     learning_rate: float = 1e-4
-    patience_lr_scheduler: int = 25
+    patience_lr_scheduler: int = 10
     factor_lr_scheduler: float = 0.5
-    cooldown_lr_scheduler: int = 10
-    patience: int = 50
+    cooldown_lr_scheduler: int = 0
+    patience: int = 20
     min_delta: float = 1e-4
     log_interval: int = 10
     log_all_for_first_epochs: int = 10
