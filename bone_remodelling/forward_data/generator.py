@@ -92,7 +92,8 @@ class TrainingDataGenerator:
 
     def generate_parallel(self, max_chunk_size: int = 100) -> None:
         """Generate training data in parallel."""
-        num_workers = min(cpu_count(), self.num_samples)
+        cpus_left: int = 2
+        num_workers = min(cpu_count() - cpus_left, self.num_samples)
         all_indices = list(range(self.num_samples))
 
         chunk_size = min(
