@@ -52,8 +52,8 @@ def main() -> None:
     parser.add_argument(
         "module",
         type=str,
-        choices=["animation", "generate_data", "surrogate_training", "surrogate_evaluation"],
-        help="The module to run. Choices are: animation, generate_data, surrogate_training, surrogate_evaluation.",
+        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate"],
+        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate.",
     )
     args, remaining_args = parser.parse_known_args()
     configuration_parameters = build_configuration_parameters()
@@ -64,19 +64,19 @@ def main() -> None:
 
     # Dispatch to the appropriate module based on the argument
     try:
-        if args.module == "animation":
+        if args.module == "animate_forward_model":
             from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
             generate_animation(configuration_parameters, remaining_args)
 
-        elif args.module == "generate_data":
+        elif args.module == "generate_forward_data":
             from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
             generate_data(configuration_parameters, remaining_args)
 
-        elif args.module == "surrogate_training":
+        elif args.module == "train_surrogate":
             from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: I001, PLC0415
             surrogate_training(configuration_parameters, remaining_args)
 
-        elif args.module == "surrogate_evaluation":
+        elif args.module == "evaluate_surrogate":
             from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
             surrogate_evaluation(configuration_parameters, remaining_args)
 
