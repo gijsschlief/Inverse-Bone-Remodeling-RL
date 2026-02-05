@@ -68,6 +68,7 @@ def main() -> None:
 
 # TODO: Create a logfile which contains outputs of the log for each run.
 # TODO: Append on the fly datageneration
+# TODO: Hyperparameter tuning for surrogate model
 
 
 if __name__ == "__main__":
