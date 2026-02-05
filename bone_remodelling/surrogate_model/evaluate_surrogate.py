@@ -6,7 +6,9 @@ from pathlib import Path
 
 import numpy as np
 
-from bone_remodelling.forward_data.reader import forward_data_reader
+from bone_remodelling.forward_data.forward_data_manager import (
+    ForwardDataManager,
+)
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.surrogate_model.loader import (
@@ -33,7 +35,7 @@ def surrogates_evaluation(
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     np.random.seed(random_state)
     raw_path = data_path / Path("raw")
-    data = forward_data_reader(raw_path)
+    data = ForwardDataManager(raw_path).load_directory()
     if data is None:
         logger.error("Failed to load the forward model data.")
         return
