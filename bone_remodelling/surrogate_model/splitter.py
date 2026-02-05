@@ -5,7 +5,9 @@ from typing import NamedTuple
 
 import numpy as np
 
-from bone_remodelling.forward_data.reader import forward_data_reader
+from bone_remodelling.forward_data.forward_data_manager import (
+    ForwardDataManager,
+)
 
 RANDOM_STATE_MAX = 10000
 
@@ -116,14 +118,14 @@ def splitting(
 
 
 def load_and_split_data(
-    path_pattern: Path,
+    forward_data_manager: ForwardDataManager,
     random_state: int = np.random.randint(0, RANDOM_STATE_MAX),
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """Load and preprocess data using forward_data_reader, which handles directories and checks.
 
     Args:
     ----
-        path_pattern (Path): Path to the JSON file or directory.
+        forward_data_manager: Instance of ForwardDataManager to handle data loading.
         random_state (int): Random seed for reproducibility (default is a random integer).
 
     Returns:
@@ -142,7 +144,7 @@ def load_and_split_data(
         AssertionError: If the loaded data does not match expected dimensions.
 
     """
-    result = forward_data_reader(path_pattern)
+    result = forward_data_manager.load_directory()
     if result is None:
         raise ValueError("Data loading failed. Please check the input path.")
     _, force_profiles, final_output_densities = result

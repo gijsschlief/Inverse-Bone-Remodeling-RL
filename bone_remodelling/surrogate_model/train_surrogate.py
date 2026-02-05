@@ -7,6 +7,7 @@ from pathlib import Path
 import numpy as np
 import torch
 
+from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
 from bone_remodelling.surrogate_model.neural_network import SurrogateModel
@@ -60,6 +61,8 @@ def run_surrogate_training(
     ensemble_seed: int,
 ) -> None:
     """Train and evaluate the surrogate model."""
+    forward_data_manager = ForwardDataManager(data_file_path)
+
     logger.info(f"Loading data from {data_file_path}")
     (
         x_train_np,
@@ -68,7 +71,7 @@ def run_surrogate_training(
         y_train_np,
         y_val_np,
         y_test_np,
-    ) = load_and_split_data(data_file_path, random_state=random_state)
+    ) = load_and_split_data(forward_data_manager, random_state=random_state)
 
     x_train_np, y_train_np, x_val_np, y_val_np = rescramble_for_ensemble(
         x_train_np,

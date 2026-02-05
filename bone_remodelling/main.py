@@ -86,7 +86,6 @@ def main() -> None:
         logger.error(f"An error occurred while running the module {args.module}: {e}")
         raise
     logger.info(f"--- Finished Module: {args.module} ---")
-# TODO: Append on the fly datageneration
 # TODO: Hyperparameter tuning for surrogate model
 
 
