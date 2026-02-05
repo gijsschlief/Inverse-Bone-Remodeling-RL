@@ -43,4 +43,4 @@ COPY . .
 RUN poetry install --no-interaction --no-ansi
 
 # Set the default command to the CLI app defined in your toml
-ENTRYPOINT ["bone-remodelling/main.py"]
+ENTRYPOINT ["python3", "bone_remodelling/main.py"]
