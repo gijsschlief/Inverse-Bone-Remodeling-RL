@@ -62,6 +62,9 @@ The goal of this thesis is to explore how reinforcement learning can be applied 
     ```bash   
     conda install -c conda-forge fenics=2019.1.0
     ```
+## Running with Docker
+1. Build: `docker build -t bone-rl-image .`
+2. Run: `docker run --rm -v $(pwd)/data:/app/data bone-rl-image`
 
 ## Usage
 Please be aware that all code has currently been implemented using absolute paths that point to local drives, which need to be changed inside the source code to a new location!
@@ -79,6 +82,7 @@ The main scripts that contain the important steps taken in the thesis are the fi
 INVERSE-BONE-REMODELING-RL/
 ├── delft_blue/         # .sh files for running modules on DelftBlue supercomputer
 ├── bone_remodelling/   # All source code
+│   ├── analysis/       # Analysis tools and plots
 │   ├── forward_data/   # Data generation and visualisation
 │   ├── forward_model/  # Simulation environment (Forward Model)
 │   ├── inverse_model/  # Simulation environment (Inverse Baseline)
