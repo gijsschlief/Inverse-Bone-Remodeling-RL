@@ -1,12 +1,12 @@
 # Use a Miniconda base to handle the FEniCS installation
-FROM continuumio/miniconda3:latest
+FROM continuumio/miniconda3:23.10.0-1
 
 # 1. Install system dependencies
 # libgl1 and libxrender1 are required for PyVista/VTK (headless rendering)
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends \
     build-essential \
     git \
-    libgl1-mesa-glx \
+    libgl1 \
     libxrender1 \
     libfontconfig1 \
     libxext6 \
@@ -22,7 +22,7 @@ RUN conda create -n bone_env python=3.11 -y && \
     conda clean -afy
 
 # Set the path so subsequent commands use the conda environment
-ENV PATH /opt/conda/envs/bone_env/bin:$PATH
+ENV PATH="/opt/conda/envs/bone_env/bin:$PATH"
 
 # 4. Install Poetry
 RUN pip install --no-cache-dir poetry
