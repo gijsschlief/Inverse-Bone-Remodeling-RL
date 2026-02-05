@@ -2,19 +2,34 @@
 
 import argparse
 import logging
+from datetime import datetime
 from pathlib import Path
 
 from bone_remodelling.parameters import ConfigurationParameters
 
 
-def setup_logging() -> logging.Logger:
-    """Set up logging for the CLI."""
-    logger = logging.getLogger(__name__)
+def setup_logging(output_dir: Path) -> logging.Logger:
+    """Set up logging to both console and a file."""
+    logger = logging.getLogger()
     logger.setLevel(logging.INFO)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
+
+    # Create formatters
+    file_formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+    console_formatter = logging.Formatter("%(levelname)s: %(message)s")
+
+    # Console Handler (for the user)
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(console_formatter)
+    logger.addHandler(console_handler)
+
+    # File Handler (for the logfile)
+    logfile = output_dir / "logs"
+    logfile.mkdir(parents=True, exist_ok=True)
+    log_file = logfile.resolve()
+    log_path = log_file / Path(f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log")
+    file_handler = logging.FileHandler(log_path, mode="w")
+    file_handler.setFormatter(file_formatter)
+    logger.addHandler(file_handler)
     return logger
 
 def build_configuration_parameters() -> ConfigurationParameters:
@@ -26,7 +41,7 @@ def build_configuration_parameters() -> ConfigurationParameters:
         The configuration parameters for bone remodelling simulations.
 
     """
-    output_dir = Path(__file__).resolve().parent.parent / "data"
+    output_dir = Path(__file__).resolve().parent.parent / Path("data")
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     return ConfigurationParameters(output_dir=output_dir)
@@ -41,32 +56,36 @@ def main() -> None:
         help="The module to run. Choices are: animation, generate_data, surrogate_training, surrogate_evaluation.",
     )
     args, remaining_args = parser.parse_known_args()
+    configuration_parameters = build_configuration_parameters()
 
-    logger = setup_logging()
-    configuration_parameters =build_configuration_parameters()
+    logger = setup_logging(configuration_parameters.output_dir)
+    logger.info(f"--- Starting Module: {args.module} ---")
     logger.info(f"Output directory set to: {configuration_parameters.output_dir}")
 
     # Dispatch to the appropriate module based on the argument
-    if args.module == "animation":
-        from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
-        generate_animation(configuration_parameters, remaining_args)
+    try:
+        if args.module == "animation":
+            from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
+            generate_animation(configuration_parameters, remaining_args)
 
-    elif args.module == "generate_data":
-        from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
-        generate_data(configuration_parameters, remaining_args)
+        elif args.module == "generate_data":
+            from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
+            generate_data(configuration_parameters, remaining_args)
 
-    elif args.module == "surrogate_training":
-        from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: I001, PLC0415
-        surrogate_training(configuration_parameters, remaining_args)
+        elif args.module == "surrogate_training":
+            from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: I001, PLC0415
+            surrogate_training(configuration_parameters, remaining_args)
 
-    elif args.module == "surrogate_evaluation":
-        from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
-        surrogate_evaluation(configuration_parameters, remaining_args)
+        elif args.module == "surrogate_evaluation":
+            from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
+            surrogate_evaluation(configuration_parameters, remaining_args)
 
-    else:
-        raise RuntimeError(f"Unknown module: {args.module}")
-
-# TODO: Create a logfile which contains outputs of the log for each run.
+        else:
+            raise RuntimeError(f"Unknown module: {args.module}")
+    except Exception as e:
+        logger.error(f"An error occurred while running the module {args.module}: {e}")
+        raise
+    logger.info(f"--- Finished Module: {args.module} ---")
 # TODO: Append on the fly datageneration
 # TODO: Hyperparameter tuning for surrogate model
 

@@ -254,12 +254,23 @@ def load_surrogate_models(
 def predict_with_surrogates(
     predictors: list[SurrogatePredictor],
     x: np.ndarray,
+    batch_size: int = 1024,
 ) -> tuple[np.ndarray, np.ndarray]:
     """Predict using surrogate models and returns a list of the mean scores and the standard deviations."""
     if not predictors:
             raise ValueError("The list of predictors is empty. Cannot perform inference.")
 
-    predictions = np.array([predictor(x) for predictor in predictors])
-    mean_prediction = np.mean(predictions, axis=0)
-    std_prediction = np.std(predictions, axis=0)
+    all_predictor_outputs = []
+    for predictor in predictors:
+        model_batches = []
+        for i in range(0, len(x), batch_size):
+            batch = x[i:i+batch_size]
+            prediction = predictor(batch)
+            model_batches.append(prediction)
+
+        full_result_for_this_model = np.concatenate(model_batches, axis=0)
+        all_predictor_outputs.append(full_result_for_this_model)
+
+    mean_prediction = np.mean(all_predictor_outputs, axis=0)
+    std_prediction = np.std(all_predictor_outputs, axis=0)
     return mean_prediction, std_prediction

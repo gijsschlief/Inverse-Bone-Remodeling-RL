@@ -1,5 +1,6 @@
 """Evaluate the surrogate model's performance on validation data."""
 
+import argparse
 import logging
 from pathlib import Path
 
@@ -25,7 +26,9 @@ logger = logging.getLogger(__name__)
 def surrogates_evaluation(
     data_path: Path,
     model_class: type[SurrogateModel],
-    random_state: int = 0,
+    random_state: int,
+    batch_size: int = 1024,
+    metric: str = "ssim",
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
     np.random.seed(random_state)
@@ -53,22 +56,23 @@ def surrogates_evaluation(
 
     # Load surrogate models
     surrogate_path = data_path / Path("surrogate_models")
+    surrogate_path = surrogate_path.resolve()
     predictors = load_surrogate_models(surrogate_path, model_class)
 
     # Run the predictors on the three sets
-    y_train_predicted, _ = predict_with_surrogates(predictors, x_train)
-    y_val_predicted, _ = predict_with_surrogates(predictors, x_val)
-    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test)
+    y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=batch_size)
+    y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=batch_size)
+    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=batch_size)
 
     # Calculate average similarity scores
-    train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method="ssim") for i in range(len(y_train_predicted))]
-    logger.info(f"Train SSIM: {np.mean(train_ssim):.4f}")
+    train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_train_predicted))]
+    logger.info(f"Train {metric.upper()}: {np.mean(train_ssim):.4f}")
 
-    val_ssim = [calculate_similarity(y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method="ssim") for i in range(len(y_val_predicted))]
-    logger.info(f"Validation SSIM: {np.mean(val_ssim):.4f}")
+    val_ssim = [calculate_similarity(y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_val_predicted))]
+    logger.info(f"Validation {metric.upper()}: {np.mean(val_ssim):.4f}")
 
-    test_ssim = [calculate_similarity(y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method="ssim") for i in range(len(y_test_predicted))]
-    logger.info(f"Test SSIM: {np.mean(test_ssim):.4f}")
+    test_ssim = [calculate_similarity(y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_test_predicted))]
+    logger.info(f"Test {metric.upper()}: {np.mean(test_ssim):.4f}")
 
     # Visualize some results from the test set
     worst_index = np.argmin(test_ssim)
@@ -87,12 +91,30 @@ def surrogates_evaluation(
             x_test[k],
         )
 
-def cli(config: ConfigurationParameters, args: list[str]) -> None:
+def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
     """Command-line interface for surrogate model evaluation."""
+    parser = argparse.ArgumentParser(description="Evaluate the surrogate model.")
+    parser.add_argument(
+        "--batch-size",
+        choices=range(1, 10_000),
+        default=1024,
+        type=int,
+        help="Batch size for surrogate model evaluation.",
+    )
+    parser.add_argument(
+        "--metric",
+        choices=["mse","mae","cosine","iou","dice","ssim","wasserstein"],
+        default="ssim",
+        type=str,
+        help="Metric for surrogate model evaluation.",
+    )
+    args = parser.parse_args(cli_args)
     surrogates_evaluation(
         data_path=config.output_dir,
         model_class=SurrogateModel,
         random_state=config.seed,
+        batch_size=args.batch_size,
+        metric=args.metric,
     )
 
 if __name__ == "__main__":
