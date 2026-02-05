@@ -160,10 +160,16 @@ def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
         default="random",
         help="Type of animation to generate.",
     )
+    parser.add_argument(
+        "--animator",
+        choices=["matplotlib", "pyvista"],
+        default="matplotlib",
+        help="Animation library to use.",
+    )
     args = parser.parse_args(remaining_args)
-    run_animation(config=config, type=args.type)
+    run_animation(config=config, type=args.type, animator=args.animator)
 
-def run_animation(config: ConfigurationParameters, type: str = "random") -> None:
+def run_animation(config: ConfigurationParameters, type: str = "random", animator: str = "matplotlib") -> None:
     """Run the density animations to create to GIFS."""
     logger.info("Starting density animation generation.")
     initial_density = np.ones((config.mesh_top_resolution, config.mesh_side_resolution)) * config.start_density
@@ -199,8 +205,10 @@ def run_animation(config: ConfigurationParameters, type: str = "random") -> None
 
     simulation = DensitySimulation(parameters=parameters)
 
-    animate_density_matplotlib(simulation=simulation, data_directory=config.output_dir)
-    animate_density_pyvista(simulation=simulation, data_directory=config.output_dir)
+    if animator == "matplotlib":
+        animate_density_matplotlib(simulation=simulation, data_directory=config.output_dir)
+    elif animator == "pyvista":
+        animate_density_pyvista(simulation=simulation, data_directory=config.output_dir)
 
 
 if __name__ == "__main__":
@@ -209,4 +217,4 @@ if __name__ == "__main__":
     config = ConfigurationParameters(
         output_dir=Path(__file__).resolve().parent.parent.parent / Path("data"),
     )
-    run_animation(config=config)
+    run_animation(config=config, animator="matplotlib")
