@@ -52,8 +52,8 @@ def main() -> None:
     parser.add_argument(
         "module",
         type=str,
-        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate", "train_inverse", "evaluate_inverse"],
-        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse, evaluate_inverse.",
+        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate", "train_inverse", "evaluate_inverse", "run_all"],
+        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse, evaluate_inverse, run_all.",
     )
     args, remaining_args = parser.parse_known_args()
     configuration_parameters = build_configuration_parameters()
@@ -85,6 +85,24 @@ def main() -> None:
         elif args.module == "evaluate_inverse":
             from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: I001, PLC0415
             inverse_evaluation(configuration_parameters, remaining_args)
+        elif args.module == "run_all":
+            from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
+            from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
+            from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: I001, PLC0415
+            from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
+            from bone_remodelling.inverse_model.train_inverse import cli as inverse_training  # noqa: I001, PLC0415
+            from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: I001, PLC0415
+            from bone_remodelling.rl_model.run_rl_environment import cli as rl_training  # noqa: I001, PLC0415
+
+            generate_data(configuration_parameters, ["--samples", "100000", "--type", "merger"])
+            surrogate_training(configuration_parameters, [])
+            generate_data(configuration_parameters, ["--samples", "50000", "--type", "triangular"])
+            inverse_training(configuration_parameters, [])
+            rl_training(configuration_parameters, [])
+
+            generate_animation(configuration_parameters, ["--type", "validation", "--animator", "matplotlib"])
+            surrogate_evaluation(configuration_parameters, [])
+            inverse_evaluation(configuration_parameters, [])
 
         else:
             raise RuntimeError(f"Unknown module: {args.module}")
