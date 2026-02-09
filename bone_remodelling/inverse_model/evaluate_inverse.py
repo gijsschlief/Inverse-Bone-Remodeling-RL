@@ -102,8 +102,7 @@ def inverse_model_evaluation(
     y_val_predicted = inverse_prediction(predictors, train_parameters, x_val, y_val)
     y_test_predicted = inverse_prediction(predictors, train_parameters, x_test, y_test)
 
-    inverse_model_metrics(sample_forces=y_train, predicted_forces=y_train_predicted)
-    inverse_model_metrics(sample_forces=y_val, predicted_forces=y_val_predicted)
+    logger.info("Calculating inverse model metrics on the test set...")
     inverse_model_metrics(sample_forces=y_test, predicted_forces=y_test_predicted)
 
     try:
