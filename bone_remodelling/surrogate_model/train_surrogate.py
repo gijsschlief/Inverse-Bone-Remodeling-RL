@@ -1,4 +1,4 @@
-"""Trainer script for the SurrogateModel. Note that SSIMS are calculated on normalized data here and thus lower than the true values."""
+"""Trainer script for the SurrogateModel."""
 
 import argparse
 import logging
@@ -8,12 +8,13 @@ import numpy as np
 import torch
 
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
+from bone_remodelling.old_inverse_model.inverse_trainer import combined_loss
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
 from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.sanitizer import sanitize_data
 from bone_remodelling.surrogate_model.splitter import load_and_split_data
-from bone_remodelling.surrogate_model.train_parameters import (
+from bone_remodelling.surrogate_model.surrogate_parameters import (
     SurrogateTrainParameters,
 )
 from bone_remodelling.surrogate_model.trainer import SurrogateModelTrainer
@@ -92,7 +93,7 @@ def run_surrogate_training(
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
     predictor = SurrogatePredictor(SurrogateModel, train_parameters)
-    surrogate_trainer = SurrogateModelTrainer(predictor, train_parameters)
+    surrogate_trainer = SurrogateModelTrainer(predictor, train_parameters, loss_function=combined_loss)
     surrogate_trainer.time_training((x_train_np, y_train_np), (x_val_np, y_val_np))
 
 def cli(

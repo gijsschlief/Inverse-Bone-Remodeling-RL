@@ -1,26 +1,26 @@
-"""Evaluate the inverse surrogate model's performance on validation data."""
+"""Evaluate the inverse model's performance on validation data."""
 
+import argparse
 import logging
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
-from bone_remodelling.forward_data.reader import forward_data_reader
-from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
-from bone_remodelling.inverse_model.inverse_neural_network import (
-    InverseModel,
+from bone_remodelling.forward_data.forward_data_manager import (
+    ForwardDataManager,
 )
-from bone_remodelling.inverse_model.inverse_trainer import params_to_force_profile
-from bone_remodelling.rl_model.forward_pass import SurrogateForwarder
+from bone_remodelling.inverse_model.inverse_neural_network import InverseModel
+from bone_remodelling.inverse_model.inverse_parameters import InverseTrainParameters
+from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
-from bone_remodelling.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,
+from bone_remodelling.surrogate_model.loader import (
+    load_surrogate_models,
+    predict_with_surrogates,
 )
 from bone_remodelling.surrogate_model.sanitizer import sanitize_data
 from bone_remodelling.surrogate_model.splitter import splitting
-from bone_remodelling.surrogate_model.visualizer import plot_difference_matrix
+from bone_remodelling.surrogate_model.visualizer import plot_surrogate
 
 logger = logging.getLogger(__name__)
 
@@ -53,18 +53,17 @@ def inverse_model_metrics(sample_forces: np.ndarray, predicted_forces: np.ndarra
     mean_difference = np.mean(location_differences)
     logger.info(f"Mean Absolute Difference in Peak Locations: {mean_difference:.4f} Newton.")
 
-def run_inverse_model_evaluation(
-    model_path: Path,
+def inverse_model_evaluation(
     data_path: Path,
-    unloaded_model: InverseModel,
+    model_class: type[torch.nn.Module],
+    train_parameters: InverseTrainParameters,
+    random_state: int,
+    metric: str = "ssim",
 ) -> None:
-    """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
-    model: InverseModel | None = load_inverse_model(model_path, unloaded_model)
-    if model is None:
-        logger.error("Failed to load the inverse model.")
-        return
-
-    data = forward_data_reader(data_path)
+    """Load data, preprocess it, load the inverse model, and evaluate its performance."""
+    np.random.seed(random_state)
+    raw_path = data_path / Path("raw")
+    data = ForwardDataManager(raw_path).load_directory()
     if data is None:
         logger.error("Failed to load the forward model data.")
         return
@@ -73,168 +72,89 @@ def run_inverse_model_evaluation(
     if force_profiles is None or final_output_densities is None:
         logger.error("Failed to load the data.")
         return
+
     force_profiles, final_output_densities = sanitize_data(
         force_profiles,
         final_output_densities,
     )
 
-    _, _, x_test, _, _, y_test = splitting(
+    x_train, x_val, x_test, y_train, y_val, y_test = splitting(
         force_profiles,
         final_output_densities,
-        random_state=1,
+        random_state=random_state,
     )
-    if x_test is None or y_test is None:
-        logger.error("Failed to split the data into validation sets.")
-        return
 
-    y_test_tensor = torch.tensor(
-    y_test, dtype=torch.float32, device=next(model.parameters()).device)
+    # Load inverse models
+    inverse_model_path = data_path / Path("inverse_models")
+    inverse_model_path = inverse_model_path.resolve()
+    predictors = load_surrogate_models(inverse_model_path, model_class, train_parameters)
 
-    with torch.no_grad():
-        validation_predictions = model(y_test_tensor)
+    # Run the predictors on the three sets
+    y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=train_parameters.batch_size)
+    y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=train_parameters.batch_size)
+    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=train_parameters.batch_size)
 
-    # Convert predicted parameters → 3x10 force profiles
-    validation_predictions_np = validation_predictions.cpu().numpy()
+    # Calculate average similarity scores
+    train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_train_predicted))]
+    logger.info(f"Train {metric.upper()}: {np.mean(train_ssim):.4f}")
 
-    # convert [zeroes area with one at peak to peak and side location]
-    side_location = np.zeros(validation_predictions_np.shape[0])
-    peak_location = np.zeros(validation_predictions_np.shape[0])
-    for i in range(validation_predictions_np.shape[0]):
-        peak_index = np.argmax(validation_predictions_np[i])
-        peak_location[i] = peak_index % 10
-        side_location[i] = peak_index // 10
+    val_ssim = [calculate_similarity(y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_val_predicted))]
+    logger.info(f"Validation {metric.upper()}: {np.mean(val_ssim):.4f}")
 
-    predictions = np.zeros((validation_predictions_np.shape[0], 3))
-    predictions[:, 0] = peak_location[:]
-    predictions[:, 1] = side_location[:]
-    predictions[:, 2] = validation_predictions_np[:, 30]
-    reconstructed_forces = np.array([
-        params_to_force_profile(
-            int(np.clip(pred[0], 0, 9)),
-            int(np.clip(np.round(pred[1]), 0, 2)),
-            float(pred[2]),
-        )
-        for pred in predictions
-    ])
+    test_ssim = [calculate_similarity(y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_test_predicted))]
+    logger.info(f"Test {metric.upper()}: {np.mean(test_ssim):.4f}")
 
-    inverse_model_metrics(sample_forces=x_test,
-                          predicted_forces=reconstructed_forces)
-
-    # Calculate similarity metrics
-    surrogate_forwarder = SurrogateForwarder(
-        surrogate_model_path=model_path,
-        density_shape=(10, 10),
-        model_class=ReversedSurrogateModel,
+    # Visualize some results from the test set
+    worst_index = np.argmin(test_ssim)
+    plot_surrogate(
+        y_test_predicted[worst_index].squeeze(),
+        y_test_std[worst_index].squeeze(),
+        y_test[worst_index],
+        x_test[worst_index],
     )
-    if surrogate_forwarder.surrogate_model is None:
-        logger.error("Failed to load the surrogate model for forward pass.")
-        return
-    ssim = np.zeros(reconstructed_forces.shape[0])
-    mse = np.zeros(reconstructed_forces.shape[0])
-    reconstructed_density = np.zeros((reconstructed_forces.shape[0], 10, 10))
-    for sample in range(reconstructed_forces.shape[0]):
-        reconstructed_density[sample] = surrogate_forwarder.forward_pass(reconstructed_forces[sample])
-        ssim[sample] = calculate_similarity(reference_matrix=y_test[sample],
-                         comparison_matrix=reconstructed_density[sample],
-                         method="ssim")
-        mse[sample] = calculate_similarity(reference_matrix=y_test[sample],
-                        comparison_matrix=reconstructed_density[sample],
-                        method="mse")
-    logger.info(f"Average SSIM over validation set: {np.mean(ssim):.6f}")
-    logger.info(f"Average MSE over validation set: {np.mean(mse):.6f}")
 
-    for _ in range(100):
-        k = np.random.randint(0, len(x_test))
-        logger.info(f"Sample {k}: SSIM = {ssim[k]:.6f}, MSE = {mse[k]:.6f}")
-        logger.info(f"Original Force Profile: {x_test[k]}")
-        logger.info(f"Reconstructed Force Profile: {reconstructed_forces[k]}")
-        plot_inverse_model(
-            reconstructed_density[k],
+    for k in np.random.choice(len(x_test), size=5, replace=False):
+        plot_surrogate(
+            y_test_predicted[k].squeeze(),
+            y_test_std[k].squeeze(),
             y_test[k],
-            reconstructed_forces[k],
             x_test[k],
         )
-    return
 
-def load_inverse_model(
-    model_path: Path,
-    model: InverseModel,
-) -> InverseModel | None:
-    """Load the inverse surrogate model and its normalization parameters from a file.
-
-    Args:
-    ----
-        model_path (Path): The path to the model file.
-        model (InverseModel): The model instance to be loaded.
-
-    Returns:
-    -------
-        tuple: A tuple containing the model, input mean, input std, output mean, and output std.
-
-    """
-    try:
-        model.load_model(model_path)
-        model.eval()
-        return model
-    except (FileNotFoundError, KeyError, RuntimeError) as e:
-        logger.error(f"Error loading model from {model_path}: {e}")
-        return None
-
-
-def plot_inverse_model(
-    predicted_matrix: np.ndarray,
-    actual_matrix: np.ndarray,
-    predicted_force_profile: np.ndarray,
-    original_force_profile: np.ndarray,
-) -> plt.Figure:
-    """Compare the surrogate model's predictions with the actual validation data.
-
-    Args:
-    ----
-        predicted_matrix (np.ndarray): Predicted density matrix from the surrogate model.
-        actual_matrix (np.ndarray): Actual density matrix from the validation set.
-        predicted_force_profile (np.ndarray): Force profile predicted by the inverse model.
-        original_force_profile (np.ndarray): Original force profile from the validation set.
-
-    """
-    # Plot original, predicted, and difference matrices side by side (1 row, 3 columns)
-    min_true_value: float = 0.01
-    max_true_value: float = 1.74
-    force_mask = np.ones_like(original_force_profile, dtype=bool)
-
-    figure, axes = plt.subplots(1, 3, figsize=(18, 6))
-    plot_density_matrix(
-        actual_matrix,
-        (original_force_profile, force_mask),
-        "Original Density Matrix",
-        axes[0],
-        (min_true_value, max_true_value),
+def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
+    """Command-line interface for inverse model evaluation."""
+    parser = argparse.ArgumentParser(description="Evaluate the inverse model.")
+    parser.add_argument(
+        "--batch-size",
+        choices=range(1, 10_000),
+        default=1024,
+        type=int,
+        help="Batch size for inverse model evaluation.",
     )
-    plot_density_matrix(
-        predicted_matrix,
-        (predicted_force_profile, force_mask),
-        "Predicted Density Matrix",
-        axes[1],
-        (min_true_value, max_true_value),
+    parser.add_argument(
+        "--metric",
+        choices=["mse","mae","cosine","iou","dice","ssim","wasserstein"],
+        default="ssim",
+        type=str,
+        help="Metric for inverse model evaluation.",
     )
-    plot_difference_matrix(
-        predicted_matrix,
-        actual_matrix,
-        "Difference Matrix (Predicted - Actual) as Percentage",
-        axes[2],
+    args = parser.parse_args(cli_args)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model_path = config.output_dir / Path("inverse_models")
+    train_parameters = InverseTrainParameters(model_path=model_path, device=device, batch_size=args.batch_size)
+    inverse_model_evaluation(
+        data_path=config.output_dir,
+        model_class=InverseModel,
+        train_parameters=train_parameters,
+        random_state=config.seed,
+        metric=args.metric,
     )
-
-    plt.tight_layout()
-    plt.show()
-    return figure
 
 if __name__ == "__main__":
-    model_path = Path(__file__).parent.parent.parent / Path("data", "inverse_model", "trained_model.pth")
-    data_path = Path(__file__).parent.parent.parent / Path("data", "raw", "triangular")
+    # Developer convenience entry point.
+    # For reproducible runs, use the unified CLI (main.py).
+    config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = InverseModel().to(device)
-    run_inverse_model_evaluation(
-        model_path=model_path,
-        data_path=data_path,
-        unloaded_model=model,
-    )
+    model_path = config.output_dir / Path("inverse_models")
+    train_parameters = InverseTrainParameters(model_path=model_path, device=device)
+    inverse_model_evaluation(data_path=config.output_dir, model_class=InverseModel, train_parameters=train_parameters, random_state=config.seed)

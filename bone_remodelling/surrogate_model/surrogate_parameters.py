@@ -1,13 +1,38 @@
 """Stores parameters used for training the surrogate model."""
 
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
 import torch
 
 
+class TrainParameters(ABC):
+    """Abstract base class for training parameters."""
+
+    model_path: Path
+    device: torch.device
+    epochs: int
+    batch_size: int
+    learning_rate: float
+    patience_lr_scheduler: int
+    factor_lr_scheduler: float
+    cooldown_lr_scheduler: int
+    patience: int
+    min_delta: float
+    log_interval: int
+    log_all_for_first_epochs: int
+    shuffle_data: bool
+    plot_interval: int
+
+    @abstractmethod
+    def __post_init__(self) -> None:
+        """Ensure that the model path exists."""
+        pass
+
+
 @dataclass
-class SurrogateTrainParameters:
+class SurrogateTrainParameters(TrainParameters):
     """Parameters for training the surrogate model."""
 
     model_path: Path

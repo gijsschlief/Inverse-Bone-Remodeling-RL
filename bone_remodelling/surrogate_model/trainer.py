@@ -2,19 +2,21 @@
 
 import logging
 import time
+from collections.abc import Callable
 from copy import deepcopy
 
 import numpy as np
 import torch
 
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
-from bone_remodelling.surrogate_model.loss_function import combined_loss
 from bone_remodelling.surrogate_model.optimiser_scheduler_dataloader import (
     build_dataloader,
     build_learning_rate_scheduler,
     build_optimizer,
 )
-from bone_remodelling.surrogate_model.train_parameters import SurrogateTrainParameters
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    TrainParameters,
+)
 from bone_remodelling.surrogate_model.visualizer import plot_loss
 
 logger = logging.getLogger(__name__)
@@ -22,13 +24,13 @@ logger = logging.getLogger(__name__)
 class SurrogateModelTrainer:
     """Trainer class for the surrogate model."""
 
-    def __init__(self, predicter: SurrogatePredictor, train_parameters: SurrogateTrainParameters) -> None:
+    def __init__(self, predicter: SurrogatePredictor, train_parameters: TrainParameters, loss_function: Callable) -> None:
         """Initialize the SurrogateModelTrainer."""
         self.predicter = predicter
         self.train_parameters = train_parameters
 
         self.predicter.model.to(self.train_parameters.device)
-        self.loss_function = combined_loss
+        self.loss_function = loss_function
         self.optimizer = build_optimizer(self.predicter.model, self.train_parameters)
         self.scheduler = build_learning_rate_scheduler(self.optimizer, self.train_parameters)
 

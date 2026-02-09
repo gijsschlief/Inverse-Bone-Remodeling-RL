@@ -5,6 +5,7 @@ import logging
 from pathlib import Path
 
 import numpy as np
+import torch
 
 from bone_remodelling.forward_data.forward_data_manager import (
     ForwardDataManager,
@@ -20,6 +21,9 @@ from bone_remodelling.surrogate_model.neural_network import (
 )
 from bone_remodelling.surrogate_model.sanitizer import sanitize_data
 from bone_remodelling.surrogate_model.splitter import splitting
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    SurrogateTrainParameters,
+)
 from bone_remodelling.surrogate_model.visualizer import plot_surrogate
 
 logger = logging.getLogger(__name__)
@@ -28,8 +32,8 @@ logger = logging.getLogger(__name__)
 def surrogates_evaluation(
     data_path: Path,
     model_class: type[SurrogateModel],
+    train_parameters: SurrogateTrainParameters,
     random_state: int,
-    batch_size: int = 1024,
     metric: str = "ssim",
 ) -> None:
     """Load data, preprocess it, load the surrogate model, and evaluate its performance."""
@@ -59,12 +63,12 @@ def surrogates_evaluation(
     # Load surrogate models
     surrogate_path = data_path / Path("surrogate_models")
     surrogate_path = surrogate_path.resolve()
-    predictors = load_surrogate_models(surrogate_path, model_class)
+    predictors = load_surrogate_models(surrogate_path, model_class, train_parameters)
 
     # Run the predictors on the three sets
-    y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=batch_size)
-    y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=batch_size)
-    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=batch_size)
+    y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=train_parameters.batch_size)
+    y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=train_parameters.batch_size)
+    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=train_parameters.batch_size)
 
     # Calculate average similarity scores
     train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_train_predicted))]
@@ -111,11 +115,18 @@ def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
         help="Metric for surrogate model evaluation.",
     )
     args = parser.parse_args(cli_args)
+
+    train_parameters = SurrogateTrainParameters(
+        model_path=config.output_dir / Path("surrogate_models/model.pth"),
+        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+        batch_size=args.batch_size,
+    )
+
     surrogates_evaluation(
         data_path=config.output_dir,
         model_class=SurrogateModel,
+        train_parameters=train_parameters,
         random_state=config.seed,
-        batch_size=args.batch_size,
         metric=args.metric,
     )
 
@@ -123,4 +134,8 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
-    surrogates_evaluation(data_path=config.output_dir, model_class=SurrogateModel, random_state=config.seed)
+    train_parameters = SurrogateTrainParameters(
+        model_path=config.output_dir / Path("surrogate_models/model.pth"),
+        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    )
+    surrogates_evaluation(data_path=config.output_dir, model_class=SurrogateModel, train_parameters=train_parameters, random_state=config.seed)

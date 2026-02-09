@@ -9,7 +9,9 @@ import torch
 from bone_remodelling.surrogate_model.neural_network import (
     SurrogateModel,
 )
-from bone_remodelling.surrogate_model.train_parameters import SurrogateTrainParameters
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    TrainParameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +37,7 @@ class SurrogatePredictor:
     def __init__(
         self,
         model_class: type[torch.nn.Module],
-        train_parameters: SurrogateTrainParameters,
+        train_parameters: TrainParameters,
     ) -> None:
         """Initialize the loader with the path to the model and the model class.
 
@@ -224,13 +226,13 @@ class SurrogatePredictor:
 
 def load_surrogate_models(
     model_folder: Path,
-    model_class: type[SurrogateModel],
+    model_class: type[torch.nn.Module],
+    train_parameters: TrainParameters,
 ) -> list[SurrogatePredictor]:
     """Load any number of surrogate models from a specified folder."""
     logger.info(f"Loading all models from {model_folder}")
 
     predictors: list[SurrogatePredictor] = []
-    device = "cuda" if torch.cuda.is_available() else "cpu"
 
     for model_path in model_folder.glob("*.pth"):
         if not model_path.is_file() or model_path.stat().st_size == 0:
@@ -240,10 +242,7 @@ def load_surrogate_models(
         try:
             predictor = SurrogatePredictor(
                 model_class=model_class,
-                train_parameters=SurrogateTrainParameters(
-                    model_path=model_path,
-                    device=torch.device(device),
-                ),
+                train_parameters=train_parameters,
             )
             predictors.append(predictor)
         except (RuntimeError, ValueError) as e:

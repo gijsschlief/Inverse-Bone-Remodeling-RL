@@ -79,6 +79,12 @@ def main() -> None:
         elif args.module == "evaluate_surrogate":
             from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
             surrogate_evaluation(configuration_parameters, remaining_args)
+        elif args.module == "train_inverse":
+            from bone_remodelling.inverse_model.train_inverse import cli as inverse_training  # noqa: I001, PLC0415
+            inverse_training(configuration_parameters, remaining_args)
+        elif args.module == "evaluate_inverse":
+            from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: I001, PLC0415
+            inverse_evaluation(configuration_parameters, remaining_args)
 
         else:
             raise RuntimeError(f"Unknown module: {args.module}")

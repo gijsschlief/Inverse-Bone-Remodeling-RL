@@ -2,26 +2,28 @@
 
 import torch
 
-from bone_remodelling.surrogate_model.train_parameters import SurrogateTrainParameters
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    TrainParameters,
+)
 
 
 def build_optimizer(
         model: torch.nn.Module,
-        train_parameters: SurrogateTrainParameters,
+        train_parameters: TrainParameters,
     ) -> torch.optim.AdamW:
     """Get an optimizer for the surrogate model."""
     return torch.optim.AdamW(model.parameters(), lr=train_parameters.learning_rate)
 
 def build_learning_rate_scheduler(
     optimizer: torch.optim.Optimizer,
-    train_parameters: SurrogateTrainParameters,
+    train_parameters: TrainParameters,
 ) -> torch.optim.lr_scheduler.ReduceLROnPlateau:
     """Get a learning rate scheduler for the surrogate model.
 
     Args:
     ----
         optimizer (torch.optim.Optimizer): The optimizer to schedule.
-        train_parameters (SurrogateTrainParameters): Training parameters including device, epochs, batch size, learning rate, patience, min delta, log interval, and log all for first epochs.
+        train_parameters (TrainParameters): Training parameters including device, epochs, batch size, learning rate, patience, min delta, log interval, and log all for first epochs.
 
     Returns:
     -------
