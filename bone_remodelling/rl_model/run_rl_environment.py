@@ -1,16 +1,19 @@
 """Run a reinforcement learning environment for bone remodeling."""
 
+import argparse
 import logging
 from functools import partial
+from logging import config
 from pathlib import Path
 
 import numpy as np
+import torch
 from stable_baselines3 import PPO
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
+from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import (
-    EnsembleForwarder,
     FenicsForwarder,
     ForwardPass,
     SurrogateForwarder,
@@ -23,11 +26,11 @@ from bone_remodelling.rl_model.validation_callback import ValidationCallback
 from bone_remodelling.rl_model.validation_environment_builder import (
     ValidationEnvironmentBuilder,
 )
-from bone_remodelling.surrogate_model.loader import SurrogateModelLoader
-from bone_remodelling.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,
-)
+from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.splitter import load_and_split_data
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    SurrogateTrainParameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -120,7 +123,7 @@ def initialize_new_model(
     )
 
 
-def main(run_parameters: RunConfiguration) -> None:
+def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfiguration, rl_parameters: RLParameters, surrogate_parameters: TrainParameters) -> None:
     """Designs and trains a reinforcement learning agent for bone remodeling.
 
     This function initializes the bone remodeling environment, loads the surrogate model,
@@ -130,7 +133,10 @@ def main(run_parameters: RunConfiguration) -> None:
 
     Args:
     ----
-        run_parameters (RunConfiguration): Configuration parameters for the run.
+        config (ConfigurationParameters): Configuration parameters for the run.
+        run_parameters (RunConfiguration): Run-specific parameters.
+        rl_parameters (RLParameters): Parameters for the RL agent.
+        surrogate_parameters (SurrogateTrainParameters): Parameters for training the surrogate model.
 
     """
     (
@@ -143,26 +149,23 @@ def main(run_parameters: RunConfiguration) -> None:
     ) = load_and_split_data(run_parameters.data_path, random_state=run_parameters.random_state)
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
-    rl_parameters = RLParameters()
     metrics = MetricsContainer()
 
-    forwarder_surrogate = SurrogateForwarder(
-        surrogate_model_path=run_parameters.surrogate_path,
-        density_shape=train_densities[0].shape,
-        model_class=ReversedSurrogateModel,
-    )
-    forwarder_fenics = FenicsForwarder(
-        force_profile=train_forces[0],
-        initial_density_field=np.ones(train_densities[0].shape) * 0.8,
-    )
+    forwarder: ForwardPass
+    if run_parameters.forward_type == "fenics":
+        forwarder = FenicsForwarder(
+            config=config,
+            force_profile=train_forces[0],
+        )
+    else:
+        forwarder = SurrogateForwarder(
+            config=config,
+            model_class=SurrogateModel,
+            train_parameters=surrogate_parameters,
+        )
 
-    forwarder_ensemble = EnsembleForwarder(
-        model_paths=run_parameters.ensemble_path,
-        model_class=ReversedSurrogateModel,
-        model_loader=SurrogateModelLoader,
-    )
     validation_environment_builder = ValidationEnvironmentBuilder(
-        forwarder_surrogate, rl_parameters,
+        forwarder, rl_parameters,
     )
 
     number_of_environments: int = run_parameters.number_of_environments
@@ -174,7 +177,7 @@ def main(run_parameters: RunConfiguration) -> None:
         train_forces=train_forces,
         train_densities=train_densities,
         rl_parameters=rl_parameters,
-        forwarder=forwarder_ensemble,
+        forwarder=forwarder,
     )
 
     environment_functions = [
@@ -239,8 +242,25 @@ def main(run_parameters: RunConfiguration) -> None:
     finally:
         vectorized_environment.close()
 
+def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
+    """Command-line interface for running the RL training."""
+    parser = argparse.ArgumentParser(description="Generate density animations.")
+    parser.add_argument(
+        "--forward-type",
+        choices=["fenics","surrogate"],
+        default="surrogate",
+        help="Forward pass to use for the RL environment.",
+    )
+    args = parser.parse_args(remaining_args)
+    config = ConfigurationParameters()
+    run_parameters = RunConfiguration(output_dir=config.output_dir, forward_type=args.forward_type)
+    rl_parameters = RLParameters()
+    model_path = (Path(config.output_dir) / Path("surrogate_model")).resolve()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    surrogate_parameters = SurrogateTrainParameters(model_path, device)
+    train_rl_agent(config, run_parameters, rl_parameters, surrogate_parameters)
+
 
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    run_parameters = RunConfiguration()
-    main(run_parameters=run_parameters)
+    run_parameters = RunConfiguration(output_dir=config.output_dir)
+    train_rl_agent(run_parameters=run_parameters)

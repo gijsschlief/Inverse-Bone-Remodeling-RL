@@ -4,7 +4,9 @@ import warnings
 from typing import Callable
 
 import numpy as np
-from scipy.stats import wasserstein_distance as wasserstein_calculation
+from scipy.stats import (
+    wasserstein_distance as wasserstein_calculation,  # type: ignore[import-untyped]
+)
 from skimage.metrics import structural_similarity as _ssim
 
 BASELINE_DEFAULT: float = 0.1
@@ -94,11 +96,11 @@ def _norm_overlap(metric: float) -> float:
 
 
 def _mse(ref: np.ndarray, cmp: np.ndarray, baseline: float, *_: float) -> float:
-    metric: float = np.mean((ref - cmp) ** 2)
-    return metric
+    metric: float = float(np.mean((ref - cmp) ** 2))
+    return _norm_err(metric, baseline)
 
 def _mae(ref: np.ndarray, cmp: np.ndarray, baseline: float, *_: float) -> float:
-    metric: float = np.mean(np.abs(ref - cmp))
+    metric: float = float(np.mean(np.abs(ref - cmp)))
     return _norm_err(metric, baseline)
 
 
@@ -125,9 +127,7 @@ def _dice(ref: np.ndarray, cmp: np.ndarray, _: float, threshold: float) -> float
 
 
 def _ssim_score(ref: np.ndarray, cmp: np.ndarray, *_: float) -> float:
-    score: float
-    score, _ = _ssim(ref, cmp, full=True, data_range=ref.max() - ref.min())
-    return score
+    return float(_ssim(ref, cmp, full=True, data_range=ref.max() - ref.min())[0])
 
 
 def _wasserstein(

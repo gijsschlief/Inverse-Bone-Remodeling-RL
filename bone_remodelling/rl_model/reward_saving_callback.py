@@ -59,27 +59,25 @@ class RewardSavingCallback(BaseCallback):
             return
 
         # Smooth reward
+        smoothed, smoothed_x = None, None
         window = self.smoothing_window
         if len(rewards) >= window:
             smoothed = np.convolve(rewards, np.ones(window) / window, mode="valid")
             smoothed_x = episode_x[window - 1:]
-        else:
-            smoothed = None
 
         # Small smooth reward
+        small_smoothed, small_smoothed_x = None, None
         small_window = self.smoothing_window // 10
         if len(rewards) >= small_window:
             small_smoothed = np.convolve(rewards, np.ones(small_window) / small_window, mode="valid")
             small_smoothed_x = episode_x[small_window - 1:]
-        else:
-            small_smoothed = None
 
         fig, reward_axis = plt.subplots(figsize=(12, 5))
 
         # Reward curve (left y-axis)
-        if small_smoothed is not None:
+        if small_smoothed is not None and small_smoothed_x is not None:
             reward_axis.plot(small_smoothed_x, small_smoothed, alpha=0.3, label=f"Smoothed reward (w={small_window})", color="gray")
-        if smoothed is not None:
+        if smoothed is not None and smoothed_x is not None:
             reward_axis.plot(smoothed_x, smoothed, label=f"Smoothed reward (w={window})")
 
         reward_axis.set_xlabel("Episode index")

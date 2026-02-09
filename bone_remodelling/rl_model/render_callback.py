@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
-from bone_remodelling.forward_data.visualizer import plot_density_matrix
+from bone_remodelling.forward_data.force_profile_generator import ForceProfileGenerator
+from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
 from bone_remodelling.rl_model.parameters import RLParameters
 from bone_remodelling.surrogate_model.visualizer import plot_difference_matrix
 
@@ -18,6 +19,7 @@ class RenderCallback(BaseCallback):
 
     def __init__(
         self,
+        force_generator: ForceProfileGenerator,
         render_freq: int = 10,
         environment_index: int = 0,
         rl_parameters: RLParameters = RLParameters(),
@@ -26,6 +28,7 @@ class RenderCallback(BaseCallback):
 
         Args:
         ----
+            force_generator (ForceProfileGenerator): Force profile generator to get the force mask for visualization.
             render_freq (int): Frequency of rendering in terms of steps.
             environment_index (int): Index of the environment to render.
             rl_parameters (RLParameters): RL parameters for the callback.
@@ -35,6 +38,7 @@ class RenderCallback(BaseCallback):
         self.render_freq = render_freq
         self.environment_index = environment_index
         self.max_steps = rl_parameters.max_steps
+        self.force_mask = force_generator.generate_force_mask()
 
     def _on_step(self) -> bool:
         if self.num_timesteps % self.render_freq == 0:
@@ -75,7 +79,7 @@ class RenderCallback(BaseCallback):
             ax_target.clear()
             plot_density_matrix(
                 target_density,
-                force_profile=target_force,
+                force_data=(target_force, self.force_mask),
                 title=f"Target Density (Sample {current_sample_index})",
                 axis=ax_target,
             )
@@ -85,7 +89,7 @@ class RenderCallback(BaseCallback):
         ax_current.clear()
         plot_density_matrix(
             last_predicted_density,
-            force_profile=force_profile,
+            force_data=(force_profile, self.force_mask),
             title=f"Current Density: Step {current_step} / {self.max_steps}",
             axis=ax_current,
         )

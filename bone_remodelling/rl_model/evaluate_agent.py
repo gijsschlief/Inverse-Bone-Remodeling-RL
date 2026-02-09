@@ -1,28 +1,27 @@
 """Evaluate the trained RL agent."""
 
+import argparse
 import logging
+from pathlib import Path
 
 import numpy as np
 from matplotlib import pyplot as plt
 from stable_baselines3 import PPO
 
-from bone_remodelling.forward_data.reader import forward_data_reader
+from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.inverse_model.evaluate_inverse import (
+    evaluate_predictions_with_surrogate,
     inverse_model_metrics,
-    plot_inverse_model,
 )
+from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import (
-    EnsembleForwarder,
     SurrogateForwarder,
 )
 from bone_remodelling.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodelling.rl_model.render_callback import RenderCallback
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
-from bone_remodelling.surrogate_model.loader import SurrogateModelLoader
-from bone_remodelling.surrogate_model.neural_networks.reversed_nn import (
-    ReversedSurrogateModel,
-)
+from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.splitter import splitting
 
 logger = logging.getLogger(__name__)
@@ -62,6 +61,8 @@ def evaluate_agent(
     worst_sample_information = None
     worst_estimate_information = None
     worst_reward = float('inf')
+
+    evaluate_predictions_with_surrogate(metric=metric)
 
     for ep in range(num_episodes):
         obs, _ = environment.reset()
@@ -132,13 +133,15 @@ def evaluate_agent(
     }
 
 
-def main() -> None:
+def run_agent_evaluation(config: ConfigurationParameters, metric: str) -> None:
     """Evaluate the RL agent."""
-    run_parameters = RunConfiguration()
+    run_parameters = RunConfiguration(output_dir=config.output_dir)
 
-    result = forward_data_reader(run_parameters.data_path)
-    if result is not None:
-        _, target_forces, target_densities = result
+    forward_data_manager = ForwardDataManager((run_parameters.data_path / Path("raw", "triangular")).resolve())
+    result = forward_data_manager.load_directory()
+    if result is None:
+        raise ValueError("Failed to load forward data from directory")
+    _, target_forces, target_densities = result
 
     _, _, test_density_profiles, _, _, test_force_profiles = splitting(
         target_densities,
@@ -150,17 +153,10 @@ def main() -> None:
 
     rl_parameters = RLParameters()
 
-    # USE THE SURROGATE OR ENSEMBLE FORWARDER DEPENDING ON THE TRAINING SETUP
     forwarder_surrogate = SurrogateForwarder(
     surrogate_model_path=run_parameters.surrogate_path,
     density_shape=test_density_profiles[0].shape,
-    model_class=ReversedSurrogateModel,
-    )
-
-    forwarder_ensemble = EnsembleForwarder(  # noqa: F841
-        model_paths=run_parameters.ensemble_path,
-        model_class=ReversedSurrogateModel,
-        model_loader=SurrogateModelLoader,
+    model_class=SurrogateModel,
     )
 
     agent_evaluation_environment = BoneRemodelingEnvironment(
@@ -228,6 +224,23 @@ def main() -> None:
         )
         plt.show()
 
+def cli(configuration_parameters: ConfigurationParameters, remaining_args: list) -> None:
+    """CLI entry point for evaluating the RL agent."""
+    parser = argparse.ArgumentParser(description="Evaluate the RL agent.")
+    parser.add_argument(
+        "--metric",
+        choices=["ssim", "mse"],
+        type=str,
+        default="ssim",
+        help="RL metric used to evaluate the agent.",
+    )
+    args = parser.parse_args(remaining_args)
+
+    run_agent_evaluation(configuration_parameters, args.metric)
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    main()
+    config = ConfigurationParameters(
+        output_dir=Path("output"),
+    )
+    run_agent_evaluation(config, "ssim")

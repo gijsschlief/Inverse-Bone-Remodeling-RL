@@ -52,21 +52,36 @@ class RunConfiguration:
 
     Attributes
     ----------
+        output_dir: Path
+        forward_type: str
         total_timesteps: int
         render_freq: int
         validation_frequency: int
-        reward_plot_path: Path
+        reward_plot_path: Path | None
 
     """
 
+    output_dir: Path
+    forward_type: str = "surrogate"
     total_timesteps: int = 20_000_001
     render_frequency: int = 9999
     validation_frequency: int = 200_000
     validation_size: int = 100
     number_of_environments: int = 10
     random_state: int = 0
-    reward_plot_path: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent / Path("data", "figures", "reward_curve_extra_action_ensemble_RL_20mil.png"))
-    agent_path: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent / Path("data", "agents", "surrogate_agent_extra_action_best_20mil.zip"))
-    data_path: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent / Path("data", "raw", "triangular"))
-    ensemble_path: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent / Path("data", "models", "ensemble"))
-    surrogate_path: Path = field(default_factory=lambda: Path(__file__).parent.parent.parent / Path("data", "models", "surrogate.pth"))
+    reward_plot_path: Path | None = field(default=None)
+    agent_path: Path | None = field(default=None)
+    data_path: Path | None = field(default=None)
+    surrogate_path: Path | None = field(default=None)
+
+    def __post_init__(self) -> None:
+        """Initialize path fields based on output_dir."""
+        self.output_dir.resolve()
+        if self.reward_plot_path is None:
+            self.reward_plot_path = self.output_dir / Path("figures", "reward_curve_extra_action_ensemble_RL_20mil.png")
+        if self.agent_path is None:
+            self.agent_path = self.output_dir / Path("agents", "surrogate_agent_extra_action_best_20mil.zip")
+        if self.data_path is None:
+            self.data_path = self.output_dir / Path("raw", "triangular")
+        if self.surrogate_path is None:
+            self.surrogate_path = self.output_dir / Path("surrogate_models", "surrogate.pth")
