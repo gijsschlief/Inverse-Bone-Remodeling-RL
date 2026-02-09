@@ -88,3 +88,4 @@ class InverseModel(torch.nn.Module):
     def save_model(self, file_path: Path) -> None:
         """Save the model state to a file."""
         torch.save(self.state_dict(), file_path)
+
