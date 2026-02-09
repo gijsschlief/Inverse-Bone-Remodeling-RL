@@ -60,3 +60,23 @@ def reshape_input_features_for_model(unconverted_data: np.ndarray) -> np.ndarray
         force_location_vector[class_index] = 100.0
         converted_data[i] = np.concatenate([force_location_vector, [magnitude]])
     return converted_data
+
+def reshape_features_back_to_params(model_output: np.ndarray) -> np.ndarray:
+    """Convert model output back to parameters (location, side, magnitude).
+
+    Args:
+        model_output (np.ndarray): Model output features (N, 31).
+
+    Returns:
+        params_data (np.ndarray): Converted parameters (N, 3).
+
+    """
+    params_data = np.zeros((model_output.shape[0], 3), dtype=np.float32)
+    for i in range(model_output.shape[0]):
+        force_location_vector = model_output[i][:30]
+        magnitude = model_output[i][30]
+        class_index = np.argmax(force_location_vector)
+        side = class_index // 10
+        location = class_index % 10
+        params_data[i] = [location, side, magnitude]
+    return params_data

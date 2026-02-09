@@ -12,14 +12,24 @@ from bone_remodelling.forward_data.forward_data_manager import (
 )
 from bone_remodelling.inverse_model.inverse_neural_network import InverseModel
 from bone_remodelling.inverse_model.inverse_parameters import InverseTrainParameters
+from bone_remodelling.inverse_model.triangular_to_params_converter import (
+    force_profile_to_params,
+    params_to_force_profile,
+    reshape_features_back_to_params,
+    reshape_input_features_for_model,
+)
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.surrogate_model.loader import (
     load_surrogate_models,
     predict_with_surrogates,
 )
+from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.sanitizer import sanitize_data
 from bone_remodelling.surrogate_model.splitter import splitting
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    SurrogateTrainParameters,
+)
 from bone_remodelling.surrogate_model.visualizer import plot_surrogate
 
 logger = logging.getLogger(__name__)
@@ -78,23 +88,69 @@ def inverse_model_evaluation(
         final_output_densities,
     )
 
-    x_train, x_val, x_test, y_train, y_val, y_test = splitting(
+    y_train, y_val, y_test, x_train, x_val, x_test = splitting(
         force_profiles,
         final_output_densities,
         random_state=random_state,
     )
 
+    # From triangular force profiles to parameters (location, side, magnitude)
+    y_train = np.array([force_profile_to_params(fp) for fp in y_train])
+    y_val = np.array([force_profile_to_params(fp) for fp in y_val])
+    y_test = np.array([force_profile_to_params(fp) for fp in y_test])
+
+    # From parameters to new input format for the model
+    y_train = reshape_input_features_for_model(y_train)
+    y_val = reshape_input_features_for_model(y_val)
+    y_test = reshape_input_features_for_model(y_test)
+
     # Load inverse models
-    inverse_model_path = data_path / Path("inverse_models")
-    inverse_model_path = inverse_model_path.resolve()
-    predictors = load_surrogate_models(inverse_model_path, model_class, train_parameters)
+    predictors = load_surrogate_models(model_class, train_parameters)
 
     # Run the predictors on the three sets
     y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=train_parameters.batch_size)
     y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=train_parameters.batch_size)
     y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=train_parameters.batch_size)
 
-    # Calculate average similarity scores
+    # From new input format back to parameters (location, side, magnitude)
+    y_train_predicted = reshape_features_back_to_params(y_train_predicted)
+    y_val_predicted = reshape_features_back_to_params(y_val_predicted)
+    y_test_predicted = reshape_features_back_to_params(y_test_predicted)
+
+    # From parameters back to triangular force profiles
+    y_train_predicted = np.array([params_to_force_profile(params) for params in y_train_predicted])
+    y_val_predicted = np.array([params_to_force_profile(params) for params in y_val_predicted])
+    y_test_predicted = np.array([params_to_force_profile(params) for params in y_test_predicted])
+
+    inverse_model_metrics(sample_forces=y_train, predicted_forces=y_train_predicted)
+    inverse_model_metrics(sample_forces=y_val, predicted_forces=y_val_predicted)
+    inverse_model_metrics(sample_forces=y_test, predicted_forces=y_test_predicted)
+
+    try:
+        evaluate_predictions_with_surrogate(surrogate_model_path=data_path / Path("surrogate_models/model.pth"), force_predictions=(y_train_predicted, y_val_predicted, y_test_predicted), true_densities=(x_train, x_val, x_test), metric=metric)
+    except OSError as e:
+        logger.error(f"Could not load surrogate model for evaluation: {e}")
+        return
+
+def evaluate_predictions_with_surrogate(
+    surrogate_model_path: Path,
+    force_predictions: tuple[np.ndarray, np.ndarray, np.ndarray],
+    true_densities: tuple[np.ndarray, np.ndarray, np.ndarray],
+    metric: str,
+) -> None:
+    """Evaluate the predicted parameters by converting them back to force profiles and using the surrogate model to predict the resulting densities, then comparing those to the true densities."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    surrogate_train_parameters = SurrogateTrainParameters(model_path=surrogate_model_path, device=device)
+
+    surrogate_predictors = load_surrogate_models(SurrogateModel, surrogate_train_parameters)
+
+    x_train, x_val, x_test = force_predictions
+    y_train, y_val, y_test = true_densities
+
+    y_train_predicted, _ = predict_with_surrogates(surrogate_predictors, x_train, batch_size=surrogate_train_parameters.batch_size)
+    y_val_predicted, _ = predict_with_surrogates(surrogate_predictors, x_val, batch_size=surrogate_train_parameters.batch_size)
+    y_test_predicted, y_test_std = predict_with_surrogates(surrogate_predictors, x_test, batch_size=surrogate_train_parameters.batch_size)
+
     train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_train_predicted))]
     logger.info(f"Train {metric.upper()}: {np.mean(train_ssim):.4f}")
 
@@ -140,7 +196,7 @@ def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
     )
     args = parser.parse_args(cli_args)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = config.output_dir / Path("inverse_models")
+    model_path = (config.output_dir / Path("inverse_models", "model.pth")).resolve()
     train_parameters = InverseTrainParameters(model_path=model_path, device=device, batch_size=args.batch_size)
     inverse_model_evaluation(
         data_path=config.output_dir,
@@ -155,6 +211,6 @@ if __name__ == "__main__":
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model_path = config.output_dir / Path("inverse_models")
+    model_path = (config.output_dir / Path("inverse_models", "model.pth")).resolve()
     train_parameters = InverseTrainParameters(model_path=model_path, device=device)
     inverse_model_evaluation(data_path=config.output_dir, model_class=InverseModel, train_parameters=train_parameters, random_state=config.seed)

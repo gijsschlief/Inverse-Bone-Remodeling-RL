@@ -61,9 +61,8 @@ def surrogates_evaluation(
     )
 
     # Load surrogate models
-    surrogate_path = data_path / Path("surrogate_models")
-    surrogate_path = surrogate_path.resolve()
-    predictors = load_surrogate_models(surrogate_path, model_class, train_parameters)
+    train_parameters.model_path = (data_path / Path("surrogate_models", "model.pth")).resolve()
+    predictors = load_surrogate_models(model_class, train_parameters)
 
     # Run the predictors on the three sets
     y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=train_parameters.batch_size)

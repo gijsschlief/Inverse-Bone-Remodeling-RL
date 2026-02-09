@@ -6,9 +6,6 @@ from pathlib import Path
 import numpy as np
 import torch
 
-from bone_remodelling.surrogate_model.neural_network import (
-    SurrogateModel,
-)
 from bone_remodelling.surrogate_model.surrogate_parameters import (
     TrainParameters,
 )
@@ -225,11 +222,11 @@ class SurrogatePredictor:
 
 
 def load_surrogate_models(
-    model_folder: Path,
     model_class: type[torch.nn.Module],
     train_parameters: TrainParameters,
 ) -> list[SurrogatePredictor]:
     """Load any number of surrogate models from a specified folder."""
+    model_folder = train_parameters.model_path.parent.resolve()
     logger.info(f"Loading all models from {model_folder}")
 
     predictors: list[SurrogatePredictor] = []
