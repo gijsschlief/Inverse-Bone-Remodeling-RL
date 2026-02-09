@@ -74,7 +74,7 @@ def cli(
         cli_args (list[str]): Additional CLI arguments (not used here).
 
     """
-    data_file_path = configuration_parameters.output_dir / Path("raw")
+    data_file_path = configuration_parameters.output_dir / Path("raw", "triangular")
     model_path = configuration_parameters.output_dir / Path(f"inverse_models/model_{configuration_parameters.seed}.pth")
     model_path = model_path.resolve()
     model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
     model_path = config.output_dir / Path(f"inverse_models/model_{config.seed}.pth")
-    data_file_path = config.output_dir / Path("raw")
+    data_file_path = config.output_dir / Path("raw", "triangular")
     run_inverse_training(data_file_path, model_path, random_state=config.seed, ensemble_seed=config.seed)
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)
