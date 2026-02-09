@@ -14,6 +14,7 @@ from bone_remodelling.inverse_model.inverse_parameters import (
 )
 from bone_remodelling.inverse_model.triangular_to_params_converter import (
     force_profile_to_params,
+    reshape_input_features_for_model,
 )
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
@@ -60,6 +61,11 @@ def run_inverse_training(
     y_train_np = np.array([force_profile_to_params(fp) for fp in y_train_np])
     y_val_np = np.array([force_profile_to_params(fp) for fp in y_val_np])
     y_test_np = np.array([force_profile_to_params(fp) for fp in y_test_np])
+
+    logger.info("Using parameters for new output vector format (location, side, magnitude).")
+    y_train_np = reshape_input_features_for_model(y_train_np)
+    y_val_np = reshape_input_features_for_model(y_val_np)
+    y_test_np = reshape_input_features_for_model(y_test_np)
 
     logger.info(f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}")
     train_parameters = InverseTrainParameters(
