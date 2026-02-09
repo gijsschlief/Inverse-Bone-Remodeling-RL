@@ -87,12 +87,12 @@ def main() -> None:
             inverse_evaluation(configuration_parameters, remaining_args)
         elif args.module == "run_all":
             from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
-            from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
-            from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: I001, PLC0415
-            from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: I001, PLC0415
-            from bone_remodelling.inverse_model.train_inverse import cli as inverse_training  # noqa: I001, PLC0415
-            from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: I001, PLC0415
-            from bone_remodelling.rl_model.run_rl_environment import cli as rl_training  # noqa: I001, PLC0415
+            from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: PLC0415
+            from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: PLC0415
+            from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: PLC0415
+            from bone_remodelling.inverse_model.train_inverse import cli as inverse_training  # noqa: PLC0415
+            from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: PLC0415
+            from bone_remodelling.rl_model.run_rl_environment import cli as rl_training  # noqa: PLC0415
 
             generate_data(configuration_parameters, ["--samples", "100000", "--type", "merger"])
             surrogate_training(configuration_parameters, [])
