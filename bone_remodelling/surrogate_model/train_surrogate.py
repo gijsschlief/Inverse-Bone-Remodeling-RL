@@ -8,9 +8,9 @@ import numpy as np
 import torch
 
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
-from bone_remodelling.old_inverse_model.inverse_trainer import combined_loss
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
+from bone_remodelling.surrogate_model.loss_function import combined_loss
 from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.sanitizer import sanitize_data
 from bone_remodelling.surrogate_model.splitter import load_and_split_data
