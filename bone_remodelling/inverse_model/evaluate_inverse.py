@@ -21,6 +21,7 @@ from bone_remodelling.inverse_model.triangular_to_params_converter import (
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.surrogate_model.loader import (
+    SurrogatePredictor,
     load_surrogate_models,
     predict_with_surrogates,
 )
@@ -33,6 +34,7 @@ from bone_remodelling.surrogate_model.surrogate_parameters import (
 from bone_remodelling.surrogate_model.visualizer import plot_surrogate
 
 logger = logging.getLogger(__name__)
+
 
 def inverse_model_metrics(sample_forces: np.ndarray, predicted_forces: np.ndarray) -> None:
     """Calculate metrics for the inverse model predictions. Looks at the force side, exact location and magnitude differences."""
@@ -94,52 +96,43 @@ def inverse_model_evaluation(
         random_state=random_state,
     )
 
-    # From triangular force profiles to parameters (location, side, magnitude)
-    y_train = np.array([force_profile_to_params(fp) for fp in y_train])
-    y_val = np.array([force_profile_to_params(fp) for fp in y_val])
-    y_test = np.array([force_profile_to_params(fp) for fp in y_test])
-
-    # From parameters to new input format for the model
-    y_train = reshape_input_features_for_model(y_train)
-    y_val = reshape_input_features_for_model(y_val)
-    y_test = reshape_input_features_for_model(y_test)
-
     # Load inverse models
     predictors = load_surrogate_models(model_class, train_parameters)
-
-    # Run the predictors on the three sets
-    y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=train_parameters.batch_size)
-    y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=train_parameters.batch_size)
-    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=train_parameters.batch_size)
-
-    # From new input format back to parameters (location, side, magnitude)
-    y_train_predicted = reshape_features_back_to_params(y_train_predicted)
-    y_val_predicted = reshape_features_back_to_params(y_val_predicted)
-    y_test_predicted = reshape_features_back_to_params(y_test_predicted)
-
-    # From parameters back to triangular force profiles
-    y_train_predicted = np.array([params_to_force_profile(params) for params in y_train_predicted])
-    y_val_predicted = np.array([params_to_force_profile(params) for params in y_val_predicted])
-    y_test_predicted = np.array([params_to_force_profile(params) for params in y_test_predicted])
+    y_train_predicted = inverse_prediction(predictors, train_parameters, x_train, y_train)
+    y_val_predicted = inverse_prediction(predictors, train_parameters, x_val, y_val)
+    y_test_predicted = inverse_prediction(predictors, train_parameters, x_test, y_test)
 
     inverse_model_metrics(sample_forces=y_train, predicted_forces=y_train_predicted)
     inverse_model_metrics(sample_forces=y_val, predicted_forces=y_val_predicted)
     inverse_model_metrics(sample_forces=y_test, predicted_forces=y_test_predicted)
 
     try:
-        evaluate_predictions_with_surrogate(surrogate_model_path=data_path / Path("surrogate_models/model.pth"), force_predictions=(y_train_predicted, y_val_predicted, y_test_predicted), true_densities=(x_train, x_val, x_test), metric=metric)
+        evaluate_predictions_with_surrogate(surrogate_model_path=data_path / Path("surrogate_models/model.pth"), device=train_parameters.device, force_predictions=(y_train_predicted, y_val_predicted, y_test_predicted), true_densities=(x_train, x_val, x_test), metric=metric)
     except OSError as e:
         logger.error(f"Could not load surrogate model for evaluation: {e}")
         return
 
+def inverse_prediction(
+    predictors: list[SurrogatePredictor],
+    train_parameters: InverseTrainParameters,
+    x: np.ndarray,
+    y: np.ndarray,
+) -> np.ndarray:
+    """Evaluate the predicted parameters by converting them back to force profiles and using the surrogate model to predict the resulting densities, then comparing those to the true densities."""
+    y = np.array([force_profile_to_params(fp) for fp in y])
+    y = reshape_input_features_for_model(y)
+    y_predicted, _ = predict_with_surrogates(predictors, x, batch_size=train_parameters.batch_size)
+    y_predicted = reshape_features_back_to_params(y_predicted)
+    return np.array([params_to_force_profile(int(y_predicted[i][0]), int(y_predicted[i][1]), y_predicted[i][2]) for i in range(len(y_predicted))])
+
 def evaluate_predictions_with_surrogate(
     surrogate_model_path: Path,
+    device: torch.device,
     force_predictions: tuple[np.ndarray, np.ndarray, np.ndarray],
     true_densities: tuple[np.ndarray, np.ndarray, np.ndarray],
     metric: str,
 ) -> None:
     """Evaluate the predicted parameters by converting them back to force profiles and using the surrogate model to predict the resulting densities, then comparing those to the true densities."""
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     surrogate_train_parameters = SurrogateTrainParameters(model_path=surrogate_model_path, device=device)
 
     surrogate_predictors = load_surrogate_models(SurrogateModel, surrogate_train_parameters)
