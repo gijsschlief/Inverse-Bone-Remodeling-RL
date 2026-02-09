@@ -52,8 +52,8 @@ def main() -> None:
     parser.add_argument(
         "module",
         type=str,
-        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate"],
-        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate.",
+        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate", "train_inverse", "evaluate_inverse"],
+        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse, evaluate_inverse.",
     )
     args, remaining_args = parser.parse_known_args()
     configuration_parameters = build_configuration_parameters()
