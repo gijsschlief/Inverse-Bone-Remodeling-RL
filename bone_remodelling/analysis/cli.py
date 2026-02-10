@@ -1,6 +1,7 @@
 """The parser for the analysis tools from the model."""
 
 import argparse
+from pathlib import Path
 
 from bone_remodelling.parameters import ConfigurationParameters
 
@@ -33,5 +34,5 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
         from bone_remodelling.analysis.visualise_forces import run as visualise_forces  # noqa: I001, PLC0415
         visualise_forces(config)
     elif args.type == "diversity_metrics":
-        from bone_remodelling.analysis.diversity_metrics import run as diversity_metrics  # noqa: I001, PLC0415
-        diversity_metrics(config)
+        from bone_remodelling.analysis.diversity_metrics import run_diversity_metrics as diversity_metrics  # noqa: I001, PLC0415
+        diversity_metrics(config.output_dir / Path("raw"))

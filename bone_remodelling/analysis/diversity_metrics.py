@@ -6,9 +6,9 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
-from scipy.stats import entropy
+from scipy.stats import entropy  # type: ignore[import-untyped]
 
-from bone_remodelling.forward_data.reader import forward_data_reader
+from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
 
 logger = logging.getLogger(__name__)
@@ -38,7 +38,7 @@ def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
     # Force energy variance
     energies = np.sum(force_profiles**2, axis=1)
     energy_mean = np.mean(energies)
-    energy_varience = np.var(energies)
+    energy_varience = float(np.var(energies))
 
     return {
         "coverage_fraction": coverage_fraction,
@@ -48,9 +48,10 @@ def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
         "energy_varience": energy_varience,
     }
 
-def diversity_metrics() -> None:
+def run_diversity_metrics(data_dir: Path) -> None:
     """Compute simple dataset diversity metrics for biomechanical force profiles."""
-    result = forward_data_reader()
+    forward_data_manager = ForwardDataManager(data_dir)
+    result = forward_data_manager.load_directory()
     force_profiles, output_densities = np.array([]), np.array([])
     if result is not None:
         _, force_profiles, output_densities = result
@@ -72,9 +73,11 @@ def diversity_metrics() -> None:
         axis=plt.gca(),
     )
     plt.show()
-
-    directory_path_triangular = Path(__file__).parent.parent.parent / Path("data", "raw", "triangular")
-    result_triangular = forward_data_reader(directory_path_triangular)
+    triangular_dir = (Path(data_dir) /  Path("triangular")).resolve()
+    if not triangular_dir.exists():
+        logger.error(f"Triangular data cannot be loaded from: {triangular_dir}")
+    forward_data_manager_triangular = ForwardDataManager(triangular_dir)
+    result_triangular = forward_data_manager_triangular.load_directory()
     force_profiles_triangular, output_densities_triangular = np.array([]), np.array([])
     if result_triangular is not None:
         _, force_profiles_triangular, output_densities_triangular = result_triangular
@@ -144,4 +147,5 @@ def compare_diversity_metrics(force_profile_flat: np.ndarray, force_profile_flat
         logger.info(f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}")
 
 if __name__ == "__main__":
-    diversity_metrics()
+    data_dir = Path(__file__).resolve().parent.parent.parent / Path("data", "raw")
+    run_diversity_metrics(data_dir)
