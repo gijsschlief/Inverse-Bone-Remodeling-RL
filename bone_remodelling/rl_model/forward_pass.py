@@ -71,7 +71,9 @@ class SurrogateForwarder(ForwardPass):
             np.ndarray: The predicted density from the surrogate model.
 
         """
-        return predict_with_surrogates(self.predictors, force_profile, batch_size=self.batch_size)[0].reshape(self.density_shape)
+        x_flat = force_profile.flatten()
+        x_input = x_flat[np.newaxis, :]
+        return predict_with_surrogates(self.predictors, x_input, batch_size=self.batch_size)[0].reshape(self.density_shape)
 
 class FenicsForwarder(ForwardPass):
     """Forward model for predicting bone density based on force profile."""
