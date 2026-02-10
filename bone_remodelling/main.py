@@ -89,6 +89,8 @@ def main() -> None:  # noqa: C901
             inverse_evaluation(configuration_parameters, remaining_args)
 
         elif args.module == "train_rl":
+            import matplotlib  # noqa: ICN001, PLC0415
+            matplotlib.use('TkAgg')
             from bone_remodelling.rl_model.run_rl_environment import cli as rl_training  # noqa: I001, PLC0415
             rl_training(configuration_parameters, remaining_args)
 
