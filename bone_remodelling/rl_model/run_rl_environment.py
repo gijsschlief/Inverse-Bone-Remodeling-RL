@@ -1,16 +1,21 @@
 """Run a reinforcement learning environment for bone remodeling."""
 
+import os
+os.environ["QT_QPA_PLATFORM"] = "offscreen"
+
 import argparse
 import logging
 from functools import partial
-from logging import config
 from pathlib import Path
 
 import numpy as np
 import torch
 from stable_baselines3 import PPO
+from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 
+from bone_remodelling.forward_data.force_profile_generator import ForceProfileGenerator
+from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import (
@@ -30,6 +35,7 @@ from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.splitter import load_and_split_data
 from bone_remodelling.surrogate_model.surrogate_parameters import (
     SurrogateTrainParameters,
+    TrainParameters,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,7 +55,6 @@ def save_model_safely(model: PPO, path: Path) -> Path:
             counter += 1
         path = Path(f"{directory}/{base_path}_{counter}{ext}")
     model.save(path)
-    #TODO: ALSO SAVE THE NORMALIZATION PARAMETERS!
     return Path(path)
 
 
@@ -57,7 +62,7 @@ def _build_environment(
     train_forces: np.ndarray,
     train_densities: np.ndarray,
     rl_parameters: RLParameters,
-    forwarder: type[ForwardPass],
+    forwarder: ForwardPass,
     seed: int,
 ) -> BoneRemodelingEnvironment:
     """Build a bone remodeling environment for reinforcement learning."""
@@ -94,14 +99,14 @@ def find_latest_agent(path: Path) -> Path:
 
 
 def initialize_new_model(
-    environment: BoneRemodelingEnvironment,
+    environment: VecNormalize,
     rl_parameters: RLParameters,
 ) -> PPO:
     """Initialize a new PPO model with the given environment.
 
     Args:
     ----
-        environment (BoneRemodelingEnvironment): The RL environment to use.
+        environment (VecNormalize): The RL environment to use.
         rl_parameters (RLParameters): The parameters for the RL agent.
 
     Returns:
@@ -136,9 +141,10 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
         config (ConfigurationParameters): Configuration parameters for the run.
         run_parameters (RunConfiguration): Run-specific parameters.
         rl_parameters (RLParameters): Parameters for the RL agent.
-        surrogate_parameters (SurrogateTrainParameters): Parameters for training the surrogate model.
+        surrogate_parameters (TrainParameters): Parameters for training the surrogate model.
 
     """
+    forward_data_manager = ForwardDataManager(run_parameters.data_path)
     (
         train_forces,
         validation_forces,
@@ -146,7 +152,7 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
         train_densities,
         validation_densities,
         _,
-    ) = load_and_split_data(run_parameters.data_path, random_state=run_parameters.random_state)
+    ) = load_and_split_data(forward_data_manager, random_state=run_parameters.random_state)
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
     metrics = MetricsContainer()
@@ -181,12 +187,11 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
     )
 
     environment_functions = [
-        partial(make_environment, seed=base_seed + i)
+        lambda seed=base_seed + i: make_environment(seed=seed)
         for i in range(number_of_environments)
     ]
-    vectorized_environment = SubprocVecEnv(environment_functions)
-    vectorized_environment = VecNormalize(
-        vectorized_environment,
+    vectorized_environment: VecNormalize = VecNormalize(
+        SubprocVecEnv(environment_functions),
         norm_obs=False,
         norm_reward=True,
         clip_reward=10.0,
@@ -213,28 +218,31 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
     )
 
     try:
+        callbacks: list[BaseCallback] = [
+            RenderCallback(
+                force_generator=ForceProfileGenerator((config.force_top_resolution, config.force_side_resolution)),
+                render_freq=run_parameters.render_frequency,
+                environment_index=0,
+                rl_parameters=rl_parameters,
+            ),
+        ]
+        if run_parameters.reward_plot_path is not None:
+            callbacks.append(RewardSavingCallback(
+                metrics=metrics,
+                out_path=run_parameters.reward_plot_path,
+            ))
+        callbacks.append(ValidationCallback(
+            metrics=metrics,
+            learning_rate_container=current_learning_rate,
+            validation_data=(validation_forces[:run_parameters.validation_size], validation_densities[:run_parameters.validation_size]),
+            validation_environment_builder=validation_environment_builder,
+            final_forwarder=forwarder,
+            rl_parameters=rl_parameters,
+            validation_frequency=run_parameters.validation_frequency,
+        ))
         model.learn(
             total_timesteps=run_parameters.total_timesteps,
-            callback=[
-                RenderCallback(
-                    render_freq=run_parameters.render_frequency,
-                    environment_index=0,
-                    rl_parameters=rl_parameters,
-                ),
-                RewardSavingCallback(
-                    metrics=metrics,
-                    out_path=run_parameters.reward_plot_path,
-                ),
-                ValidationCallback(
-                    metrics=metrics,
-                    learning_rate_container=current_learning_rate,
-                    validation_data=(validation_forces[:run_parameters.validation_size], validation_densities[:run_parameters.validation_size]),
-                    validation_environment_builder=validation_environment_builder,
-                    final_forwarder=forwarder_fenics,
-                    rl_parameters=rl_parameters,
-                    validation_frequency=run_parameters.validation_frequency,
-                ),
-            ],
+            callback=callbacks,
         )
         logger.info("Training complete.")
         saved_path = save_model_safely(model, run_parameters.agent_path)
@@ -252,15 +260,9 @@ def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
         help="Forward pass to use for the RL environment.",
     )
     args = parser.parse_args(remaining_args)
-    config = ConfigurationParameters()
     run_parameters = RunConfiguration(output_dir=config.output_dir, forward_type=args.forward_type)
     rl_parameters = RLParameters()
-    model_path = (Path(config.output_dir) / Path("surrogate_model")).resolve()
+    model_path = (Path(config.output_dir) / Path("surrogate_models", "surrogate.pth")).resolve()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     surrogate_parameters = SurrogateTrainParameters(model_path, device)
     train_rl_agent(config, run_parameters, rl_parameters, surrogate_parameters)
-
-
-if __name__ == "__main__":
-    run_parameters = RunConfiguration(output_dir=config.output_dir)
-    train_rl_agent(run_parameters=run_parameters)

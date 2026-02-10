@@ -69,19 +69,16 @@ class RunConfiguration:
     validation_size: int = 100
     number_of_environments: int = 10
     random_state: int = 0
-    reward_plot_path: Path | None = field(default=None)
-    agent_path: Path | None = field(default=None)
-    data_path: Path | None = field(default=None)
-    surrogate_path: Path | None = field(default=None)
+    reward_plot_path: Path = field(init=False)
+    agent_path: Path = field(init=False)
+    data_path: Path = field(init=False)
+    surrogate_path: Path = field(init=False)
 
     def __post_init__(self) -> None:
         """Initialize path fields based on output_dir."""
-        self.output_dir.resolve()
-        if self.reward_plot_path is None:
-            self.reward_plot_path = self.output_dir / Path("figures", "reward_curve_extra_action_ensemble_RL_20mil.png")
-        if self.agent_path is None:
-            self.agent_path = self.output_dir / Path("agents", "surrogate_agent_extra_action_best_20mil.zip")
-        if self.data_path is None:
-            self.data_path = self.output_dir / Path("raw", "triangular")
-        if self.surrogate_path is None:
-            self.surrogate_path = self.output_dir / Path("surrogate_models", "surrogate.pth")
+        self.output_dir = Path(self.output_dir).resolve()
+
+        self.reward_plot_path = self.output_dir / Path("figures", "reward_curve_extra_action_ensemble_RL_20mil.png")
+        self.agent_path = self.output_dir / Path("agents", "surrogate_agent_extra_action_best_20mil.zip")
+        self.data_path = self.output_dir / Path("raw", "triangular")
+        self.surrogate_path = self.output_dir / Path("surrogate_models", "surrogate.pth")

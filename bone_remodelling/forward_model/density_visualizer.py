@@ -17,7 +17,7 @@ def plot_density_matrix(
     matrix: np.ndarray,
     force_data: tuple[np.ndarray | None, np.ndarray | None] = (None, None),
     title: str = "Density Matrix",
-    axis: Axes = plt.gca(),
+    axis: Axes | None = None,
     color_scale: tuple[float, float] = (0.01, 1.73),
 ) -> None:
     """Plot a density matrix with annotations.
@@ -31,6 +31,8 @@ def plot_density_matrix(
         color_scale (tuple[float, float]): Contains the minimum and maximum color scale values
 
     """
+    if axis is None:
+        return
     min_color_scale, max_color_scale = color_scale
 
     axis.imshow(
@@ -198,7 +200,7 @@ def plot_density_pyvista(simulation: DensitySimulation) -> None:
     base_grid.cell_data["Density"] = simulation.get_density_function().vector().get_local()
 
     try:
-        pyvista_plotter = Plotter()
+        pyvista_plotter = Plotter() # type: ignore
         render_density_pyvista_frame(
             pyvista_plotter,
             base_grid,
@@ -212,7 +214,7 @@ def plot_density_pyvista(simulation: DensitySimulation) -> None:
 
 
 def render_density_pyvista_frame(
-    pyvista_plotter: Plotter,
+    pyvista_plotter: Plotter, # type: ignore
     grid: UnstructuredGrid,
     scalar_field_name: str,
     step_title: str,

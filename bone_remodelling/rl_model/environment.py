@@ -6,9 +6,7 @@ import numpy as np
 from gymnasium import Env, spaces
 
 from bone_remodelling.rl_model.forward_pass import (
-    EnsembleForwarder,
-    FenicsForwarder,
-    SurrogateForwarder,
+    ForwardPass,
 )
 from bone_remodelling.rl_model.parameters import RLParameters
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
@@ -21,7 +19,7 @@ class BoneRemodelingEnvironment(Env):
 
     def __init__(
         self,
-        forwarder: EnsembleForwarder | FenicsForwarder | SurrogateForwarder,
+        forwarder: ForwardPass,
         target_densities: np.ndarray,
         target_forces: np.ndarray,
         rl_parameters: RLParameters,
@@ -29,9 +27,6 @@ class BoneRemodelingEnvironment(Env):
         """Initialize the environment with a surrogate model."""
         super().__init__()
         self.forwarder = forwarder
-
-        self.action_space: spaces.Box
-        self.observation_space: spaces.Box
 
         self.target_densities = target_densities
         self.density_shape = target_densities[0].shape
