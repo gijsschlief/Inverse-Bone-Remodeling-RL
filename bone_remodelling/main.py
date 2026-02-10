@@ -46,14 +46,14 @@ def build_configuration_parameters() -> ConfigurationParameters:
     output_dir.mkdir(parents=True, exist_ok=True)
     return ConfigurationParameters(output_dir=output_dir)
 
-def main() -> None:  # noqa: C901
+def main() -> None:  # noqa: C901, PLR0912
     """Handle CLI arguments and execute the appropriate module."""
     parser = argparse.ArgumentParser(description="Unified CLI for Thesis modules.")
     parser.add_argument(
         "module",
         type=str,
-        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate", "train_inverse", "evaluate_inverse", "train_rl", "evaluate_rl", "run_all"],
-        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse, evaluate_inverse, train_rl, evaluate_rl, run_all.",
+        choices=["animate_forward_model", "generate_forward_data", "train_surrogate", "evaluate_surrogate", "train_inverse", "evaluate_inverse", "train_rl", "evaluate_rl", "analysis", "train_all", "evaluate_all"],
+        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse, evaluate_inverse, train_rl, evaluate_rl, analysis, train_all, evaluate_all.",
     )
     args, remaining_args = parser.parse_known_args()
     configuration_parameters = build_configuration_parameters()
@@ -98,9 +98,17 @@ def main() -> None:  # noqa: C901
             from bone_remodelling.rl_model.evaluate_agent import cli as rl_evaluation  # noqa: I001, PLC0415
             rl_evaluation(configuration_parameters, remaining_args)
 
-        elif args.module == "run_all":
-            logger.info(f"Running all modules in sequence...{remaining_args} not used for run_all.")
-            run_all(configuration_parameters)
+        elif args.module == "analysis":
+            from bone_remodelling.analysis.cli import cli as analysis   # noqa: I001, PLC0415
+            analysis(configuration_parameters, remaining_args)
+
+        elif args.module == "train_all":
+            logger.info(f"Running all modules in sequence...{remaining_args} not used for train_all.")
+            train_all(configuration_parameters)
+
+        elif args.module == "evaluate_all":
+            logger.info(f"Evaluating all modules in sequence...{remaining_args} not used for evaluate_all.")
+            evaluate_all(configuration_parameters)
 
         else:
             raise RuntimeError(f"Unknown module: {args.module}")
@@ -109,16 +117,12 @@ def main() -> None:  # noqa: C901
         raise
     logger.info(f"--- Finished Module: {args.module} ---")
 
-def run_all(configuration_parameters: ConfigurationParameters) -> None:
-    """Run all modules in sequence."""
-    from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
-    from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: PLC0415
+def train_all(configuration_parameters: ConfigurationParameters) -> None:
+    """Train all modules in sequence."""
+    from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
     from bone_remodelling.surrogate_model.train_surrogate import cli as surrogate_training  # noqa: PLC0415
-    from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: PLC0415
     from bone_remodelling.inverse_model.train_inverse import cli as inverse_training  # noqa: PLC0415
-    from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: PLC0415
     from bone_remodelling.rl_model.run_rl_environment import cli as rl_training  # noqa: PLC0415
-    from bone_remodelling.rl_model.evaluate_agent import cli as rl_evaluation  # noqa: PLC0415
 
     generate_data(configuration_parameters, ["--samples", "100000", "--type", "merger"])
     surrogate_training(configuration_parameters, [])
@@ -126,15 +130,26 @@ def run_all(configuration_parameters: ConfigurationParameters) -> None:
     inverse_training(configuration_parameters, [])
     rl_training(configuration_parameters, [])
 
+def evaluate_all(configuration_parameters: ConfigurationParameters) -> None:
+    """Evaluate all modules in sequence."""
+    from bone_remodelling.forward_model.density_animation import cli as generate_animation  # noqa: I001, PLC0415
+    from bone_remodelling.surrogate_model.evaluate_surrogate import cli as surrogate_evaluation  # noqa: PLC0415
+    from bone_remodelling.inverse_model.evaluate_inverse import cli as inverse_evaluation  # noqa: PLC0415
+    from bone_remodelling.rl_model.evaluate_agent import cli as rl_evaluation  # noqa: PLC0415
+
     generate_animation(configuration_parameters, ["--type", "validation", "--animator", "matplotlib"])
     surrogate_evaluation(configuration_parameters, [])
     inverse_evaluation(configuration_parameters, [])
     rl_evaluation(configuration_parameters, [])
 
-# TODO: Hyperparameter tuning for surrogate model
-# TODO: Add parameters to the parser of the RL model to give more freedom to the user
-# TODO: Create the parsing of the analysis module that can generate the different figures
-# Check if code can still run surrogate on GPU with rl on cpu.!
+# TODO(gijsschlief): Hyperparameter tuning for surrogate model
+#https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/issues/18
+
+# TODO(gijsschlief): Add parameters to the parser of the RL model to give more freedom to the user
+#https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/issues/20
+
+# TODO(gijsschlief): Create the parsing of the analysis module that can generate the different figures
+#https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/issues/19
 
 if __name__ == "__main__":
     main()
