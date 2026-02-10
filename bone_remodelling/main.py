@@ -130,6 +130,9 @@ def run_all(configuration_parameters: ConfigurationParameters) -> None:
     rl_evaluation(configuration_parameters, [])
 
 # TODO: Hyperparameter tuning for surrogate model
+# TODO: Add parameters to the parser of the RL model to give more freedom to the user
+# TODO: Create the parsing of the analysis module that can generate the different figures
+# Check if code can still run surrogate on GPU with rl on cpu.!
 
 if __name__ == "__main__":
     main()
