@@ -180,10 +180,16 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
         default="triangular",
         help="Type of force profile to generate ('merger' or 'triangular').",
     )
+    parser.add_argument(
+        "--append",
+        type=bool,
+        default=False,
+        help="Whether to append to existing data or create a new file. If appending give size of total samplecount needed in file.",
+    )
     args = parser.parse_args(argv)
-    run(config, samples=args.samples, force_type=args.force_type)
+    run(config, samples=args.samples, force_type=args.force_type, append=args.append)
 
-def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
+def run(config: ConfigurationParameters, samples: int, force_type: str, append: bool) -> None:
     """Generate training data for bone remodeling simulations.
 
     Args:
@@ -191,6 +197,7 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
         config (ConfigurationParameters): Configuration parameters for the simulation.
         samples (int): Number of samples to generate.
         force_type (str): Type of force profile to generate ('merger' or 'triangular').
+        append (bool): Whether to append to existing data or create a new file.
 
     """
     initial_density = np.full((config.mesh_top_resolution, config.mesh_side_resolution), config.start_density)
@@ -202,7 +209,24 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
     )
     force_mask = force_profile_generator.generate_force_mask()
 
-    force_profiles, directory = None, config.output_dir / Path("raw")
+    directory = (config.output_dir / Path("raw"))
+    if force_type == "triangular":
+            directory = (config.output_dir / Path("raw", "triangular"))
+
+    directory.mkdir(parents=True, exist_ok=True)
+    forward_data_manager = ForwardDataManager(storage_path=directory)
+
+    offset: int = 0
+    existing_files = sorted(directory.glob("sim_*.jsonl"))
+    if append and existing_files:
+            latest_file = existing_files[-1].name
+            forward_data_manager = ForwardDataManager(directory, latest_file)
+            data = forward_data_manager.load_directory()
+            if data:
+                offset = len(data[0])
+                logger.info(f"Appending to {latest_file} starting from serial {offset}")
+
+    force_profiles = None
     if force_type == "merger":
         force_profiles = force_profile_generator.merger(
             num_samples=samples,
@@ -211,8 +235,6 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
         force_profiles = force_profile_generator.triangular_only(
             num_samples=samples,
         )
-        directory = directory / Path("triangular")
-    forward_data_manager = ForwardDataManager(storage_path=directory)
 
     if force_mask is None or force_profiles is None:
         logger.error("Failed to generate force profiles or force mask.")
@@ -230,7 +252,7 @@ def run(config: ConfigurationParameters, samples: int, force_type: str) -> None:
     )
 
     data_generator = TrainingDataGenerator(
-        force_profiles=force_profiles,
+        force_profiles=force_profiles[offset:],
         simulation_parameters=simulation_parameters,
         forward_data_manager=forward_data_manager,
     )
@@ -253,4 +275,4 @@ if __name__ == "__main__":
     )
     samples = 1_000
     force_type = "triangular"
-    run(config, samples, force_type)
+    run(config, samples, force_type, append=False)

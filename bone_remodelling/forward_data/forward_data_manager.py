@@ -13,10 +13,12 @@ logger = logging.getLogger(__name__)
 class ForwardDataManager:
     """Manager for storing and retrieving forward model data."""
 
-    def __init__(self, storage_path: Path) -> None:
+    def __init__(self, storage_path: Path, filename: str | None = None) -> None:
         """Initialize the ForwardDataManager with a storage path."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.storage_path = Path(storage_path) / Path(f"sim_{timestamp}.jsonl")
+        if filename is None:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"sim_{timestamp}.jsonl"
+        self.storage_path = Path(storage_path) / Path(filename)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         self.serial_number = 0
 
@@ -73,6 +75,7 @@ class ForwardDataManager:
 
     def _convert_to_numpy(self, data: list[dict]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         serials = np.array([e["serial_number"] for e in data])
+        self.serial_number = serials.max() + 1 if serials.size > 0 else 0
         forces = np.array([e["force_profile"] for e in data], dtype=np.float32)
         densities = np.array([e["final_output_density"] for e in data], dtype=np.float32)
         return serials, forces, densities
