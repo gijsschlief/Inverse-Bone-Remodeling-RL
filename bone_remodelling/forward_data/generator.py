@@ -182,14 +182,13 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     )
     parser.add_argument(
         "--append",
-        type=bool,
-        default=False,
-        help="Whether to append to existing data or create a new file. If appending give size of total samplecount needed in file.",
+        action="store_true",
+        help="Whether to append to existing data or create a new file.",
     )
     args = parser.parse_args(argv)
     run(config, samples=args.samples, force_type=args.force_type, append=args.append)
 
-def run(config: ConfigurationParameters, samples: int, force_type: str, append: bool) -> None:
+def run(config: ConfigurationParameters, samples: int, force_type: str, append: bool) -> None:  # noqa: FBT001
     """Generate training data for bone remodeling simulations.
 
     Args:
