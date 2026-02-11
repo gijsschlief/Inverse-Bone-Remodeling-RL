@@ -1,14 +1,16 @@
 """Evaluate the trained RL agent."""
 
-import argparse
 import logging
 from pathlib import Path
 
 import numpy as np
+import torch
 from matplotlib import pyplot as plt
 from stable_baselines3 import PPO
 
+from bone_remodelling.forward_data.force_profile_generator import ForceProfileGenerator
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
+from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
 from bone_remodelling.inverse_model.evaluate_inverse import (
     evaluate_predictions_with_surrogate,
     inverse_model_metrics,
@@ -23,6 +25,9 @@ from bone_remodelling.rl_model.render_callback import RenderCallback
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.surrogate_model.neural_network import SurrogateModel
 from bone_remodelling.surrogate_model.splitter import splitting
+from bone_remodelling.surrogate_model.surrogate_parameters import (
+    SurrogateTrainParameters,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +53,7 @@ def evaluate_agent(
         dict: Evaluation metrics per episode.
 
     """
+    force_generator = ForceProfileGenerator()
     episode_rewards = []
     ssim_scores = []
     mse_errors = []
@@ -55,15 +61,14 @@ def evaluate_agent(
     all_predicted_densities = []
     all_samples_forces = []
     all_sample_densities = []
-    render_callback = RenderCallback()
+    render_callback = RenderCallback(force_generator)
 
     # For plotting worst sample at the end
     worst_sample_information = None
     worst_estimate_information = None
     worst_reward = float('inf')
 
-    evaluate_predictions_with_surrogate(metric=metric)
-
+    sample_information, estimate_information, plot_reward = environment.get_data_for_visualization()
     for ep in range(num_episodes):
         obs, _ = environment.reset()
         done = False
@@ -133,7 +138,7 @@ def evaluate_agent(
     }
 
 
-def run_agent_evaluation(config: ConfigurationParameters, metric: str) -> None:
+def run_agent_evaluation(config: ConfigurationParameters) -> None:
     """Evaluate the RL agent."""
     run_parameters = RunConfiguration(output_dir=config.output_dir)
 
@@ -153,10 +158,15 @@ def run_agent_evaluation(config: ConfigurationParameters, metric: str) -> None:
 
     rl_parameters = RLParameters()
 
+    surrogate_parameters = SurrogateTrainParameters(
+        model_path=(run_parameters.data_path / Path("surrogate_models")).resolve(),
+        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
+    )
+
     forwarder_surrogate = SurrogateForwarder(
-    surrogate_model_path=run_parameters.surrogate_path,
-    density_shape=test_density_profiles[0].shape,
-    model_class=SurrogateModel,
+        config=config,
+        model_class=SurrogateModel,
+        train_parameters=surrogate_parameters,
     )
 
     agent_evaluation_environment = BoneRemodelingEnvironment(
@@ -176,16 +186,12 @@ def run_agent_evaluation(config: ConfigurationParameters, metric: str) -> None:
     test_peaks = np.max(np.abs(np.array(evaluation_result["sample_forces"])), axis=(1, 2))
     eval_peaks = np.max(np.abs(np.array(evaluation_result["forces"])), axis=(1, 2))
     eps = 1e-3
-    test_peaks = np.clip(test_peaks, eps, None)
-    eval_peaks = np.clip(eval_peaks, eps, None)
+    test_peaks, eval_peaks = np.clip(test_peaks, eps, None), np.clip(eval_peaks, eps, None)
     plt.figure(num=2)
     plt.scatter(test_peaks, eval_peaks, alpha=0.4)
-    max_test = test_peaks.max()
-    max_eval = eval_peaks.max()
-    min_test = test_peaks.min()
-    min_eval = eval_peaks.min()
-    max_val = max(max_test, max_eval)
-    min_val = min(min_test, min_eval)
+    max_test, max_eval = test_peaks.max(), eval_peaks.max()
+    min_test, min_eval = test_peaks.min(), eval_peaks.min()
+    max_val, min_val = max(max_test, max_eval), min(min_test, min_eval)
     plt.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=2)
     plt.xscale('log')
     plt.yscale('log')
@@ -211,6 +217,8 @@ def run_agent_evaluation(config: ConfigurationParameters, metric: str) -> None:
     logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}")
 
     # Plot representative samples from evaluation
+    force_generator = ForceProfileGenerator()
+    force_mask = force_generator.generate_force_mask()
     for _ in range(100):
         k = np.random.randint(0, len(sample_forces))
         logger.info(f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}")
@@ -219,28 +227,36 @@ def run_agent_evaluation(config: ConfigurationParameters, metric: str) -> None:
         plot_inverse_model(
             predicted_densities[k],
             sample_densities[k],
-            predicted_forces[k],
-            sample_forces[k],
+            (predicted_forces[k], force_mask),
+            (sample_forces[k], force_mask),
         )
         plt.show()
 
-def cli(configuration_parameters: ConfigurationParameters, remaining_args: list) -> None:
-    """CLI entry point for evaluating the RL agent."""
-    parser = argparse.ArgumentParser(description="Evaluate the RL agent.")
-    parser.add_argument(
-        "--metric",
-        choices=["ssim", "mse"],
-        type=str,
-        default="ssim",
-        help="RL metric used to evaluate the agent.",
+def plot_inverse_model(predicted_density: np.ndarray, sample_density: np.ndarray, predicted_force: tuple[np.ndarray, np.ndarray], sample_force: tuple[np.ndarray, np.ndarray]) -> None:
+    """Plot the predicted vs sample density and force profiles."""
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5))
+    plot_density_matrix(
+        matrix=predicted_density,
+        title="Predicted Density",
+        axis=axes[0],
+        color_scale=(0, 1),
+        force_data=predicted_force,
     )
-    args = parser.parse_args(remaining_args)
+    plot_density_matrix(
+        matrix=sample_density,
+        title="Sample Density",
+        axis=axes[1],
+        color_scale=(0, 1),
+        force_data=sample_force,
+    )
 
-    run_agent_evaluation(configuration_parameters, args.metric)
+def cli(configuration_parameters: ConfigurationParameters, remaining_args: list) -> None:  # noqa: ARG001
+    """CLI entry point for evaluating the RL agent."""
+    run_agent_evaluation(configuration_parameters)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     config = ConfigurationParameters(
         output_dir=Path("output"),
     )
-    run_agent_evaluation(config, "ssim")
+    run_agent_evaluation(config)
