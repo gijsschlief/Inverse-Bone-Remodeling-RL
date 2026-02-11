@@ -235,12 +235,13 @@ def load_surrogate_models(
         if not model_path.is_file() or model_path.stat().st_size == 0:
             logger.warning(f"Skipping invalid file: {model_path}")
             continue
-
+        train_parameters.model_path = model_path
         try:
             predictor = SurrogatePredictor(
                 model_class=model_class,
                 train_parameters=train_parameters,
             )
+            predictor.load_model()
             predictors.append(predictor)
         except (RuntimeError, ValueError) as e:
             logger.warning(f"Failed to load model from {model_path}: {e}")

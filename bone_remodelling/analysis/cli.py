@@ -23,10 +23,19 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
         default="triangular",
         help="Type of force profile to generate ('merger' or 'triangular').",
     )
+    parser.add_argument(
+        "--num_samples",
+        type=int,
+        default=20,
+        help="Number of samples to generate for the forward parameter sweep.",
+    )
     args = parser.parse_args(argv)
     if args.type == "forward_parameter_sweep":
-        from bone_remodelling.analysis.forward_parameter_sweep import run as forward_parameter_sweep  # noqa: I001, PLC0415
-        forward_parameter_sweep(config)
+        from bone_remodelling.analysis.forward_parameter_sweep import run_forward_sweep as forward_parameter_sweep  # noqa: I001, PLC0415
+        sweep_directory = (config.output_dir / Path("forward_parameter_sweep"))
+        sweep_directory.mkdir(exist_ok=True)
+        sweep_file = sweep_directory / Path("sweep_results.csv")
+        forward_parameter_sweep(sweep_file, num_samples=args.num_samples)
     elif args.type == "max_force_sweep":
         from bone_remodelling.analysis.max_force_sweep import run as max_force_sweep  # noqa: I001, PLC0415
         max_force_sweep(config, force_type=args.force_type)

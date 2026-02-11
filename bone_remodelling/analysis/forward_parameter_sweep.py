@@ -150,11 +150,8 @@ def datasweep(data_path: Path) -> None:
     density_references = run_reference_simulation(simulation_base_parameters, force_profiles)
     run_parameter_sweep(simulation_base_parameters, force_profiles, density_references, data_path)
 
-def pareto_plot(data_path: Path) -> None:
+def pareto_plot(sweep_data_frame: pd.DataFrame) -> None:
     """Generate a Pareto plot from the CSV results."""
-    sweep_data_frame = pd.read_csv(data_path)
-
-    # Remove failed runs
     sweep_data_frame = sweep_data_frame.dropna(subset=["runtime_s", "l2_error"])
     sweep_data_frame = sweep_data_frame[sweep_data_frame["l2_error"] > 0]
 
@@ -254,8 +251,14 @@ def performance_comparison(num_samples: int = 100) -> None:
         logger.info(f"  → L2 Error: {combined_l2_error:.4f}")
         logger.info(f"  → Example profile: {density[0]}")
 
-if __name__ == "__main__":
-    data_path = Path(__file__).parent.parent.parent / Path("data", "sweeps", "parameter_sweep.csv")
-    datasweep(data_path=data_path)
-    pareto_plot(data_path=data_path)
-    performance_comparison(num_samples=5)
+def run_forward_sweep(sweep_file: Path, num_samples: int) -> None:
+    """Run the full forward model parameter sweep and analysis."""
+    try:
+        dataframe = pd.read_csv(sweep_file)
+        logger.info(f"Loaded existing sweep results from {sweep_file}")
+    except FileNotFoundError:
+        logger.warning(f"Sweep results not found at {sweep_file}. Running new sweep...")
+        datasweep(data_path=sweep_file)
+        dataframe = pd.read_csv(sweep_file)
+    pareto_plot(dataframe)
+    performance_comparison(num_samples=num_samples)

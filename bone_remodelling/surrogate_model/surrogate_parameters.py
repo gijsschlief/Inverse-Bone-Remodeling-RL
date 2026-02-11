@@ -39,7 +39,7 @@ class SurrogateTrainParameters(TrainParameters):
     device: torch.device
     epochs: int = 1_000
     batch_size: int = 256
-    learning_rate: float = 1e-4
+    learning_rate: float = 1e-3
     patience_lr_scheduler: int = 10
     factor_lr_scheduler: float = 0.5
     cooldown_lr_scheduler: int = 0
