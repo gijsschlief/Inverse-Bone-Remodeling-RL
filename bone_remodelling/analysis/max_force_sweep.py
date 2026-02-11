@@ -10,11 +10,9 @@ import numpy as np
 from bone_remodelling.forward_data.force_profile_generator import (
     ForceProfileGenerator,
 )
+from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.forward_data.generator import (
     TrainingDataGenerator,
-)
-from bone_remodelling.forward_data.reader import (
-    forward_data_reader,
 )
 from bone_remodelling.forward_model.parameters import (
     SimulationParameters,
@@ -65,17 +63,13 @@ def run_sweep(data_path: Path) -> None:
         force_mask=force_mask,
         initial_density_field=initial_density,
     )
-
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
-        output_dir=data_path,
         simulation_parameters=simulation_parameters,
+        forward_data_manager=ForwardDataManager(data_path)
     )
     start_time = time.time()
-    _ = data_generator.generate_parallel(
-        max_chunk_size=500,
-        force_profile_name="force_sweep",
-    )
+    data_generator.generate_parallel()
     stop_time = time.time()
 
     elapsed_time = stop_time - start_time
@@ -114,17 +108,8 @@ def plot_undersaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float],
     plt.legend()
     plt.show()
 
-def analyse_sweep(data_path: Path) -> None:
+def analyse_sweep(force_profiles: np.ndarray, densities: np.ndarray) -> None:
     """Analyse the results of the max force sweep simulations."""
-    data = forward_data_reader(
-        file_path=data_path,
-    )
-
-    if data is None:
-        logger.error("No data found for analysis.")
-        return
-    _, force_profiles, densities = data
-
     saturations: list[np.bool] = []
     undersaturations: list[np.bool] = []
     energies: list[float] = []
@@ -174,7 +159,24 @@ def analyse_sweep(data_path: Path) -> None:
 
     plot_undersaturation(x, y_undersaturated, bin_centers_undersaturated, bin_means_undersaturated)
 
+def run_sweep_and_analyse(data_path: Path) -> None:
+    """Run the max force sweep simulations and analyse the results."""
+    try:
+        data_manager = ForwardDataManager(data_path)
+        data = data_manager.load_directory()
+    except FileNotFoundError:
+        data = None
+    if data is None:
+        logger.info("No data found for analysis.")
+        run_sweep(data_path)
+        data_manager = ForwardDataManager(data_path)
+        data = data_manager.load_directory()
+    if data is None:
+        logger.error("Data loading failed after sweep. Exiting analysis.")
+        return
+    _, force_profiles, densities = data
+    analyse_sweep(force_profiles, densities)
+
 if __name__ == "__main__":
     data_path = Path(__file__).parent.parent.parent / Path("data", "sweeps", "max_force_sweep")
-    run_sweep(data_path=data_path)
-    analyse_sweep(data_path=data_path)
+    run_sweep_and_analyse(data_path=data_path)
