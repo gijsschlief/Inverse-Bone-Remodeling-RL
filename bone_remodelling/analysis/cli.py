@@ -13,7 +13,7 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
         "--type",
         type=str,
         default="max_force_sweep",
-        choices=["forward_parameter_sweep", "max_force_sweep", "visualise_forces", "diversity_metrics"],
+        choices=["forward_parameter_sweep", "max_force_sweep", "visualise_forces", "visualise_database", "diversity_metrics"],
         help="Analysis tools used for figure generation.",
     )
     parser.add_argument(
@@ -41,3 +41,5 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     elif args.type == "diversity_metrics":
         from bone_remodelling.analysis.diversity_metrics import run_diversity_metrics as diversity_metrics  # noqa: I001, PLC0415
         diversity_metrics(config.output_dir / Path("raw"))
+    else:
+        raise ValueError(f"Unknown analysis type: {args.type}")
