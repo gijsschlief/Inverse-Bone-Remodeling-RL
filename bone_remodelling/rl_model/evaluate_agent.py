@@ -12,7 +12,6 @@ from bone_remodelling.forward_data.force_profile_generator import ForceProfileGe
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
 from bone_remodelling.inverse_model.evaluate_inverse import (
-    evaluate_predictions_with_surrogate,
     inverse_model_metrics,
 )
 from bone_remodelling.parameters import ConfigurationParameters
