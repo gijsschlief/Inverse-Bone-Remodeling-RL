@@ -1,6 +1,7 @@
 """Module for loading and using a surrogate model for bone remodeling simulations."""
 
 import logging
+from copy import deepcopy
 from pathlib import Path
 
 import numpy as np
@@ -44,7 +45,9 @@ class SurrogatePredictor:
             train_parameters (SurrogateTrainParameters): Training parameters including model path and device.
 
         """
-        self.model: torch.nn.Module = model_class()
+        self.model: torch.nn.Module = model_class(
+            train_parameters.width, train_parameters.depth, train_parameters.dropout,
+        )
         self.train_parameters = train_parameters
         self.model.to(self.train_parameters.device)
 
@@ -63,8 +66,17 @@ class SurrogatePredictor:
 
     def load_model(self) -> None:
         """Load the model from the specified path."""
+        self.load_parameters()
+        self.update_size()
         self.load_state_dictionary()
-        self.load_normalization_params()
+
+    def update_size(self) -> None:
+        """Update the models size based on the loaded training parameters."""
+        self.model.update(
+            self.train_parameters.width,
+            self.train_parameters.depth,
+            self.train_parameters.dropout,
+        )
 
     def load_state_dictionary(self) -> None:
         """Load the state dictionary and set model to evaluation model."""
@@ -77,8 +89,8 @@ class SurrogatePredictor:
         )
         self.model.eval()
 
-    def load_normalization_params(self) -> None:
-        """Load normalization parameters associated with the model.
+    def load_parameters(self) -> None:
+        """Load all parameters associated with the model.
 
         Args:
         ----
@@ -94,6 +106,9 @@ class SurrogatePredictor:
             return
 
         with np.load(normalization_path) as data:
+            self.train_parameters.width = int(data.get("width"))
+            self.train_parameters.depth = int(data.get("depth"))
+            self.train_parameters.dropout = float(data.get("dropout"))
             self.x_mean = data.get("x_mean").copy() if "x_mean" in data else None
             self.x_std = data.get("x_std").copy() if "x_std" in data else None
             self.y_mean = data.get("y_mean").copy() if "y_mean" in data else None
@@ -242,7 +257,11 @@ class SurrogatePredictor:
     ) -> None:
         """Store the model parameters to the specified path."""
         torch.save(self.model.state_dict(), path)
-        save_dict: dict[str, np.ndarray] = {}
+        save_dict: dict[str, np.ndarray | int | float] = {}
+        save_dict["width"] = self.train_parameters.width
+        save_dict["depth"] = self.train_parameters.depth
+        save_dict["dropout"] = self.train_parameters.dropout
+
         if self.x_mean is not None:
             save_dict["x_mean"] = self.x_mean
         if self.x_std is not None:
@@ -271,11 +290,12 @@ def load_surrogate_models(
         if not model_path.is_file() or model_path.stat().st_size == 0:
             logger.warning(f"Skipping invalid file: {model_path}")
             continue
-        train_parameters.model_path = model_path
+        current_parameters = deepcopy(train_parameters)
+        current_parameters.model_path = model_path
         try:
             predictor = SurrogatePredictor(
                 model_class=model_class,
-                train_parameters=train_parameters,
+                train_parameters=current_parameters,
             )
             predictor.load_model()
             predictors.append(predictor)

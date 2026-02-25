@@ -6,6 +6,7 @@ from collections.abc import Callable
 from copy import deepcopy
 
 import numpy as np
+import optuna
 import torch
 
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
@@ -60,6 +61,7 @@ class SurrogateModelTrainer:
         self,
         train_data: tuple[np.ndarray, np.ndarray],
         val_data: tuple[np.ndarray, np.ndarray],
+        trial: optuna.trial.Trial | None = None,
     ) -> None:
         """Train the surrogate model."""
         x_train_np = self.predicter.set_input_normalize(train_data[0])
@@ -118,6 +120,14 @@ class SurrogateModelTrainer:
                 validation_loss = self.loss_function(val_logits, y_val)
 
             self.validation_losses.append(validation_loss.item())
+
+            # Communication with optuna
+            if trial is not None:
+                trial.report(validation_loss, epoch)
+                if trial.should_prune():
+                    logger.info(f"Trial {trial.number} pruned at epoch {epoch}.")
+                    raise optuna.exceptions.TrialPruned
+
             self.scheduler.step(validation_loss)
 
             early_stop, epochs_no_improve = self.early_stopping_check(

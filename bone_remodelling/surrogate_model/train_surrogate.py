@@ -2,9 +2,11 @@
 
 import argparse
 import logging
+from functools import partial
 from pathlib import Path
 
 import numpy as np
+import optuna
 import torch
 
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
@@ -61,12 +63,13 @@ def rescramble_for_ensemble(
         y_val_rescrambled,
     )
 
-
 def run_surrogate_training(
     data_file_path: Path,
     model_path: Path,
     random_state: int,
     ensemble_seed: int,
+    *,
+    tune: bool,
 ) -> None:
     """Train and evaluate the surrogate model."""
     forward_data_manager = ForwardDataManager(data_file_path)
@@ -97,18 +100,107 @@ def run_surrogate_training(
     logger.info(
         f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}",
     )
-    train_parameters = SurrogateTrainParameters(
-        model_path=model_path,
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    )
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if tune:
+        logger.info("Running hyperparameter tuning...")
+        best_parameters = hyperparameter_search(
+            (x_train_np, y_train_np), (x_val_np, y_val_np), model_path, device,
+        )
+        train_parameters = SurrogateTrainParameters(
+            model_path=model_path,
+            device=device,
+            batch_size=best_parameters["batch_size"],
+            weight_decay=best_parameters["weight_decay"],
+            width=best_parameters["width"],
+            depth=best_parameters["depth"],
+            dropout=best_parameters["dropout"],
+            alpha=best_parameters["alpha"],
+        )
+    else:
+        train_parameters = SurrogateTrainParameters(
+            model_path=model_path,
+            device=device,
+        )
+
     predictor = SurrogatePredictor(SurrogateModel, train_parameters)
+    combined_loss_function = partial(combined_loss, loss_weight=train_parameters.alpha)
     surrogate_trainer = SurrogateModelTrainer(
         predictor,
         train_parameters,
-        loss_function=combined_loss,
+        loss_function=combined_loss_function,
     )
     surrogate_trainer.time_training((x_train_np, y_train_np), (x_val_np, y_val_np))
 
+def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarray], validation_data: tuple[np.ndarray, np.ndarray], model_path: Path, device: torch.device) -> float:
+    """Objective defined for the optuna training."""
+    hyperparameters = {
+        "batch_size": trial.suggest_int("batch_size", 16, 256),
+        "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
+        "width": trial.suggest_categorical("width", [512, 1024, 2048]),
+        "depth": trial.suggest_categorical("depth", [4, 6, 8]),
+        "dropout": trial.suggest_float("dropout", 0.0, 0.5),
+        "alpha": trial.suggest_float("alpha", 0.0, 1.0),
+    }
+
+    trial_params = SurrogateTrainParameters(
+        model_path=model_path,
+        device=device,
+        batch_size=hyperparameters["batch_size"],
+        weight_decay=hyperparameters["weight_decay"],
+        width=hyperparameters["width"],
+        depth=hyperparameters["depth"],
+        dropout=hyperparameters["dropout"],
+        alpha=hyperparameters["alpha"],
+    )
+
+    predictor = SurrogatePredictor(
+        SurrogateModel,
+        trial_params,
+    )
+
+    combined_loss_function = partial(combined_loss, loss_weight=trial_params.alpha)
+    trainer = SurrogateModelTrainer(predictor, trial_params, combined_loss_function)
+
+    try:
+        trainer.train(train_data, validation_data, trial=trial)
+    except optuna.exceptions.TrialPruned:
+        # Re-raise so Optuna knows it was pruned
+        raise
+
+    return trainer.best_val_loss
+
+def hyperparameter_search(
+    train_data: tuple[np.ndarray, np.ndarray],
+    validation_data: tuple[np.ndarray, np.ndarray],
+    model_path: Path,
+    device: torch.device,
+) -> dict:
+    """Hyperparameter tuning function."""
+    study_name = "surrogate_tuning"
+    storage_name = f"sqlite:///{study_name}.db"
+
+    study = optuna.create_study(
+        study_name=study_name,
+        storage=storage_name,
+        direction="minimize",
+        load_if_exists=True,
+        # TPE is great for correlated params like width/depth
+        sampler=optuna.samplers.TPESampler(multivariate=True),
+        pruner=optuna.pruners.MedianPruner(),
+    )
+
+    objective_function = partial(
+        objective,
+        train_data=train_data,
+        validation_data=validation_data,
+        model_path=model_path,
+        device=device,
+    )
+    study.optimize(objective_function, n_trials=50)  # Start with 50-100 trials
+    logger.info("Best Trial:")
+    logger.info(study.best_trial.params)
+    return study.best_params
 
 def cli(
     configuration_parameters: ConfigurationParameters,
@@ -137,12 +229,18 @@ def cli(
         default=configuration_parameters.seed,
         help="Ensemble seed for training.",
     )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Hyperparameter tuning for the surrogate training.",
+    )
     args = parser.parse_args(cli_args)
     run_surrogate_training(
         data_file_path,
         model_path,
         random_state=configuration_parameters.seed,
         ensemble_seed=args.ensemble_seed,
+        tune=args.tune,
     )
 
 
@@ -159,6 +257,7 @@ if __name__ == "__main__":
         model_path,
         random_state=config.seed,
         ensemble_seed=config.seed,
+        tune=False,
     )
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)

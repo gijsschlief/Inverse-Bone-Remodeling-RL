@@ -14,6 +14,11 @@ class TrainParameters(ABC):
     device: torch.device
     epochs: int
     batch_size: int
+    weight_decay: float
+    alpha: float
+    width: int
+    depth: int
+    dropout: float
     learning_rate: float
     patience_lr_scheduler: int
     factor_lr_scheduler: float
@@ -38,13 +43,24 @@ class SurrogateTrainParameters(TrainParameters):
     model_path: Path
     device: torch.device
     epochs: int = 1_000
+
+    # Hyperparameters
     batch_size: int = 64
+    weight_decay: float = 1e-4
+    alpha: float = 0.5
+    width: int = 1024
+    depth: int = 6
+    dropout: float = 0.3
+
+    # Learning rate variables
     learning_rate: float = 1e-3
     patience_lr_scheduler: int = 10
     factor_lr_scheduler: float = 0.5
     cooldown_lr_scheduler: int = 0
     patience: int = 20
     min_delta: float = 1e-4
+
+    # Plotting variables
     log_interval: int = 10
     log_all_for_first_epochs: int = 10
     shuffle_data: bool = True

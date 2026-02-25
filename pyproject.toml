@@ -24,6 +24,8 @@ numpy = "^2.2.6"
 pyvista = "==0.42.3"
 vtk = "==9.2.6"
 pytorch-msssim = "^0.1.0"
+optuna = "^4.7.0"
+optuna-integration = "^4.7.0"
 
 
 [tool.poetry.group.dev.dependencies]
