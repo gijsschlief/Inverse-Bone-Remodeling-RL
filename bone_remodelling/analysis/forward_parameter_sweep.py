@@ -47,7 +47,8 @@ def compute_l2_error(a: np.ndarray, b: np.ndarray) -> np.floating:
 
 
 def run_reference_simulation(
-    initial_simulation_parameters: SimulationParameters, force_profiles: np.ndarray
+    initial_simulation_parameters: SimulationParameters,
+    force_profiles: np.ndarray,
 ) -> list[np.ndarray]:
     """Run a very tight simulation to get a high-quality reference solution."""
     logger.info("\n=== Running reference simulation (high-quality baseline) ===\n")
@@ -118,7 +119,7 @@ def run_parameter_sweep(
                 "time_steps",
                 "runtime_s",
                 "l2_error",
-            ]
+            ],
         )
 
         for combo in parameter_grid():
@@ -132,7 +133,7 @@ def run_parameter_sweep(
                 time_steps=int(combo["time_steps"]),
             )
             density = np.zeros(
-                (len(force_profiles), *base_params.initial_density_field.shape)
+                (len(force_profiles), *base_params.initial_density_field.shape),
             )
             l2_error = np.zeros(len(force_profiles))
             runtime: float = np.nan
@@ -159,7 +160,7 @@ def run_parameter_sweep(
                     combo["time_steps"],
                     runtime,
                     average_l2_error,
-                ]
+                ],
             )
             logger.info(f"  → runtime={runtime:.2f}s, L2 error={average_l2_error:.3e}")
     logger.info(f"\nSweep complete. Results written to: {output_csv}")
@@ -181,10 +182,14 @@ def datasweep(data_path: Path) -> None:
         initial_density_field=initial_density,
     )
     density_references = run_reference_simulation(
-        simulation_base_parameters, force_profiles
+        simulation_base_parameters,
+        force_profiles,
     )
     run_parameter_sweep(
-        simulation_base_parameters, force_profiles, density_references, data_path
+        simulation_base_parameters,
+        force_profiles,
+        density_references,
+        data_path,
     )
 
 
@@ -227,7 +232,12 @@ def pareto_plot(sweep_data_frame: pd.DataFrame) -> None:
     )
     # orinal model
     plt.scatter(
-        26.849, 0.065, color="black", marker="x", s=100, label="Original model t = 100"
+        26.849,
+        0.065,
+        color="black",
+        marker="x",
+        s=100,
+        label="Original model t = 100",
     )
 
     # Chosen optimum
@@ -293,7 +303,7 @@ def performance_comparison(num_samples: int = 100) -> None:
         _reference_density[i] = run_simulation(params_i)
     reference_runtime = time.time() - t0
     logger.info(
-        f"Reference simulation runtime for {num_samples} runs: {reference_runtime:.2f}s"
+        f"Reference simulation runtime for {num_samples} runs: {reference_runtime:.2f}s",
     )
     logger.info(f"  → Example profiles: {_reference_density[0]}")
 

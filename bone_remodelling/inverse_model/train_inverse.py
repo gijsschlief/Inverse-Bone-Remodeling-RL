@@ -64,14 +64,14 @@ def run_inverse_training(
     y_test_np = np.array([force_profile_to_params(fp) for fp in y_test_np])
 
     logger.info(
-        "Using parameters for new output vector format (location, side, magnitude)."
+        "Using parameters for new output vector format (location, side, magnitude).",
     )
     y_train_np = reshape_input_features_for_model(y_train_np)
     y_val_np = reshape_input_features_for_model(y_val_np)
     y_test_np = reshape_input_features_for_model(y_test_np)
 
     logger.info(
-        f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}"
+        f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}",
     )
     train_parameters = InverseTrainParameters(
         model_path=model_path,
@@ -79,7 +79,9 @@ def run_inverse_training(
     )
     predictor = SurrogatePredictor(InverseModel, train_parameters)
     inverse_trainer = SurrogateModelTrainer(
-        predictor, train_parameters, loss_function=torch.nn.MSELoss()
+        predictor,
+        train_parameters,
+        loss_function=torch.nn.MSELoss(),
     )
     inverse_trainer.time_training((x_train_np, y_train_np), (x_val_np, y_val_np))
 
@@ -98,7 +100,7 @@ def cli(
     """
     data_file_path = configuration_parameters.output_dir / Path("raw", "triangular")
     model_path = configuration_parameters.output_dir / Path(
-        f"inverse_models/model_{configuration_parameters.seed}.pth"
+        f"inverse_models/model_{configuration_parameters.seed}.pth",
     )
     model_path = model_path.resolve()
     model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -124,12 +126,15 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(
-        output_dir=Path(__file__).parent.parent.parent / Path("data")
+        output_dir=Path(__file__).parent.parent.parent / Path("data"),
     )
     model_path = config.output_dir / Path(f"inverse_models/model_{config.seed}.pth")
     data_file_path = config.output_dir / Path("raw", "triangular")
     run_inverse_training(
-        data_file_path, model_path, random_state=config.seed, ensemble_seed=config.seed
+        data_file_path,
+        model_path,
+        random_state=config.seed,
+        ensemble_seed=config.seed,
     )
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)

@@ -47,10 +47,14 @@ class ForceProfileGenerator:
         force_count = self._log_normal_sampling(mean=0.5, sigma=0.8)[0].astype(int)
         force_count = min(force_count, total_elements)
         random_location = self._rng.choice(
-            total_elements, size=force_count, replace=False
+            total_elements,
+            size=force_count,
+            replace=False,
         )
         force_magnitude = self._rng.uniform(
-            self._force_min, self._force_max, size=force_count
+            self._force_min,
+            self._force_max,
+            size=force_count,
         )
         force_sign = self._rng.choice([-1, 1], size=force_count)
         force_value = force_magnitude * force_sign
@@ -152,7 +156,9 @@ class ForceProfileGenerator:
     def merger(self, num_samples: int, lower_energy_bound: float = 1e-12) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
         profile_count = self._log_normal_sampling(
-            mean=0.5, sigma=0.8, size=num_samples
+            mean=0.5,
+            sigma=0.8,
+            size=num_samples,
         ).astype(int)
 
         profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
@@ -176,7 +182,9 @@ class ForceProfileGenerator:
         return profiles
 
     def triangular_only(
-        self, num_samples: int, lower_energy_bound: float = 1e-12
+        self,
+        num_samples: int,
+        lower_energy_bound: float = 1e-12,
     ) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
         profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
@@ -195,14 +203,16 @@ class ForceProfileGenerator:
         return force_mask
 
     def _energy_scaling(
-        self, force_profile: np.ndarray, lower_energy_bound: float = 1e-12
+        self,
+        force_profile: np.ndarray,
+        lower_energy_bound: float = 1e-12,
     ) -> float:
         """Scale force profiles to match target energy levels."""
         target_energy = self._log_uniform_sampling().item()
         actual_energy = np.sum(force_profile**2)
         if actual_energy < lower_energy_bound:
             logger.warning(
-                f"Force profile has zero energy; skipping scaling. {force_profile}"
+                f"Force profile has zero energy; skipping scaling. {force_profile}",
             )
             return 1.0
         return np.sqrt(target_energy / actual_energy)
@@ -214,7 +224,10 @@ class ForceProfileGenerator:
         return np.exp(self._rng.uniform(log_low, log_high, size=size))
 
     def _log_normal_sampling(
-        self, mean: float = 0.0, sigma: float = 1.0, size: int = 1
+        self,
+        mean: float = 0.0,
+        sigma: float = 1.0,
+        size: int = 1,
     ) -> np.ndarray:
         """Sample from a log-normal distribution with given mean and sigma."""
         return np.clip(self._rng.lognormal(mean, sigma, size=size).astype(int), 1, None)

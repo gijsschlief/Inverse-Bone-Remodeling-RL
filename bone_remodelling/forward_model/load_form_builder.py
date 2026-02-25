@@ -134,7 +134,9 @@ class LoadFormBuilder:
 
     @staticmethod
     def _build_one(
-        force_row: np.ndarray, force_mask_row: np.ndarray, axis: str
+        force_row: np.ndarray,
+        force_mask_row: np.ndarray,
+        axis: str,
     ) -> Expression:
         """Build one force expression based on the force profile."""
         expression_pieces = []

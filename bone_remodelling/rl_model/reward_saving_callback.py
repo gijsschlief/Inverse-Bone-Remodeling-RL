@@ -76,7 +76,9 @@ class RewardSavingCallback(BaseCallback):
         small_window = self.smoothing_window // 10
         if len(rewards) >= small_window:
             small_smoothed = np.convolve(
-                rewards, np.ones(small_window) / small_window, mode="valid"
+                rewards,
+                np.ones(small_window) / small_window,
+                mode="valid",
             )
             small_smoothed_x = episode_x[small_window - 1 :]
 
@@ -93,7 +95,9 @@ class RewardSavingCallback(BaseCallback):
             )
         if smoothed is not None and smoothed_x is not None:
             reward_axis.plot(
-                smoothed_x, smoothed, label=f"Smoothed reward (w={window})"
+                smoothed_x,
+                smoothed,
+                label=f"Smoothed reward (w={window})",
             )
 
         reward_axis.set_xlabel("Episode index")
@@ -105,7 +109,11 @@ class RewardSavingCallback(BaseCallback):
         if len(val_scores) > 0:
             ax2 = reward_axis.twinx()
             ax2.plot(
-                val_steps, val_scores, "o-", color="orange", label="Validation SSIM"
+                val_steps,
+                val_scores,
+                "o-",
+                color="orange",
+                label="Validation SSIM",
             )
             ax2.set_ylabel("SSIM")
             ax2.legend(loc="upper right")
@@ -125,7 +133,9 @@ if __name__ == "__main__":
 
     metrics = MetricsContainer()
     figure_path = Path(__file__).parent.parent.parent / Path(
-        "data", "figures", "test_reward_curve.png"
+        "data",
+        "figures",
+        "test_reward_curve.png",
     )
     for i in range(0, 500_000, 25):
         metrics.episode_indices.append(i // 25)
@@ -134,6 +144,9 @@ if __name__ == "__main__":
     metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
     metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
     callback = RewardSavingCallback(
-        metrics, out_path=figure_path, smoothing_window=1000, verbose=1
+        metrics,
+        out_path=figure_path,
+        smoothing_window=1000,
+        verbose=1,
     )
     callback._on_training_end()

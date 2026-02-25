@@ -40,7 +40,8 @@ def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> np
 
 
 def generate_force_batches(
-    force_max_values: list[float], batch_size: int = 20
+    force_max_values: list[float],
+    batch_size: int = 20,
 ) -> list[np.ndarray]:
     """Generate batches of force profiles for given max force values."""
     gen = ForceProfileGenerator(profile_top_and_sides=(10, 10), batch_seed=42)
@@ -176,7 +177,10 @@ def analyse_sweep(force_profiles: np.ndarray, densities: np.ndarray) -> None:
             bin_means_oversaturated.append(np.mean(y_oversaturated[mask]))
 
     plot_oversaturation(
-        x, y_oversaturated, bin_centers_oversaturated, bin_means_oversaturated
+        x,
+        y_oversaturated,
+        bin_centers_oversaturated,
+        bin_means_oversaturated,
     )
 
     # THE SAME BUT FOR UNDERSATURATION
@@ -193,7 +197,10 @@ def analyse_sweep(force_profiles: np.ndarray, densities: np.ndarray) -> None:
             bin_means_undersaturated.append(np.mean(y_undersaturated[mask]))
 
     plot_undersaturation(
-        x, y_undersaturated, bin_centers_undersaturated, bin_means_undersaturated
+        x,
+        y_undersaturated,
+        bin_centers_undersaturated,
+        bin_means_undersaturated,
     )
 
 
@@ -218,6 +225,8 @@ def run_sweep_and_analyse(data_path: Path) -> None:
 
 if __name__ == "__main__":
     data_path = Path(__file__).parent.parent.parent / Path(
-        "data", "sweeps", "max_force_sweep"
+        "data",
+        "sweeps",
+        "max_force_sweep",
     )
     run_sweep_and_analyse(data_path=data_path)

@@ -135,7 +135,8 @@ class TrainingDataGenerator:
             for fut in as_completed(futures):
                 batch_force_profiles, batch_final_densities = fut.result()
                 self.forward_data_manager.save_data(
-                    batch_force_profiles, batch_final_densities
+                    batch_force_profiles,
+                    batch_final_densities,
                 )
                 completed_samples += len(batch_force_profiles)
                 pct = completed_samples / self.num_samples * 100
@@ -173,7 +174,7 @@ class TrainingDataGenerator:
 def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     """CLI entry point for training data generation."""
     parser = argparse.ArgumentParser(
-        description="Generate training data for bone remodeling simulations."
+        description="Generate training data for bone remodeling simulations.",
     )
     parser.add_argument(
         "--samples",
@@ -198,8 +199,11 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
 
 
 def run(
-    config: ConfigurationParameters, samples: int, force_type: str, append: bool
-) -> None:  # noqa: FBT001
+    config: ConfigurationParameters,
+    samples: int,
+    force_type: str,
+    append: bool,
+) -> None:
     """Generate training data for bone remodeling simulations.
 
     Args:
@@ -211,7 +215,8 @@ def run(
 
     """
     initial_density = np.full(
-        (config.mesh_top_resolution, config.mesh_side_resolution), config.start_density
+        (config.mesh_top_resolution, config.mesh_side_resolution),
+        config.start_density,
     )
     logger.info("Generating force profiles...")
 
@@ -276,10 +281,11 @@ def run(
         data_generator.generate_parallel(max_chunk_size=500)
     except Exception:  # noqa: BLE001
         logger.warning(
-            "An error occurred during parallel data generation", exc_info=True
+            "An error occurred during parallel data generation",
+            exc_info=True,
         )
         logger.warning(
-            "Continuing with serialised data generation instead (note: significantly slower)"
+            "Continuing with serialised data generation instead (note: significantly slower)",
         )
         data_generator.generate_serial()
     stop_time = time.time()

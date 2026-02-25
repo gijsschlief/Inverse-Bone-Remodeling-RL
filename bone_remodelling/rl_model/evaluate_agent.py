@@ -150,7 +150,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     run_parameters = RunConfiguration(output_dir=config.output_dir)
 
     forward_data_manager = ForwardDataManager(
-        (run_parameters.data_path / Path("raw", "triangular")).resolve()
+        (run_parameters.data_path / Path("raw", "triangular")).resolve(),
     )
     result = forward_data_manager.load_directory()
     if result is None:
@@ -193,7 +193,8 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
 
     # Force Magnitude Comparison
     test_peaks = np.max(
-        np.abs(np.array(evaluation_result["sample_forces"])), axis=(1, 2)
+        np.abs(np.array(evaluation_result["sample_forces"])),
+        axis=(1, 2),
     )
     eval_peaks = np.max(np.abs(np.array(evaluation_result["forces"])), axis=(1, 2))
     eps = 1e-3
@@ -226,14 +227,14 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
     avg_ssim = sum(evaluation_result["ssim_scores"]) / len(
-        evaluation_result["ssim_scores"]
+        evaluation_result["ssim_scores"],
     )
     avg_mse = sum(evaluation_result["mse_errors"]) / len(
-        evaluation_result["mse_errors"]
+        evaluation_result["mse_errors"],
     )
 
     logger.info(
-        f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}"
+        f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}",
     )
 
     # Plot representative samples from evaluation
@@ -242,7 +243,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     for _ in range(100):
         k = np.random.randint(0, len(sample_forces))
         logger.info(
-            f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}"
+            f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}",
         )
         logger.info(f"Original Force Profile: {sample_forces[k]}")
         logger.info(f"Reconstructed Force Profile: {predicted_forces[k]}")
@@ -280,8 +281,8 @@ def plot_inverse_model(
 
 
 def cli(
-    configuration_parameters: ConfigurationParameters, remaining_args: list
-) -> None:  # noqa: ARG001
+    configuration_parameters: ConfigurationParameters,
+) -> None:
     """CLI entry point for evaluating the RL agent."""
     run_agent_evaluation(configuration_parameters)
 

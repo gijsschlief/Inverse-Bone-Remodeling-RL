@@ -39,7 +39,8 @@ class SurrogateModelTrainer:
         self.loss_function = loss_function
         self.optimizer = build_optimizer(self.predicter.model, self.train_parameters)
         self.scheduler = build_learning_rate_scheduler(
-            self.optimizer, self.train_parameters
+            self.optimizer,
+            self.train_parameters,
         )
 
     def time_training(
@@ -74,10 +75,10 @@ class SurrogateModelTrainer:
         )
 
         x_val: torch.Tensor = torch.tensor(x_val_np, dtype=torch.float32).to(
-            self.train_parameters.device
+            self.train_parameters.device,
         )
         y_val: torch.Tensor = torch.tensor(y_val_np, dtype=torch.float32).to(
-            self.train_parameters.device
+            self.train_parameters.device,
         )
 
         self.best_val_loss = float("inf")
@@ -132,7 +133,7 @@ class SurrogateModelTrainer:
                 )
             if early_stop:
                 logger.info(
-                    f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs)."
+                    f"Early stopping at epoch {epoch} (no improvement in {self.train_parameters.patience} epochs).",
                 )
                 break
         self.reload_and_save_best_model()
@@ -150,7 +151,9 @@ class SurrogateModelTrainer:
             return
 
     def early_stopping_check(
-        self, current_val_loss: float, epochs_no_improve: int
+        self,
+        current_val_loss: float,
+        epochs_no_improve: int,
     ) -> tuple[bool, int]:
         """Check if early stopping criteria are met."""
         if current_val_loss + self.train_parameters.min_delta < self.best_val_loss:
@@ -158,7 +161,7 @@ class SurrogateModelTrainer:
             self.best_model_state = deepcopy(self.predicter.model.state_dict())
             epochs_no_improve = 0
             logger.info(
-                f"Validation loss improved to {self.best_val_loss:.4f}. Saving model state."
+                f"Validation loss improved to {self.best_val_loss:.4f}. Saving model state.",
             )
             return False, epochs_no_improve
         epochs_no_improve += 1
@@ -187,5 +190,6 @@ class SurrogateModelTrainer:
                 "learning_rates": self.learning_rates,
             }
             self.predicter.save_model_with_versioning(
-                self.train_parameters.model_path, history=history
+                self.train_parameters.model_path,
+                history=history,
             )

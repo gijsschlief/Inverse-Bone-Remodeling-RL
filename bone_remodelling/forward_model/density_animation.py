@@ -38,7 +38,8 @@ def animate_density_matplotlib(
     """
     logger.info("Starting Matplotlib animation generation.")
     output_directory: Path = Path(data_directory) / Path(
-        "animations", "density_animation.gif"
+        "animations",
+        "density_animation.gif",
     )
     if not output_directory.parent.exists():
         output_directory.parent.mkdir(parents=True, exist_ok=True)
@@ -95,7 +96,8 @@ def animate_density_pyvista(
     """
     logger.info("Starting PyVista animation generation.")
     output_directory: Path = Path(data_directory) / Path(
-        "animations", "density_animation_pyvista.gif"
+        "animations",
+        "density_animation_pyvista.gif",
     )
     if not output_directory.parent.exists():
         output_directory.parent.mkdir(parents=True, exist_ok=True)
@@ -107,7 +109,9 @@ def animate_density_pyvista(
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
     base_grid = UnstructuredGrid(
-        cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d
+        cells_pv,
+        np.full(cells.shape[0], 5, dtype=np.uint8),
+        points_3d,
     )
     pyvista_plotter = Plotter(off_screen=True)  # type: ignore
     pyvista_plotter.open_gif(str(output_directory))
@@ -185,7 +189,9 @@ def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
 
 
 def run_animation(
-    config: ConfigurationParameters, type: str = "random", animator: str = "matplotlib"
+    config: ConfigurationParameters,
+    type: str = "random",
+    animator: str = "matplotlib",
 ) -> None:
     """Run the density animations to create to GIFS."""
     logger.info("Starting density animation generation.")
@@ -212,7 +218,7 @@ def run_animation(
                 scale_factors * force_maginitude,
                 np.zeros(config.mesh_side_resolution),
                 np.zeros(config.mesh_side_resolution),
-            ]
+            ],
         )
 
         parameters = SimulationParameters(
@@ -229,7 +235,8 @@ def run_animation(
 
     if animator == "matplotlib":
         animate_density_matplotlib(
-            simulation=simulation, data_directory=config.output_dir
+            simulation=simulation,
+            data_directory=config.output_dir,
         )
     elif animator == "pyvista":
         animate_density_pyvista(simulation=simulation, data_directory=config.output_dir)

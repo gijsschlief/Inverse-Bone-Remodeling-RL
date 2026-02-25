@@ -95,7 +95,7 @@ def run_surrogate_training(
     x_test_np, y_test_np = sanitize_data(x_test_np, y_test_np)
 
     logger.info(
-        f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}"
+        f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}",
     )
     train_parameters = SurrogateTrainParameters(
         model_path=model_path,
@@ -103,7 +103,9 @@ def run_surrogate_training(
     )
     predictor = SurrogatePredictor(SurrogateModel, train_parameters)
     surrogate_trainer = SurrogateModelTrainer(
-        predictor, train_parameters, loss_function=combined_loss
+        predictor,
+        train_parameters,
+        loss_function=combined_loss,
     )
     surrogate_trainer.time_training((x_train_np, y_train_np), (x_val_np, y_val_np))
 
@@ -122,7 +124,7 @@ def cli(
     """
     data_file_path = configuration_parameters.output_dir / Path("raw")
     model_path = configuration_parameters.output_dir / Path(
-        f"surrogate_models/model_{configuration_parameters.seed}.pth"
+        f"surrogate_models/model_{configuration_parameters.seed}.pth",
     )
     model_path = model_path.resolve()
     model_path.parent.mkdir(parents=True, exist_ok=True)
@@ -148,12 +150,15 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(
-        output_dir=Path(__file__).parent.parent.parent / Path("data")
+        output_dir=Path(__file__).parent.parent.parent / Path("data"),
     )
     model_path = config.output_dir / Path(f"surrogate_models/model_{config.seed}.pth")
     data_file_path = config.output_dir / Path("raw")
     run_surrogate_training(
-        data_file_path, model_path, random_state=config.seed, ensemble_seed=config.seed
+        data_file_path,
+        model_path,
+        random_state=config.seed,
+        ensemble_seed=config.seed,
     )
     logger.info("All training runs completed.")
     logger.info("Final model saved at: %s", model_path)

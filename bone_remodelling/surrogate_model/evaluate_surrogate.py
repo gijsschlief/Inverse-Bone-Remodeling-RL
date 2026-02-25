@@ -68,19 +68,29 @@ def surrogates_evaluation(
 
     # Run the predictors on the three sets
     y_train_predicted, _ = predict_with_surrogates(
-        predictors, x_train, batch_size=train_parameters.batch_size
+        predictors,
+        x_train,
+        batch_size=train_parameters.batch_size,
     )
     y_val_predicted, _ = predict_with_surrogates(
-        predictors, x_val, batch_size=train_parameters.batch_size
+        predictors,
+        x_val,
+        batch_size=train_parameters.batch_size,
     )
     y_test_predicted, y_test_std = predict_with_surrogates(
-        predictors, x_test, batch_size=train_parameters.batch_size
+        predictors,
+        x_test,
+        batch_size=train_parameters.batch_size,
     )
 
     # Calculate average similarity scores
     train_ssim = [
         calculate_similarity(
-            y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric
+            y_train_predicted[i],
+            y_train[i],
+            baseline=0.1,
+            threshold=0.5,
+            method=metric,
         )
         for i in range(len(y_train_predicted))
     ]
@@ -88,7 +98,11 @@ def surrogates_evaluation(
 
     val_ssim = [
         calculate_similarity(
-            y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method=metric
+            y_val_predicted[i],
+            y_val[i],
+            baseline=0.1,
+            threshold=0.5,
+            method=metric,
         )
         for i in range(len(y_val_predicted))
     ]
@@ -96,7 +110,11 @@ def surrogates_evaluation(
 
     test_ssim = [
         calculate_similarity(
-            y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method=metric
+            y_test_predicted[i],
+            y_test[i],
+            baseline=0.1,
+            threshold=0.5,
+            method=metric,
         )
         for i in range(len(y_test_predicted))
     ]
@@ -158,7 +176,7 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(
-        output_dir=Path(__file__).parent.parent.parent / Path("data")
+        output_dir=Path(__file__).parent.parent.parent / Path("data"),
     )
     train_parameters = SurrogateTrainParameters(
         model_path=config.output_dir / Path("surrogate_models/model.pth"),

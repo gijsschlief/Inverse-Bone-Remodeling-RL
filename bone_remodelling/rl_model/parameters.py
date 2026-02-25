@@ -80,12 +80,15 @@ class RunConfiguration:
         self.output_dir = Path(self.output_dir).resolve()
 
         self.reward_plot_path = self.output_dir / Path(
-            "figures", "reward_curve_extra_action_ensemble_RL_20mil.png"
+            "figures",
+            "reward_curve_extra_action_ensemble_RL_20mil.png",
         )
         self.agent_path = self.output_dir / Path(
-            "agents", "surrogate_agent_extra_action_best_20mil.zip"
+            "agents",
+            "surrogate_agent_extra_action_best_20mil.zip",
         )
         self.data_path = self.output_dir / Path("raw", "triangular")
         self.surrogate_path = self.output_dir / Path(
-            "surrogate_models", "surrogate.pth"
+            "surrogate_models",
+            "surrogate.pth",
         )

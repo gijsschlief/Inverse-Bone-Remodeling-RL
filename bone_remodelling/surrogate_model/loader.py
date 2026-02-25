@@ -73,7 +73,7 @@ class SurrogatePredictor:
                 self.train_parameters.model_path,
                 map_location=self.train_parameters.device,
                 weights_only=False,
-            )
+            ),
         )
         self.model.eval()
 
@@ -89,7 +89,7 @@ class SurrogatePredictor:
 
         if not normalization_path.exists():
             logger.warning(
-                f"Normalization file not found at {normalization_path}. Using defaults."
+                f"Normalization file not found at {normalization_path}. Using defaults.",
             )
             return
 
@@ -111,7 +111,7 @@ class SurrogatePredictor:
 
         if not history_path.exists():
             logger.warning(
-                f"History file not found at {history_path}. Returning empty history."
+                f"History file not found at {history_path}. Returning empty history.",
             )
             return {}
 
@@ -136,12 +136,12 @@ class SurrogatePredictor:
         """
         if self.x_mean is None or self.x_std is None:
             x_normalised = torch.tensor(x_raw, dtype=torch.float32).to(
-                self.train_parameters.device
+                self.train_parameters.device,
             )
         else:
             x_normalised_array = self.normalize_input(x_raw)
             x_normalised = torch.tensor(x_normalised_array, dtype=torch.float32).to(
-                self.train_parameters.device
+                self.train_parameters.device,
             )
         with torch.no_grad():
             y_normalised = self.model(x_normalised)
@@ -174,7 +174,7 @@ class SurrogatePredictor:
         """Normalize input data."""
         if self.x_mean is None or self.x_std is None:
             logger.warning(
-                "Input normalization parameters are not set. Returning raw input."
+                "Input normalization parameters are not set. Returning raw input.",
             )
             return x_raw
         return (x_raw - self.x_mean) / self.x_std
@@ -186,7 +186,7 @@ class SurrogatePredictor:
         """Normalize output data."""
         if self.y_mean is None or self.y_std is None:
             logger.warning(
-                "Output normalization parameters are not set. Returning raw output."
+                "Output normalization parameters are not set. Returning raw output.",
             )
             return y_raw
         return (y_raw - self.y_mean) / self.y_std
@@ -198,7 +198,7 @@ class SurrogatePredictor:
         """Unnormalize input data."""
         if self.x_mean is None or self.x_std is None:
             logger.warning(
-                "Input normalization parameters are not set. Returning normalized input."
+                "Input normalization parameters are not set. Returning normalized input.",
             )
             return x_normalized
         return x_normalized * self.x_std + self.x_mean
@@ -210,13 +210,15 @@ class SurrogatePredictor:
         """Unnormalize output data."""
         if self.y_mean is None or self.y_std is None:
             logger.warning(
-                "Output normalization parameters are not set. Returning normalized output."
+                "Output normalization parameters are not set. Returning normalized output.",
             )
             return y_normalized
         return y_normalized * self.y_std + self.y_mean
 
     def save_model_with_versioning(
-        self, path: Path, history: dict[str, list[float]] | None = None
+        self,
+        path: Path,
+        history: dict[str, list[float]] | None = None,
     ) -> None:
         """Save the model to a file, ensuring no overwriting of existing files."""
         try:
@@ -229,12 +231,14 @@ class SurrogatePredictor:
                 path = Path(f"{base_path}_{counter}{ext}")
         except OSError as e:
             logger.warning(
-                f"Safely saving model failed ({e}), overwriting existing file."
+                f"Safely saving model failed ({e}), overwriting existing file.",
             )
         self.store_model_parameters(path, history=history)
 
     def store_model_parameters(
-        self, path: Path, history: dict[str, list[float]] | None = None
+        self,
+        path: Path,
+        history: dict[str, list[float]] | None = None,
     ) -> None:
         """Store the model parameters to the specified path."""
         torch.save(self.model.state_dict(), path)

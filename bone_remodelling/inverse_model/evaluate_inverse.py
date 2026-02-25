@@ -37,7 +37,8 @@ logger = logging.getLogger(__name__)
 
 
 def inverse_model_metrics(
-    sample_forces: np.ndarray, predicted_forces: np.ndarray
+    sample_forces: np.ndarray,
+    predicted_forces: np.ndarray,
 ) -> None:
     """Calculate metrics for the inverse model predictions. Looks at the force side, exact location and magnitude differences."""
     # Force Side Selection
@@ -45,7 +46,7 @@ def inverse_model_metrics(
     eval_side = np.argmax(np.max(np.abs(predicted_forces), axis=2), axis=1)
     side_accuracy = np.sum(test_side == eval_side) / len(test_side)
     logger.info(
-        f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct."
+        f"Force Side Selection Accuracy: {np.sum(test_side == eval_side)}/{len(test_side)} or {side_accuracy:.4f} correct.",
     )
 
     # Correct per-sample peak location extraction
@@ -53,21 +54,21 @@ def inverse_model_metrics(
         [
             np.argmax(np.abs(sample_forces[i, test_side[i], :]))
             for i in range(len(sample_forces))
-        ]
+        ],
     )
 
     eval_peak_locations_on_true_side = np.array(
         [
             np.argmax(np.abs(predicted_forces[i, test_side[i], :]))
             for i in range(len(predicted_forces))
-        ]
+        ],
     )
     exact_match = (test_side == eval_side) & (
         test_peak_locations == eval_peak_locations_on_true_side
     )
     exact_accuracy = np.mean(exact_match)
     logger.info(
-        f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct."
+        f"Exact Match Accuracy (side + peak): {np.sum(exact_match)}/{len(exact_match)} or {exact_accuracy:.4f} correct.",
     )
 
     # Difference between predicted and true peak locations
@@ -76,7 +77,7 @@ def inverse_model_metrics(
     location_differences = np.abs(sample_max_force - eval_max_force)
     mean_difference = np.mean(location_differences)
     logger.info(
-        f"Mean Absolute Difference in Peak Locations: {mean_difference:.4f} Newton."
+        f"Mean Absolute Difference in Peak Locations: {mean_difference:.4f} Newton.",
     )
 
 
@@ -114,7 +115,10 @@ def inverse_model_evaluation(
     # Load inverse models
     predictors = load_surrogate_models(model_class, train_parameters)
     y_train_predicted = inverse_prediction(
-        predictors, train_parameters, x_train, y_train
+        predictors,
+        train_parameters,
+        x_train,
+        y_train,
     )
     y_val_predicted = inverse_prediction(predictors, train_parameters, x_val, y_val)
     y_test_predicted = inverse_prediction(predictors, train_parameters, x_test, y_test)
@@ -145,16 +149,20 @@ def inverse_prediction(
     y = np.array([force_profile_to_params(fp) for fp in y])
     y = reshape_input_features_for_model(y)
     y_predicted, _ = predict_with_surrogates(
-        predictors, x, batch_size=train_parameters.batch_size
+        predictors,
+        x,
+        batch_size=train_parameters.batch_size,
     )
     y_predicted = reshape_features_back_to_params(y_predicted)
     return np.array(
         [
             params_to_force_profile(
-                int(y_predicted[i][0]), int(y_predicted[i][1]), y_predicted[i][2]
+                int(y_predicted[i][0]),
+                int(y_predicted[i][1]),
+                y_predicted[i][2],
             )
             for i in range(len(y_predicted))
-        ]
+        ],
     )
 
 
@@ -167,29 +175,41 @@ def evaluate_predictions_with_surrogate(
 ) -> None:
     """Evaluate the predicted parameters by converting them back to force profiles and using the surrogate model to predict the resulting densities, then comparing those to the true densities."""
     surrogate_train_parameters = SurrogateTrainParameters(
-        model_path=surrogate_model_path, device=device
+        model_path=surrogate_model_path,
+        device=device,
     )
 
     surrogate_predictors = load_surrogate_models(
-        SurrogateModel, surrogate_train_parameters
+        SurrogateModel,
+        surrogate_train_parameters,
     )
 
     x_train, x_val, x_test = force_predictions
     y_train, y_val, y_test = true_densities
 
     y_train_predicted, _ = predict_with_surrogates(
-        surrogate_predictors, x_train, batch_size=surrogate_train_parameters.batch_size
+        surrogate_predictors,
+        x_train,
+        batch_size=surrogate_train_parameters.batch_size,
     )
     y_val_predicted, _ = predict_with_surrogates(
-        surrogate_predictors, x_val, batch_size=surrogate_train_parameters.batch_size
+        surrogate_predictors,
+        x_val,
+        batch_size=surrogate_train_parameters.batch_size,
     )
     y_test_predicted, y_test_std = predict_with_surrogates(
-        surrogate_predictors, x_test, batch_size=surrogate_train_parameters.batch_size
+        surrogate_predictors,
+        x_test,
+        batch_size=surrogate_train_parameters.batch_size,
     )
 
     train_ssim = [
         calculate_similarity(
-            y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric
+            y_train_predicted[i],
+            y_train[i],
+            baseline=0.1,
+            threshold=0.5,
+            method=metric,
         )
         for i in range(len(y_train_predicted))
     ]
@@ -197,7 +217,11 @@ def evaluate_predictions_with_surrogate(
 
     val_ssim = [
         calculate_similarity(
-            y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method=metric
+            y_val_predicted[i],
+            y_val[i],
+            baseline=0.1,
+            threshold=0.5,
+            method=metric,
         )
         for i in range(len(y_val_predicted))
     ]
@@ -205,7 +229,11 @@ def evaluate_predictions_with_surrogate(
 
     test_ssim = [
         calculate_similarity(
-            y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method=metric
+            y_test_predicted[i],
+            y_test[i],
+            baseline=0.1,
+            threshold=0.5,
+            method=metric,
         )
         for i in range(len(y_test_predicted))
     ]
@@ -250,7 +278,9 @@ def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_path = (config.output_dir / Path("inverse_models", "model.pth")).resolve()
     train_parameters = InverseTrainParameters(
-        model_path=model_path, device=device, batch_size=args.batch_size
+        model_path=model_path,
+        device=device,
+        batch_size=args.batch_size,
     )
     inverse_model_evaluation(
         data_path=config.output_dir,
@@ -265,7 +295,7 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(
-        output_dir=Path(__file__).parent.parent.parent / Path("data")
+        output_dir=Path(__file__).parent.parent.parent / Path("data"),
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_path = (config.output_dir / Path("inverse_models", "model.pth")).resolve()

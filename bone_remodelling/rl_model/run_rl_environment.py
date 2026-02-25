@@ -159,7 +159,8 @@ def train_rl_agent(
         validation_densities,
         _,
     ) = load_and_split_data(
-        forward_data_manager, random_state=run_parameters.random_state
+        forward_data_manager,
+        random_state=run_parameters.random_state,
     )
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
@@ -230,7 +231,7 @@ def train_rl_agent(
         callbacks: list[BaseCallback] = [
             RenderCallback(
                 force_generator=ForceProfileGenerator(
-                    (config.force_top_resolution, config.force_side_resolution)
+                    (config.force_top_resolution, config.force_side_resolution),
                 ),
                 render_freq=run_parameters.render_frequency,
                 environment_index=0,
@@ -242,7 +243,7 @@ def train_rl_agent(
                 RewardSavingCallback(
                     metrics=metrics,
                     out_path=run_parameters.reward_plot_path,
-                )
+                ),
             )
         callbacks.append(
             ValidationCallback(
@@ -256,7 +257,7 @@ def train_rl_agent(
                 final_forwarder=forwarder,
                 rl_parameters=rl_parameters,
                 validation_frequency=run_parameters.validation_frequency,
-            )
+            ),
         )
         model.learn(
             total_timesteps=run_parameters.total_timesteps,
@@ -280,7 +281,8 @@ def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
     )
     args = parser.parse_args(remaining_args)
     run_parameters = RunConfiguration(
-        output_dir=config.output_dir, forward_type=args.forward_type
+        output_dir=config.output_dir,
+        forward_type=args.forward_type,
     )
     rl_parameters = RLParameters()
     model_path = (

@@ -84,12 +84,12 @@ def run_diversity_metrics(data_dir: Path) -> None:
         _, force_profiles_triangular, output_densities_triangular = result_triangular
     else:
         logger.error(
-            "Failed to load data from triangular dataset: forward_data_reader returned None."
+            "Failed to load data from triangular dataset: forward_data_reader returned None.",
         )
 
     force_profile_energy = np.zeros(force_profiles.shape[0])
     force_profile_flat = np.zeros(
-        (force_profiles.shape[0], force_profiles.shape[1] * force_profiles.shape[2])
+        (force_profiles.shape[0], force_profiles.shape[1] * force_profiles.shape[2]),
     )
     for i in range(force_profiles.shape[0]):
         force_profile_energy[i] = np.square(force_profiles[i]).sum()
@@ -100,11 +100,11 @@ def run_diversity_metrics(data_dir: Path) -> None:
         (
             force_profiles_triangular.shape[0],
             force_profiles_triangular.shape[1] * force_profiles_triangular.shape[2],
-        )
+        ),
     )
     for i in range(force_profiles_triangular.shape[0]):
         force_profile_energy_triangular[i] = np.square(
-            force_profiles_triangular[i]
+            force_profiles_triangular[i],
         ).sum()
         force_profile_flat_triangular[i] = force_profiles_triangular[i].flatten()
 
@@ -115,7 +115,8 @@ def run_diversity_metrics(data_dir: Path) -> None:
 
 
 def plot_force_distribution(
-    force_profiles: np.ndarray, force_profiles_triangular: np.ndarray
+    force_profiles: np.ndarray,
+    force_profiles_triangular: np.ndarray,
 ) -> None:
     """Plot Force profile distributions for two datasets."""
     plt.figure(1)
@@ -129,7 +130,8 @@ def plot_force_distribution(
 
 
 def plot_output_density(
-    output_densities: np.ndarray, output_densities_triangular: np.ndarray
+    output_densities: np.ndarray,
+    output_densities_triangular: np.ndarray,
 ) -> None:
     """Plot_output_density for two datasets."""
     plt.figure(2)
@@ -143,7 +145,8 @@ def plot_output_density(
 
 
 def plot_energy_distribution(
-    force_profile_energy: np.ndarray, force_profile_energy_triangular: np.ndarray
+    force_profile_energy: np.ndarray,
+    force_profile_energy_triangular: np.ndarray,
 ) -> None:
     """Plot_energy_distribution for two datasets."""
     plt.figure(3)
@@ -158,7 +161,8 @@ def plot_energy_distribution(
 
 
 def compare_diversity_metrics(
-    force_profile_flat: np.ndarray, force_profile_flat_triangular: np.ndarray
+    force_profile_flat: np.ndarray,
+    force_profile_flat_triangular: np.ndarray,
 ) -> None:
     """Print diversity metrics for biomechanical force profiles."""
     metrics_supervised = compute_diversity_metrics(force_profile_flat)
@@ -167,7 +171,7 @@ def compare_diversity_metrics(
     logger.info("--------------------------------------")
     for key in metrics_supervised:
         logger.info(
-            f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}"
+            f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}",
         )
 
 

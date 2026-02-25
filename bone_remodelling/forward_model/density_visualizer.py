@@ -141,7 +141,10 @@ def _plot_force_band(
 
 
 def _get_quiver_data(
-    side: str, forces: np.ndarray, height: int, width: int
+    side: str,
+    forces: np.ndarray,
+    height: int,
+    width: int,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
     offset = 1.0
 
@@ -187,7 +190,8 @@ def _plot_force_arrows(
     height, width = shape
 
     for side, forces in zip(
-        ["left", "top", "right"], [left_forces, top_forces, right_forces]
+        ["left", "top", "right"],
+        [left_forces, top_forces, right_forces],
     ):
         data = _get_quiver_data(side, forces, height, width)
         if data:
@@ -224,7 +228,9 @@ def plot_density_pyvista(simulation: DensitySimulation) -> None:
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
     base_grid = UnstructuredGrid(
-        cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d
+        cells_pv,
+        np.full(cells.shape[0], 5, dtype=np.uint8),
+        points_3d,
     )
     base_grid.cell_data["Density"] = (
         simulation.get_density_function().vector().get_local()

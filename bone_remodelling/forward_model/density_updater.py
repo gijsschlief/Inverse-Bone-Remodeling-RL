@@ -87,7 +87,9 @@ class DensityUpdater:
 
         delta = self.remodeling_rate_coefficient * (stimulus - self.stimulus_threshold)
         delta = np.clip(
-            delta, -self.maximum_delta, self.maximum_delta
+            delta,
+            -self.maximum_delta,
+            self.maximum_delta,
         )  # Limit density changes per timestep to avoid instability
 
         self.density[self.active_cells] = (

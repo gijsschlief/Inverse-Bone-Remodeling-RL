@@ -36,7 +36,8 @@ class ForwardDataManager:
                 self.serial_number += 1
 
     def load_file(
-        self, file_path: Path | None = None
+        self,
+        file_path: Path | None = None,
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
         """Read the entire dataset back into memory for training."""
         if file_path is None:
@@ -58,7 +59,7 @@ class ForwardDataManager:
         """Read and parse all JSON files in the storage directory."""
         if not self.storage_path.parent.exists():
             logger.error(
-                f"Storage directory does not exist: {self.storage_path.parent}"
+                f"Storage directory does not exist: {self.storage_path.parent}",
             )
             return None
 
@@ -83,12 +84,14 @@ class ForwardDataManager:
         )
 
     def _convert_to_numpy(
-        self, data: list[dict]
+        self,
+        data: list[dict],
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         serials = np.array([e["serial_number"] for e in data])
         self.serial_number = int(serials.max()) + 1 if serials.size > 0 else 0
         forces = np.array([e["force_profile"] for e in data], dtype=np.float32)
         densities = np.array(
-            [e["final_output_density"] for e in data], dtype=np.float32
+            [e["final_output_density"] for e in data],
+            dtype=np.float32,
         )
         return serials, forces, densities

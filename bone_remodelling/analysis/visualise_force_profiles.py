@@ -13,7 +13,8 @@ logger = logging.getLogger(__name__)
 
 
 def visualise_profiles(
-    force_profiles: np.ndarray, force_profile_energy: np.ndarray
+    force_profiles: np.ndarray,
+    force_profile_energy: np.ndarray,
 ) -> None:
     """Visualise generated force profiles."""
     plt.figure(1)
@@ -71,7 +72,7 @@ def analyse_force_generator() -> None:
     empty_profiles = np.where(force_profile_energy == 0)[0]
     if len(empty_profiles) > 0:
         logger.warning(
-            f"Found {len(empty_profiles)} empty force profiles at indices: {empty_profiles}"
+            f"Found {len(empty_profiles)} empty force profiles at indices: {empty_profiles}",
         )
 
     logger.info(f"Generated profiles like: {force_profiles[0]} and {force_profiles[1]}")

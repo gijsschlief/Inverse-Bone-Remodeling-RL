@@ -180,7 +180,7 @@ class BoneRemodelingEnvironment(Env):
         )
 
         predicted_density = self.forwarder.forward_pass(
-            force_profile=self.force_profile
+            force_profile=self.force_profile,
         )
         reward = calculate_similarity(
             reference_matrix=self.target_density,
@@ -253,7 +253,9 @@ class BoneRemodelingEnvironment(Env):
     def get_data_for_visualization(
         self,
     ) -> tuple[
-        tuple[int, np.ndarray, np.ndarray], tuple[int, np.ndarray, np.ndarray], float
+        tuple[int, np.ndarray, np.ndarray],
+        tuple[int, np.ndarray, np.ndarray],
+        float,
     ]:
         """Pass data needed for rendering the environment to the callback function."""
         sample_information = (

@@ -140,10 +140,14 @@ class DensitySimulation:
         """
         self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
         self.displacement_space = VectorFunctionSpace(
-            self.mesh, "P", self.displacement_element_order
+            self.mesh,
+            "P",
+            self.displacement_element_order,
         )
         self.cell_density_space = FunctionSpace(
-            self.mesh, "DG", self.density_element_order
+            self.mesh,
+            "DG",
+            self.density_element_order,
         )
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.displacement_test_function = TestFunction(self.displacement_space)

@@ -16,7 +16,9 @@ logger = logging.getLogger(__name__)
 
 
 def plot_loss(
-    train_losses: list[float], val_losses: list[float], learning_rates: list[float]
+    train_losses: list[float],
+    val_losses: list[float],
+    learning_rates: list[float],
 ) -> None:
     """Plot the training and validation loss history with learning rate overlay."""
     if not train_losses or not val_losses or not learning_rates:
@@ -37,7 +39,11 @@ def plot_loss(
     # Create secondary Y-axis for Learning Rate
     ax2 = axes.twinx()
     (line3,) = ax2.plot(
-        learning_rates, color="gray", linestyle=":", label="Learning Rate", alpha=0.7
+        learning_rates,
+        color="gray",
+        linestyle=":",
+        label="Learning Rate",
+        alpha=0.7,
     )
     ax2.set_yscale("log")
     ax2.set_ylabel("Learning Rate", color="gray")
@@ -48,7 +54,9 @@ def plot_loss(
     legend_labels = [str(line.get_label()) for line in lines]
     axes.legend(lines, legend_labels, loc="upper right")
     axes.set_title(
-        "Training Progress: Loss & Learning Rate", fontsize=12, fontweight="bold"
+        "Training Progress: Loss & Learning Rate",
+        fontsize=12,
+        fontweight="bold",
     )
     axes.set_xlabel("Epoch")
     plt.tight_layout()

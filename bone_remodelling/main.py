@@ -15,7 +15,7 @@ def setup_logging(output_dir: Path) -> logging.Logger:
 
     # Create formatters
     file_formatter = logging.Formatter(
-        "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+        "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
     console_formatter = logging.Formatter("%(levelname)s: %(message)s")
 
@@ -29,7 +29,7 @@ def setup_logging(output_dir: Path) -> logging.Logger:
     logfile.mkdir(parents=True, exist_ok=True)
     log_file = logfile.resolve()
     log_path = log_file / Path(
-        f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+        f"run_{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log",
     )
     file_handler = logging.FileHandler(log_path, mode="w")
     file_handler.setFormatter(file_formatter)
@@ -83,9 +83,9 @@ def main() -> None:  # noqa: C901, PLR0912
     # Dispatch to the appropriate module based on the argument
     try:
         if args.module == "animate_forward_model":
-            from bone_remodelling.forward_model.density_animation import (
+            from bone_remodelling.forward_model.density_animation import (  # noqa: PLC0415
                 cli as generate_animation,
-            )  # noqa: I001, PLC0415
+            )
 
             generate_animation(configuration_parameters, remaining_args)
 
@@ -95,30 +95,30 @@ def main() -> None:  # noqa: C901, PLR0912
             generate_data(configuration_parameters, remaining_args)
 
         elif args.module == "train_surrogate":
-            from bone_remodelling.surrogate_model.train_surrogate import (
+            from bone_remodelling.surrogate_model.train_surrogate import (  # noqa: PLC0415
                 cli as surrogate_training,
-            )  # noqa: I001, PLC0415
+            )
 
             surrogate_training(configuration_parameters, remaining_args)
 
         elif args.module == "evaluate_surrogate":
-            from bone_remodelling.surrogate_model.evaluate_surrogate import (
+            from bone_remodelling.surrogate_model.evaluate_surrogate import (  # noqa: PLC0415
                 cli as surrogate_evaluation,
-            )  # noqa: I001, PLC0415
+            )
 
             surrogate_evaluation(configuration_parameters, remaining_args)
 
         elif args.module == "train_inverse":
-            from bone_remodelling.inverse_model.train_inverse import (
+            from bone_remodelling.inverse_model.train_inverse import (  # noqa: PLC0415
                 cli as inverse_training,
-            )  # noqa: I001, PLC0415
+            )
 
             inverse_training(configuration_parameters, remaining_args)
 
         elif args.module == "evaluate_inverse":
-            from bone_remodelling.inverse_model.evaluate_inverse import (
+            from bone_remodelling.inverse_model.evaluate_inverse import (  # noqa: PLC0415
                 cli as inverse_evaluation,
-            )  # noqa: I001, PLC0415
+            )
 
             inverse_evaluation(configuration_parameters, remaining_args)
 
@@ -133,7 +133,7 @@ def main() -> None:  # noqa: C901, PLR0912
         elif args.module == "evaluate_rl":
             from bone_remodelling.rl_model.evaluate_agent import cli as rl_evaluation  # noqa: I001, PLC0415
 
-            rl_evaluation(configuration_parameters, remaining_args)
+            rl_evaluation(configuration_parameters)
 
         elif args.module == "analysis":
             from bone_remodelling.analysis.cli import cli as analysis  # noqa: I001, PLC0415
@@ -142,13 +142,13 @@ def main() -> None:  # noqa: C901, PLR0912
 
         elif args.module == "train_all":
             logger.info(
-                f"Running all modules in sequence...{remaining_args} not used for train_all."
+                f"Running all modules in sequence...{remaining_args} not used for train_all.",
             )
             train_all(configuration_parameters)
 
         elif args.module == "evaluate_all":
             logger.info(
-                f"Evaluating all modules in sequence...{remaining_args} not used for evaluate_all."
+                f"Evaluating all modules in sequence...{remaining_args} not used for evaluate_all.",
             )
             evaluate_all(configuration_parameters)
 
@@ -163,16 +163,17 @@ def main() -> None:  # noqa: C901, PLR0912
 def train_all(configuration_parameters: ConfigurationParameters) -> None:
     """Train all modules in sequence."""
     from bone_remodelling.forward_data.generator import cli as generate_data  # noqa: I001, PLC0415
-    from bone_remodelling.surrogate_model.train_surrogate import (
+    from bone_remodelling.surrogate_model.train_surrogate import (  # noqa: PLC0415
         cli as surrogate_training,
-    )  # noqa: PLC0415
+    )
     from bone_remodelling.inverse_model.train_inverse import cli as inverse_training  # noqa: PLC0415
     from bone_remodelling.rl_model.run_rl_environment import cli as rl_training  # noqa: PLC0415
 
     generate_data(configuration_parameters, ["--samples", "100000", "--type", "merger"])
     surrogate_training(configuration_parameters, [])
     generate_data(
-        configuration_parameters, ["--samples", "50000", "--type", "triangular"]
+        configuration_parameters,
+        ["--samples", "50000", "--type", "triangular"],
     )
     inverse_training(configuration_parameters, [])
     rl_training(configuration_parameters, [])
@@ -180,23 +181,26 @@ def train_all(configuration_parameters: ConfigurationParameters) -> None:
 
 def evaluate_all(configuration_parameters: ConfigurationParameters) -> None:
     """Evaluate all modules in sequence."""
-    from bone_remodelling.forward_model.density_animation import (
+    from bone_remodelling.forward_model.density_animation import (  # noqa: PLC0415
         cli as generate_animation,
-    )  # noqa: I001, PLC0415
-    from bone_remodelling.surrogate_model.evaluate_surrogate import (
-        cli as surrogate_evaluation,
-    )  # noqa: PLC0415
-    from bone_remodelling.inverse_model.evaluate_inverse import (
+    )
+    from bone_remodelling.inverse_model.evaluate_inverse import (  # noqa: PLC0415
         cli as inverse_evaluation,
-    )  # noqa: PLC0415
-    from bone_remodelling.rl_model.evaluate_agent import cli as rl_evaluation  # noqa: PLC0415
+    )
+    from bone_remodelling.rl_model.evaluate_agent import (  # noqa: PLC0415
+        cli as rl_evaluation,
+    )
+    from bone_remodelling.surrogate_model.evaluate_surrogate import (  # noqa: PLC0415
+        cli as surrogate_evaluation,
+    )
 
     generate_animation(
-        configuration_parameters, ["--type", "validation", "--animator", "matplotlib"]
+        configuration_parameters,
+        ["--type", "validation", "--animator", "matplotlib"],
     )
     surrogate_evaluation(configuration_parameters, [])
     inverse_evaluation(configuration_parameters, [])
-    rl_evaluation(configuration_parameters, [])
+    rl_evaluation(configuration_parameters)
 
 
 # TODO(gijsschlief): Hyperparameter tuning for surrogate model
