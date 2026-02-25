@@ -20,7 +20,7 @@ class ForwardDataManager:
             filename = f"sim_{timestamp}.jsonl"
         self.storage_path = Path(storage_path) / Path(filename)
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
-        self.serial_number = 0
+        self.serial_number: int = 0
 
     def save_data(self, force_profiles: Iterable, final_densities: Iterable) -> None:
         """Save data to the JSONL file, appending to it if it already exists."""
@@ -75,7 +75,7 @@ class ForwardDataManager:
 
     def _convert_to_numpy(self, data: list[dict]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         serials = np.array([e["serial_number"] for e in data])
-        self.serial_number = serials.max() + 1 if serials.size > 0 else 0
+        self.serial_number = int(serials.max()) + 1 if serials.size > 0 else 0
         forces = np.array([e["force_profile"] for e in data], dtype=np.float32)
         densities = np.array([e["final_output_density"] for e in data], dtype=np.float32)
         return serials, forces, densities
