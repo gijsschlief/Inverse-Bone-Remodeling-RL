@@ -31,17 +31,18 @@ class SurrogateModel(torch.nn.Module):
 
         # Initial expansion
         linear_layers.append(torch.nn.Flatten())
-        linear_layers.append(torch.nn.Linear(30, self.width))
+        linear_layers.append(torch.nn.Linear(30, self.width // 2))
         linear_layers.append(torch.nn.ReLU())
-        if self.dropout > 0:
-            linear_layers.append(torch.nn.Dropout(self.dropout))
+        linear_layers.append(torch.nn.Linear(self.width // 2, self.width))
+        linear_layers.append(torch.nn.ReLU())
 
         # Intermediate linear layers
-        for _ in range(num_linear_layers - 2):
+        for _ in range(num_linear_layers - 3):
             linear_layers.append(torch.nn.Linear(self.width, self.width))
             linear_layers.append(torch.nn.ReLU())
-            if self.dropout > 0:
-                linear_layers.append(torch.nn.Dropout(self.dropout))
+
+        if self.dropout > 0:
+            linear_layers.append(torch.nn.Dropout(self.dropout))
 
         # Project to spatial dimensions (128 channels at 5x5)
         self.spatial_ch = 128
@@ -60,7 +61,7 @@ class SurrogateModel(torch.nn.Module):
             torch.nn.ConvTranspose2d(
                 self.spatial_ch,
                 64,
-                kernel_size=4,
+                kernel_size=3,
                 stride=2,
                 padding=1,
             ),
@@ -74,7 +75,7 @@ class SurrogateModel(torch.nn.Module):
         for _ in range(num_conv_layers - 2):
             next_ch = max(32, current_ch // 2)
             conv_layers.append(
-                torch.nn.Conv2d(current_ch, next_ch, kernel_size=3, padding=1),
+                torch.nn.Conv2d(current_ch, next_ch, kernel_size=3, padding=1, output_padding=1),
             )
             conv_layers.append(torch.nn.ReLU())
             conv_layers.append(torch.nn.BatchNorm2d(next_ch))
