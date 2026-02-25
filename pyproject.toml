@@ -1,10 +1,16 @@
 [tool.poetry]
-name = "bone-remodeling"
+name = "bone_remodelling"
 version = "0.1.0"
-description = "Package used to solve the inverse bone remodeling problem using reinforcement learning."
+description = "Package used to solve the inverse bone remodelling problem using reinforcement learning."
 authors = ["gijsschlief <160142703+gijsschlief@users.noreply.github.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "bone_remodelling" }
+]
+
+[tool.poetry.scripts]
+bone-cli = "bone_remodelling.cli:app"
 
 [tool.poetry.dependencies]
 python = "^3.11"

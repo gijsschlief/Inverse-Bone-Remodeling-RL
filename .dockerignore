@@ -1,0 +1,13 @@
+# Ignore the data folders
+data/
+dist/
+tests/
+
+# Ignore local python junk
+__pycache__/
+.venv/
+.pytest_cache/
+.mypy_cache/
+
+# Ignore git
+.git/
