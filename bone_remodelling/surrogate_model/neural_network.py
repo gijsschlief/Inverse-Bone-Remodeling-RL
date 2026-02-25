@@ -64,6 +64,7 @@ class SurrogateModel(torch.nn.Module):
                 kernel_size=3,
                 stride=2,
                 padding=1,
+                output_padding=1,
             ),
         )
         conv_layers.append(torch.nn.ReLU())
@@ -75,7 +76,7 @@ class SurrogateModel(torch.nn.Module):
         for _ in range(num_conv_layers - 2):
             next_ch = max(32, current_ch // 2)
             conv_layers.append(
-                torch.nn.Conv2d(current_ch, next_ch, kernel_size=3, padding=1, output_padding=1),
+                torch.nn.Conv2d(current_ch, next_ch, kernel_size=3, padding=1),
             )
             conv_layers.append(torch.nn.ReLU())
             conv_layers.append(torch.nn.BatchNorm2d(next_ch))

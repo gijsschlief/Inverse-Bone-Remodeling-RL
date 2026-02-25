@@ -118,6 +118,17 @@ jupyter = ["ipython (>=7.8.0)", "tokenize-rt (>=3.2.0)"]
 uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
+name = "bottle"
+version = "0.13.4"
+description = "Fast and simple WSGI-framework for small web-applications."
+optional = false
+python-versions = "*"
+files = [
+    {file = "bottle-0.13.4-py2.py3-none-any.whl", hash = "sha256:045684fbd2764eac9cdeb824861d1551d113e8b683d8d26e296898d3dd99a12e"},
+    {file = "bottle-0.13.4.tar.gz", hash = "sha256:787e78327e12b227938de02248333d788cfe45987edca735f8f88e03472c3f47"},
+]
+
+[[package]]
 name = "certifi"
 version = "2026.1.4"
 description = "Python package for providing Mozilla's CA Bundle."
@@ -1717,6 +1728,25 @@ optional = ["boto3", "cmaes (>=0.12.0)", "google-cloud-storage", "greenlet", "gr
 test = ["fakeredis[lua]", "greenlet", "grpcio", "kaleido (<0.4)", "moto", "protobuf (>=5.28.1)", "pytest", "pytest-xdist", "scipy (>=1.9.2)", "torch"]
 
 [[package]]
+name = "optuna-dashboard"
+version = "0.20.0"
+description = "Real-time dashboard for Optuna"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "optuna_dashboard-0.20.0-py3-none-any.whl", hash = "sha256:7fe92a6b1ba8f1f77d29ff8a86fa09a01cd736e411e354d0c96c05cd4a86c289"},
+    {file = "optuna_dashboard-0.20.0.tar.gz", hash = "sha256:52a6da480a2500b6993c8fa61c81063b0dbe730edbd9f651c81b318393cca71d"},
+]
+
+[package.dependencies]
+bottle = ">=0.13.0"
+optuna = ">=3.6.0"
+
+[package.extras]
+docs = ["boto3", "botorch", "openai", "sphinx", "sphinx_rtd_theme", "streamlit", "torch"]
+preferential = ["botorch", "torch"]
+
+[[package]]
 name = "optuna-integration"
 version = "4.7.0"
 description = "Integration libraries of Optuna."
@@ -3034,4 +3064,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.11"
-content-hash = "73905d87718bae618f772d038c3cd614e0dc1e77e430ed2f04e7c0adf3a9732b"
+content-hash = "07b877afabc6b76a5be1b8818161ee6e98bbf3683807946cf53f57a79f977e15"
