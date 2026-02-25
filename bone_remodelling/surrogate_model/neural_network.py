@@ -86,12 +86,15 @@ class SurrogateModel(torch.nn.Module):
 
     def update(self, width: int, depth: int, dropout: float) -> None:
         """Update the size of the neural network."""
+        current_device = next(self.parameters()).device
+
         self.width = width
         self.depth = depth
         self.dropout = dropout
 
         self.input_fc = self._build_linear_encoder()
         self.conv_block = self._build_conv_decoder()
+        self.to(current_device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""

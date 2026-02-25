@@ -178,7 +178,8 @@ def hyperparameter_search(
 ) -> dict:
     """Hyperparameter tuning function."""
     study_name = "surrogate_tuning"
-    storage_name = f"sqlite:///{study_name}.db"
+    db_path = model_path.parent / Path(f"{study_name}.db")
+    storage_name = f"sqlite:///{db_path.resolve()}"
 
     study = optuna.create_study(
         study_name=study_name,
