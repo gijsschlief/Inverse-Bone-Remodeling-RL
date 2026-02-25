@@ -52,8 +52,22 @@ class BoneRemodelingEnvironment(Env):
         self.per_step_location_change = rl_parameters.per_step_location_change
 
         self.action_space = spaces.Box(
-            low=np.array([-self.per_step_force_change, -self.per_step_dead_zone, -self.per_step_location_change], dtype=np.float32),
-            high=np.array([self.per_step_force_change, self.per_step_dead_zone, self.per_step_location_change], dtype=np.float32),
+            low=np.array(
+                [
+                    -self.per_step_force_change,
+                    -self.per_step_dead_zone,
+                    -self.per_step_location_change,
+                ],
+                dtype=np.float32,
+            ),
+            high=np.array(
+                [
+                    self.per_step_force_change,
+                    self.per_step_dead_zone,
+                    self.per_step_location_change,
+                ],
+                dtype=np.float32,
+            ),
             dtype=np.float32,
         )
 
@@ -165,7 +179,9 @@ class BoneRemodelingEnvironment(Env):
             peak_height=float(self.peak_magnitude),
         )
 
-        predicted_density = self.forwarder.forward_pass(force_profile=self.force_profile)
+        predicted_density = self.forwarder.forward_pass(
+            force_profile=self.force_profile
+        )
         reward = calculate_similarity(
             reference_matrix=self.target_density,
             comparison_matrix=predicted_density,
@@ -226,16 +242,19 @@ class BoneRemodelingEnvironment(Env):
             if j < peak_position:
                 profile[side, j] = (peak_height / peak_position) * j
             elif j > peak_position:
-                denomerator = (self._profile_length - 1 - peak_position)
-                profile[side, j] = (
-                    peak_height / max(denomerator, 1e-6)) * (self._profile_length - 1 - j)
+                denomerator = self._profile_length - 1 - peak_position
+                profile[side, j] = (peak_height / max(denomerator, 1e-6)) * (
+                    self._profile_length - 1 - j
+                )
             else:
                 profile[side, j] = peak_height
         return profile
 
     def get_data_for_visualization(
         self,
-    ) -> tuple[ tuple[int, np.ndarray, np.ndarray], tuple[int, np.ndarray, np.ndarray], float]:
+    ) -> tuple[
+        tuple[int, np.ndarray, np.ndarray], tuple[int, np.ndarray, np.ndarray], float
+    ]:
         """Pass data needed for rendering the environment to the callback function."""
         sample_information = (
             self.current_sample_index,

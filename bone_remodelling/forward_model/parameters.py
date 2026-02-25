@@ -2,7 +2,6 @@
 
 import logging
 from dataclasses import dataclass
-from pathlib import Path
 
 import numpy as np
 
@@ -66,7 +65,9 @@ class SimulationParameters:
     """
 
     force_profile: np.ndarray  # shape (3,n)
-    force_mask: np.ndarray  # bool of shape (3,n) to define the resolution of applied forces
+    force_mask: (
+        np.ndarray
+    )  # bool of shape (3,n) to define the resolution of applied forces
     initial_density_field: np.ndarray  # shape (n,n)
 
     # material parameters based on Weinans et al. 1992

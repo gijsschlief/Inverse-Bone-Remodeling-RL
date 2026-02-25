@@ -65,9 +65,11 @@ def evaluate_agent(
     # For plotting worst sample at the end
     worst_sample_information = None
     worst_estimate_information = None
-    worst_reward = float('inf')
+    worst_reward = float("inf")
 
-    sample_information, estimate_information, plot_reward = environment.get_data_for_visualization()
+    sample_information, estimate_information, plot_reward = (
+        environment.get_data_for_visualization()
+    )
     for ep in range(num_episodes):
         obs, _ = environment.reset()
         done = False
@@ -77,7 +79,9 @@ def evaluate_agent(
             action, _ = model.predict(obs, deterministic=True)
             obs, reward, terminated, truncated, _ = environment.step(action)
 
-            sample_information, estimate_information, plot_reward = environment.get_data_for_visualization()
+            sample_information, estimate_information, plot_reward = (
+                environment.get_data_for_visualization()
+            )
             if render:
                 render_callback.render(
                     sample_information=sample_information,
@@ -119,12 +123,16 @@ def evaluate_agent(
             f"Episode {ep + 1}/{num_episodes} - Total Reward: {total_reward:.4f}, Final SSIM: {ssim:.6f}, Final MSE: {mse:.6f}",
         )
 
-    if worst_estimate_information is not None and worst_sample_information is not None and render:
+    if (
+        worst_estimate_information is not None
+        and worst_sample_information is not None
+        and render
+    ):
         render_callback.render(
             sample_information=worst_sample_information,
             estimate_information=worst_estimate_information,
-            reward=worst_reward)
-
+            reward=worst_reward,
+        )
 
     return {
         "rewards": episode_rewards,
@@ -141,7 +149,9 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     """Evaluate the RL agent."""
     run_parameters = RunConfiguration(output_dir=config.output_dir)
 
-    forward_data_manager = ForwardDataManager((run_parameters.data_path / Path("raw", "triangular")).resolve())
+    forward_data_manager = ForwardDataManager(
+        (run_parameters.data_path / Path("raw", "triangular")).resolve()
+    )
     result = forward_data_manager.load_directory()
     if result is None:
         raise ValueError("Failed to load forward data from directory")
@@ -177,23 +187,28 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     evaluation_result = evaluate_agent(
         model,
         agent_evaluation_environment,
-        num_episodes=len(test_density_profiles[:,1,1]),
+        num_episodes=len(test_density_profiles[:, 1, 1]),
         render=False,
     )
 
     # Force Magnitude Comparison
-    test_peaks = np.max(np.abs(np.array(evaluation_result["sample_forces"])), axis=(1, 2))
+    test_peaks = np.max(
+        np.abs(np.array(evaluation_result["sample_forces"])), axis=(1, 2)
+    )
     eval_peaks = np.max(np.abs(np.array(evaluation_result["forces"])), axis=(1, 2))
     eps = 1e-3
-    test_peaks, eval_peaks = np.clip(test_peaks, eps, None), np.clip(eval_peaks, eps, None)
+    test_peaks, eval_peaks = (
+        np.clip(test_peaks, eps, None),
+        np.clip(eval_peaks, eps, None),
+    )
     plt.figure(num=2)
     plt.scatter(test_peaks, eval_peaks, alpha=0.4)
     max_test, max_eval = test_peaks.max(), eval_peaks.max()
     min_test, min_eval = test_peaks.min(), eval_peaks.min()
     max_val, min_val = max(max_test, max_eval), min(min_test, min_eval)
-    plt.plot([min_val, max_val], [min_val, max_val], 'k--', linewidth=2)
-    plt.xscale('log')
-    plt.yscale('log')
+    plt.plot([min_val, max_val], [min_val, max_val], "k--", linewidth=2)
+    plt.xscale("log")
+    plt.yscale("log")
     plt.xlim(min_test, max_test)
     plt.ylim(min_eval, max_eval)
     plt.xlabel("True Peak Force")
@@ -210,17 +225,25 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
-    avg_ssim = sum(evaluation_result["ssim_scores"]) / len(evaluation_result["ssim_scores"])
-    avg_mse = sum(evaluation_result["mse_errors"]) / len(evaluation_result["mse_errors"])
+    avg_ssim = sum(evaluation_result["ssim_scores"]) / len(
+        evaluation_result["ssim_scores"]
+    )
+    avg_mse = sum(evaluation_result["mse_errors"]) / len(
+        evaluation_result["mse_errors"]
+    )
 
-    logger.info(f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}")
+    logger.info(
+        f"Average Reward: {avg_rewards:.4f}, Average SSIM: {avg_ssim:.6f}, Average MSE: {avg_mse:.6f}"
+    )
 
     # Plot representative samples from evaluation
     force_generator = ForceProfileGenerator()
     force_mask = force_generator.generate_force_mask()
     for _ in range(100):
         k = np.random.randint(0, len(sample_forces))
-        logger.info(f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}")
+        logger.info(
+            f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}"
+        )
         logger.info(f"Original Force Profile: {sample_forces[k]}")
         logger.info(f"Reconstructed Force Profile: {predicted_forces[k]}")
         plot_inverse_model(
@@ -231,7 +254,13 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
         )
         plt.show()
 
-def plot_inverse_model(predicted_density: np.ndarray, sample_density: np.ndarray, predicted_force: tuple[np.ndarray, np.ndarray], sample_force: tuple[np.ndarray, np.ndarray]) -> None:
+
+def plot_inverse_model(
+    predicted_density: np.ndarray,
+    sample_density: np.ndarray,
+    predicted_force: tuple[np.ndarray, np.ndarray],
+    sample_force: tuple[np.ndarray, np.ndarray],
+) -> None:
     """Plot the predicted vs sample density and force profiles."""
     fig, axes = plt.subplots(1, 2, figsize=(12, 5))
     plot_density_matrix(
@@ -249,9 +278,13 @@ def plot_inverse_model(predicted_density: np.ndarray, sample_density: np.ndarray
         force_data=sample_force,
     )
 
-def cli(configuration_parameters: ConfigurationParameters, remaining_args: list) -> None:  # noqa: ARG001
+
+def cli(
+    configuration_parameters: ConfigurationParameters, remaining_args: list
+) -> None:  # noqa: ARG001
     """CLI entry point for evaluating the RL agent."""
     run_agent_evaluation(configuration_parameters)
+
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)

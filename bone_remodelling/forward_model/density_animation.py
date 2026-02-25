@@ -37,7 +37,9 @@ def animate_density_matplotlib(
 
     """
     logger.info("Starting Matplotlib animation generation.")
-    output_directory: Path = Path(data_directory) / Path("animations", "density_animation.gif")
+    output_directory: Path = Path(data_directory) / Path(
+        "animations", "density_animation.gif"
+    )
     if not output_directory.parent.exists():
         output_directory.parent.mkdir(parents=True, exist_ok=True)
 
@@ -78,6 +80,7 @@ def animate_density_matplotlib(
         logger.warning("Could not save animation.")
     return animation
 
+
 def animate_density_pyvista(
     simulation: DensitySimulation,
     data_directory: Path,
@@ -91,7 +94,9 @@ def animate_density_pyvista(
 
     """
     logger.info("Starting PyVista animation generation.")
-    output_directory: Path = Path(data_directory) / Path("animations", "density_animation_pyvista.gif")
+    output_directory: Path = Path(data_directory) / Path(
+        "animations", "density_animation_pyvista.gif"
+    )
     if not output_directory.parent.exists():
         output_directory.parent.mkdir(parents=True, exist_ok=True)
 
@@ -101,8 +106,10 @@ def animate_density_pyvista(
     points_3d = np.zeros((coords.shape[0], 3))
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
-    base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
-    pyvista_plotter = Plotter(off_screen=True) # type: ignore
+    base_grid = UnstructuredGrid(
+        cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d
+    )
+    pyvista_plotter = Plotter(off_screen=True)  # type: ignore
     pyvista_plotter.open_gif(str(output_directory))
     step = 0
 
@@ -111,7 +118,9 @@ def animate_density_pyvista(
 
         for step in range(simulation.time_steps):
             simulation.step()
-            base_grid.cell_data["Density"] = simulation.get_density_function().vector().get_local()
+            base_grid.cell_data["Density"] = (
+                simulation.get_density_function().vector().get_local()
+            )
             pyvista_plotter.clear()
             render_density_pyvista_frame(
                 pyvista_plotter=pyvista_plotter,
@@ -123,11 +132,12 @@ def animate_density_pyvista(
             pyvista_plotter.write_frame()
     except RuntimeError as e:
         logger.error(f"Animation interrupted at step {step}: {e}")
-        raise # Re-raise after closing plotter to notify the caller
+        raise  # Re-raise after closing plotter to notify the caller
     finally:
         pyvista_plotter.close()
 
     logger.info(f"PyVista animation saved to {output_directory}")
+
 
 def build_force_profile_and_mask(
     config: ConfigurationParameters,
@@ -144,12 +154,16 @@ def build_force_profile_and_mask(
 
     """
     force_profile_generator = ForceProfileGenerator(
-            profile_top_and_sides=(config.force_top_resolution, config.force_side_resolution),
-            batch_seed=config.seed,
-        )
+        profile_top_and_sides=(
+            config.force_top_resolution,
+            config.force_side_resolution,
+        ),
+        batch_seed=config.seed,
+    )
     force_profile = force_profile_generator.merger(num_samples=1).squeeze()
     force_mask = force_profile_generator.generate_force_mask()
     return force_profile, force_mask
+
 
 def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
     """CLI entry point for density animation generation."""
@@ -169,10 +183,16 @@ def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
     args = parser.parse_args(remaining_args)
     run_animation(config=config, type=args.type, animator=args.animator)
 
-def run_animation(config: ConfigurationParameters, type: str = "random", animator: str = "matplotlib") -> None:
+
+def run_animation(
+    config: ConfigurationParameters, type: str = "random", animator: str = "matplotlib"
+) -> None:
     """Run the density animations to create to GIFS."""
     logger.info("Starting density animation generation.")
-    initial_density = np.ones((config.mesh_top_resolution, config.mesh_side_resolution)) * config.start_density
+    initial_density = (
+        np.ones((config.mesh_top_resolution, config.mesh_side_resolution))
+        * config.start_density
+    )
     force_profile, force_mask = build_force_profile_and_mask(config=config)
 
     if type == "random":
@@ -184,14 +204,16 @@ def run_animation(config: ConfigurationParameters, type: str = "random", animato
             max_density=config.max_density,
         )
     elif type == "validation":
-        force_maginitude = -25 # Compressive force in Newtons
-        scale_factors = np.linspace(1.0, 0, config.mesh_top_resolution+1)[:-1]
+        force_maginitude = -25  # Compressive force in Newtons
+        scale_factors = np.linspace(1.0, 0, config.mesh_top_resolution + 1)[:-1]
 
-        validation_force_profile = np.array([
-            scale_factors * force_maginitude,
-            np.zeros(config.mesh_side_resolution),
-            np.zeros(config.mesh_side_resolution),
-        ])
+        validation_force_profile = np.array(
+            [
+                scale_factors * force_maginitude,
+                np.zeros(config.mesh_side_resolution),
+                np.zeros(config.mesh_side_resolution),
+            ]
+        )
 
         parameters = SimulationParameters(
             force_profile=validation_force_profile,
@@ -206,7 +228,9 @@ def run_animation(config: ConfigurationParameters, type: str = "random", animato
     simulation = DensitySimulation(parameters=parameters)
 
     if animator == "matplotlib":
-        animate_density_matplotlib(simulation=simulation, data_directory=config.output_dir)
+        animate_density_matplotlib(
+            simulation=simulation, data_directory=config.output_dir
+        )
     elif animator == "pyvista":
         animate_density_pyvista(simulation=simulation, data_directory=config.output_dir)
 

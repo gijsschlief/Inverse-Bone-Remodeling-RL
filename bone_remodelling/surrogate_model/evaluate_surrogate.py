@@ -61,22 +61,45 @@ def surrogates_evaluation(
     )
 
     # Load surrogate models
-    train_parameters.model_path = (data_path / Path("surrogate_models", "model.pth")).resolve()
+    train_parameters.model_path = (
+        data_path / Path("surrogate_models", "model.pth")
+    ).resolve()
     predictors = load_surrogate_models(model_class, train_parameters)
 
     # Run the predictors on the three sets
-    y_train_predicted, _ = predict_with_surrogates(predictors, x_train, batch_size=train_parameters.batch_size)
-    y_val_predicted, _ = predict_with_surrogates(predictors, x_val, batch_size=train_parameters.batch_size)
-    y_test_predicted, y_test_std = predict_with_surrogates(predictors, x_test, batch_size=train_parameters.batch_size)
+    y_train_predicted, _ = predict_with_surrogates(
+        predictors, x_train, batch_size=train_parameters.batch_size
+    )
+    y_val_predicted, _ = predict_with_surrogates(
+        predictors, x_val, batch_size=train_parameters.batch_size
+    )
+    y_test_predicted, y_test_std = predict_with_surrogates(
+        predictors, x_test, batch_size=train_parameters.batch_size
+    )
 
     # Calculate average similarity scores
-    train_ssim = [calculate_similarity(y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_train_predicted))]
+    train_ssim = [
+        calculate_similarity(
+            y_train_predicted[i], y_train[i], baseline=0.1, threshold=0.5, method=metric
+        )
+        for i in range(len(y_train_predicted))
+    ]
     logger.info(f"Train {metric.upper()}: {np.mean(train_ssim):.4f}")
 
-    val_ssim = [calculate_similarity(y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_val_predicted))]
+    val_ssim = [
+        calculate_similarity(
+            y_val_predicted[i], y_val[i], baseline=0.1, threshold=0.5, method=metric
+        )
+        for i in range(len(y_val_predicted))
+    ]
     logger.info(f"Validation {metric.upper()}: {np.mean(val_ssim):.4f}")
 
-    test_ssim = [calculate_similarity(y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method=metric) for i in range(len(y_test_predicted))]
+    test_ssim = [
+        calculate_similarity(
+            y_test_predicted[i], y_test[i], baseline=0.1, threshold=0.5, method=metric
+        )
+        for i in range(len(y_test_predicted))
+    ]
     logger.info(f"Test {metric.upper()}: {np.mean(test_ssim):.4f}")
 
     # Visualize some results from the test set
@@ -96,6 +119,7 @@ def surrogates_evaluation(
             x_test[k],
         )
 
+
 def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
     """Command-line interface for surrogate model evaluation."""
     parser = argparse.ArgumentParser(description="Evaluate the surrogate model.")
@@ -108,7 +132,7 @@ def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
     )
     parser.add_argument(
         "--metric",
-        choices=["mse","mae","cosine","iou","dice","ssim","wasserstein"],
+        choices=["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"],
         default="ssim",
         type=str,
         help="Metric for surrogate model evaluation.",
@@ -129,12 +153,20 @@ def cli(config: ConfigurationParameters, cli_args: list[str]) -> None:
         metric=args.metric,
     )
 
+
 if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
-    config = ConfigurationParameters(output_dir=Path(__file__).parent.parent.parent / Path("data"))
+    config = ConfigurationParameters(
+        output_dir=Path(__file__).parent.parent.parent / Path("data")
+    )
     train_parameters = SurrogateTrainParameters(
         model_path=config.output_dir / Path("surrogate_models/model.pth"),
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
-    surrogates_evaluation(data_path=config.output_dir, model_class=SurrogateModel, train_parameters=train_parameters, random_state=config.seed)
+    surrogates_evaluation(
+        data_path=config.output_dir,
+        model_class=SurrogateModel,
+        train_parameters=train_parameters,
+        random_state=config.seed,
+    )

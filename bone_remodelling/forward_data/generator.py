@@ -47,7 +47,9 @@ def init_worker(simulation_parameters: SimulationParameters) -> None:
     _profile_length = simulation_parameters.force_profile.shape[1]
 
 
-def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> tuple[list[np.ndarray], list[np.ndarray]]:
+def run_worker_batches(
+    worker_args: list[tuple[int, np.ndarray]],
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
     """Run a batch of simulations in a worker process."""
     force_profiles = []
     final_densities = []
@@ -63,6 +65,7 @@ def run_worker_batches(worker_args: list[tuple[int, np.ndarray]]) -> tuple[list[
         except (RuntimeError, ValueError) as e:  # noqa: PERF203
             logger.error(f"Error processing sample {i + 1}: {e}")
     return force_profiles, final_densities
+
 
 class TrainingDataGenerator:
     """Class for generating training data for bone remodeling simulations."""
@@ -131,7 +134,9 @@ class TrainingDataGenerator:
             completed_samples = 0
             for fut in as_completed(futures):
                 batch_force_profiles, batch_final_densities = fut.result()
-                self.forward_data_manager.save_data(batch_force_profiles, batch_final_densities)
+                self.forward_data_manager.save_data(
+                    batch_force_profiles, batch_final_densities
+                )
                 completed_samples += len(batch_force_profiles)
                 pct = completed_samples / self.num_samples * 100
                 bar = "#" * int(pct // 2) + "." * (50 - int(pct // 2))
@@ -164,9 +169,12 @@ class TrainingDataGenerator:
         if force_profiles:
             self.forward_data_manager.save_data(force_profiles, final_densities)
 
+
 def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     """CLI entry point for training data generation."""
-    parser = argparse.ArgumentParser(description="Generate training data for bone remodeling simulations.")
+    parser = argparse.ArgumentParser(
+        description="Generate training data for bone remodeling simulations."
+    )
     parser.add_argument(
         "--samples",
         type=int,
@@ -188,7 +196,10 @@ def cli(config: ConfigurationParameters, argv: list[str]) -> None:
     args = parser.parse_args(argv)
     run(config, samples=args.samples, force_type=args.force_type, append=args.append)
 
-def run(config: ConfigurationParameters, samples: int, force_type: str, append: bool) -> None:  # noqa: FBT001
+
+def run(
+    config: ConfigurationParameters, samples: int, force_type: str, append: bool
+) -> None:  # noqa: FBT001
     """Generate training data for bone remodeling simulations.
 
     Args:
@@ -199,18 +210,23 @@ def run(config: ConfigurationParameters, samples: int, force_type: str, append: 
         append (bool): Whether to append to existing data or create a new file.
 
     """
-    initial_density = np.full((config.mesh_top_resolution, config.mesh_side_resolution), config.start_density)
+    initial_density = np.full(
+        (config.mesh_top_resolution, config.mesh_side_resolution), config.start_density
+    )
     logger.info("Generating force profiles...")
 
     force_profile_generator = ForceProfileGenerator(
-        profile_top_and_sides=(config.force_top_resolution, config.force_side_resolution),
+        profile_top_and_sides=(
+            config.force_top_resolution,
+            config.force_side_resolution,
+        ),
         batch_seed=config.seed,
     )
     force_mask = force_profile_generator.generate_force_mask()
 
-    directory = (config.output_dir / Path("raw"))
+    directory = config.output_dir / Path("raw")
     if force_type == "triangular":
-            directory = (config.output_dir / Path("raw", "triangular"))
+        directory = config.output_dir / Path("raw", "triangular")
 
     directory.mkdir(parents=True, exist_ok=True)
     forward_data_manager = ForwardDataManager(storage_path=directory)
@@ -218,12 +234,12 @@ def run(config: ConfigurationParameters, samples: int, force_type: str, append: 
     offset: int = 0
     existing_files = sorted(directory.glob("sim_*.jsonl"))
     if append and existing_files:
-            latest_file = existing_files[-1].name
-            forward_data_manager = ForwardDataManager(directory, latest_file)
-            data = forward_data_manager.load_directory()
-            if data:
-                offset = len(data[0])
-                logger.info(f"Appending to {latest_file} starting from serial {offset}")
+        latest_file = existing_files[-1].name
+        forward_data_manager = ForwardDataManager(directory, latest_file)
+        data = forward_data_manager.load_directory()
+        if data:
+            offset = len(data[0])
+            logger.info(f"Appending to {latest_file} starting from serial {offset}")
 
     force_profiles = None
     if force_type == "merger":
@@ -259,12 +275,17 @@ def run(config: ConfigurationParameters, samples: int, force_type: str, append: 
     try:
         data_generator.generate_parallel(max_chunk_size=500)
     except Exception:  # noqa: BLE001
-        logger.warning("An error occurred during parallel data generation", exc_info = True)
-        logger.warning("Continuing with serialised data generation instead (note: significantly slower)")
+        logger.warning(
+            "An error occurred during parallel data generation", exc_info=True
+        )
+        logger.warning(
+            "Continuing with serialised data generation instead (note: significantly slower)"
+        )
         data_generator.generate_serial()
     stop_time = time.time()
     elapsed_time = stop_time - start_time
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
+
 
 if __name__ == "__main__":
     # Developer convenience entry point.

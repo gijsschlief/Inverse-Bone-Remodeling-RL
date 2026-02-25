@@ -139,8 +139,12 @@ class DensitySimulation:
         and creates the necessary function spaces for the simulation.
         """
         self.mesh = UnitSquareMesh(self.n_rows, self.n_columns, "left")
-        self.displacement_space = VectorFunctionSpace(self.mesh, "P", self.displacement_element_order)
-        self.cell_density_space = FunctionSpace(self.mesh, "DG", self.density_element_order)
+        self.displacement_space = VectorFunctionSpace(
+            self.mesh, "P", self.displacement_element_order
+        )
+        self.cell_density_space = FunctionSpace(
+            self.mesh, "DG", self.density_element_order
+        )
         self.spatial_dimension = self.displacement_space.ufl_element().value_shape()[0]
         self.displacement_test_function = TestFunction(self.displacement_space)
 
@@ -193,9 +197,15 @@ class DensitySimulation:
         solver = LinearVariationalSolver(problem)
         solver.parameters["linear_solver"] = self.linear_solver
         solver.parameters["preconditioner"] = self.preconditioner
-        solver.parameters["krylov_solver"]["relative_tolerance"] = self.krylov_solver_tolerance
-        solver.parameters["krylov_solver"]["absolute_tolerance"] = self.krylov_solver_tolerance
-        solver.parameters["krylov_solver"]["maximum_iterations"] = self.krylov_solver_iterations
+        solver.parameters["krylov_solver"]["relative_tolerance"] = (
+            self.krylov_solver_tolerance
+        )
+        solver.parameters["krylov_solver"]["absolute_tolerance"] = (
+            self.krylov_solver_tolerance
+        )
+        solver.parameters["krylov_solver"]["maximum_iterations"] = (
+            self.krylov_solver_iterations
+        )
         self.elasticity_solver = solver
 
     def _update_material_properties(self) -> None:

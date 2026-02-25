@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from bone_remodeling.src.rl_model.reward_calculation import calculate_similarity
+from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 
 
 def test_calculate_similarity_invalid_method() -> None:
@@ -56,9 +56,9 @@ def test_calculate_similarity_large_random_matrices() -> None:
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for method in methods:
         result = calculate_similarity(first_matrix, second_matrix, method=method)
-        assert (
-            -1 <= result <= 1
-        ), f"Expected result between -1 and 1 for {method}, got {result}"
+        assert -1 <= result <= 1, (
+            f"Expected result between -1 and 1 for {method}, got {result}"
+        )
 
 
 def test_calculate_similarity_identical_matrices() -> None:
@@ -110,9 +110,9 @@ def test_calculate_similarity_random_matrices_with_baseline() -> None:
             method=method,
             baseline=baseline,
         )
-        assert (
-            -1 <= result <= 1
-        ), f"Expected result between -1 and 1 for {method} with baseline, got {result}"
+        assert -1 <= result <= 1, (
+            f"Expected result between -1 and 1 for {method} with baseline, got {result}"
+        )
 
 
 def test_calculate_similarity_varied_size_matrices() -> None:
@@ -124,9 +124,9 @@ def test_calculate_similarity_varied_size_matrices() -> None:
         second_matrix = np.random.rand(*size)
         for method in methods:
             result = calculate_similarity(first_matrix, second_matrix, method=method)
-            assert (
-                -1 <= result <= 1
-            ), f"Expected result between -1 and 1 for {method} with size {size}, got {result}"
+            assert -1 <= result <= 1, (
+                f"Expected result between -1 and 1 for {method} with size {size}, got {result}"
+            )
 
 
 def test_calculate_similarity_empty_matrices() -> None:
@@ -147,9 +147,9 @@ def test_calculate_similarity_random_matrices() -> None:
             first_matrix = np.abs(np.random.rand(10, 10))
             second_matrix = np.abs(np.random.rand(10, 10))
             result = calculate_similarity(first_matrix, second_matrix, method=method)
-            assert (
-                -1 <= result <= 1
-            ), f"Expected SSIM between -1 and 1 for {method}, got {result}"
+            assert -1 <= result <= 1, (
+                f"Expected SSIM between -1 and 1 for {method}, got {result}"
+            )
 
 
 def test_calculate_similarity_similar_but_not_equal_matrices() -> None:
@@ -163,9 +163,9 @@ def test_calculate_similarity_similar_but_not_equal_matrices() -> None:
     methods = ["mse", "mae", "cosine", "iou", "dice", "ssim", "wasserstein"]
     for method in methods:
         result = calculate_similarity(first_matrix, second_matrix, method=method)
-        assert (
-            result > 0
-        ), f"Expected positive result for similar matrices with {method}, got {result}"
+        assert result > 0, (
+            f"Expected positive result for similar matrices with {method}, got {result}"
+        )
 
 
 def test_calculate_similarity_thresholding() -> None:
@@ -181,9 +181,9 @@ def test_calculate_similarity_thresholding() -> None:
             method=method,
             threshold=threshold,
         )
-        assert (
-            -1 <= result <= 1
-        ), f"Expected result between -1 and 1 for {method} with threshold, got {result}"
+        assert -1 <= result <= 1, (
+            f"Expected result between -1 and 1 for {method} with threshold, got {result}"
+        )
 
 
 def test_calculate_similarity_unused_baseline_warning() -> None:
@@ -229,14 +229,14 @@ def test_calculate_similarity_dissimilar_matrices() -> None:
     methods = ["mse", "mae", "iou", "dice", "wasserstein"]
     for method in methods:
         result = calculate_similarity(first_matrix, second_matrix, method=method)
-        assert (
-            result < 0
-        ), f"Expected negative result for dissimilar matrices with {method}, got {result}"
+        assert result < 0, (
+            f"Expected negative result for dissimilar matrices with {method}, got {result}"
+        )
     # Special case for SSIM
     result_ssim = calculate_similarity(first_matrix, second_matrix, method="ssim")
-    assert (
-        result_ssim <= 0
-    ), f"Expected non-positive result for dissimilar matrices with ssim, got {result_ssim}"
+    assert result_ssim <= 0, (
+        f"Expected non-positive result for dissimilar matrices with ssim, got {result_ssim}"
+    )
 
 
 def test_calculate_similarity_warning_and_result() -> None:
@@ -253,9 +253,9 @@ def test_calculate_similarity_warning_and_result() -> None:
             method="cosine",
             baseline=2.0,
         )
-    assert (
-        -1 <= result <= 1
-    ), f"Expected result between -1 and 1 for cosine method, got {result}"
+    assert -1 <= result <= 1, (
+        f"Expected result between -1 and 1 for cosine method, got {result}"
+    )
 
 
 def test_calculate_similarity_cosine_orthogonal() -> None:

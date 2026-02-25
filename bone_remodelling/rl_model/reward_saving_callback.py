@@ -15,7 +15,13 @@ logger = logging.getLogger(__name__)
 class RewardSavingCallback(BaseCallback):
     """Callback to collect episode rewards and save a final plot."""
 
-    def __init__(self, metrics: MetricsContainer, out_path: Path, verbose: int = 0, smoothing_window: int = 1000) -> None:
+    def __init__(
+        self,
+        metrics: MetricsContainer,
+        out_path: Path,
+        verbose: int = 0,
+        smoothing_window: int = 1000,
+    ) -> None:
         """Initialize the reward saving callback.
 
         Args:
@@ -63,22 +69,32 @@ class RewardSavingCallback(BaseCallback):
         window = self.smoothing_window
         if len(rewards) >= window:
             smoothed = np.convolve(rewards, np.ones(window) / window, mode="valid")
-            smoothed_x = episode_x[window - 1:]
+            smoothed_x = episode_x[window - 1 :]
 
         # Small smooth reward
         small_smoothed, small_smoothed_x = None, None
         small_window = self.smoothing_window // 10
         if len(rewards) >= small_window:
-            small_smoothed = np.convolve(rewards, np.ones(small_window) / small_window, mode="valid")
-            small_smoothed_x = episode_x[small_window - 1:]
+            small_smoothed = np.convolve(
+                rewards, np.ones(small_window) / small_window, mode="valid"
+            )
+            small_smoothed_x = episode_x[small_window - 1 :]
 
         fig, reward_axis = plt.subplots(figsize=(12, 5))
 
         # Reward curve (left y-axis)
         if small_smoothed is not None and small_smoothed_x is not None:
-            reward_axis.plot(small_smoothed_x, small_smoothed, alpha=0.3, label=f"Smoothed reward (w={small_window})", color="gray")
+            reward_axis.plot(
+                small_smoothed_x,
+                small_smoothed,
+                alpha=0.3,
+                label=f"Smoothed reward (w={small_window})",
+                color="gray",
+            )
         if smoothed is not None and smoothed_x is not None:
-            reward_axis.plot(smoothed_x, smoothed, label=f"Smoothed reward (w={window})")
+            reward_axis.plot(
+                smoothed_x, smoothed, label=f"Smoothed reward (w={window})"
+            )
 
         reward_axis.set_xlabel("Episode index")
         reward_axis.set_ylabel("Reward")
@@ -88,7 +104,9 @@ class RewardSavingCallback(BaseCallback):
         # Validation curve (right y-axis)
         if len(val_scores) > 0:
             ax2 = reward_axis.twinx()
-            ax2.plot(val_steps, val_scores, "o-", color="orange", label="Validation SSIM")
+            ax2.plot(
+                val_steps, val_scores, "o-", color="orange", label="Validation SSIM"
+            )
             ax2.set_ylabel("SSIM")
             ax2.legend(loc="upper right")
 
@@ -100,17 +118,22 @@ class RewardSavingCallback(BaseCallback):
         if self.verbose:
             logger.info(f"Saved reward plot to {self.out_path}")
 
+
 if __name__ == "__main__":
-    #test the plotting function
+    # test the plotting function
     import random
 
     metrics = MetricsContainer()
-    figure_path = Path(__file__).parent.parent.parent / Path("data", "figures", "test_reward_curve.png")
+    figure_path = Path(__file__).parent.parent.parent / Path(
+        "data", "figures", "test_reward_curve.png"
+    )
     for i in range(0, 500_000, 25):
         metrics.episode_indices.append(i // 25)
         metrics.episode_end_timesteps.append(i)
         metrics.episode_rewards.append(random.uniform(-100, 100))
     metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
     metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    callback = RewardSavingCallback(metrics, out_path=figure_path, smoothing_window=1000, verbose=1)
+    callback = RewardSavingCallback(
+        metrics, out_path=figure_path, smoothing_window=1000, verbose=1
+    )
     callback._on_training_end()

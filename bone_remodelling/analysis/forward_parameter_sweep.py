@@ -31,6 +31,7 @@ from bone_remodelling.forward_model.parameters import (
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
+
 def run_simulation(params: SimulationParameters) -> np.ndarray:
     """Run a simulation once and return the final density field."""
     density_simulation = DensitySimulation(parameters=params)
@@ -39,11 +40,15 @@ def run_simulation(params: SimulationParameters) -> np.ndarray:
     density_simulation.run()
     return density_simulation.get_density()
 
+
 def compute_l2_error(a: np.ndarray, b: np.ndarray) -> np.floating:
     """Compute relative L2 error."""
     return np.linalg.norm(a - b) / np.linalg.norm(b)
 
-def run_reference_simulation(initial_simulation_parameters: SimulationParameters, force_profiles: np.ndarray) -> list[np.ndarray]:
+
+def run_reference_simulation(
+    initial_simulation_parameters: SimulationParameters, force_profiles: np.ndarray
+) -> list[np.ndarray]:
     """Run a very tight simulation to get a high-quality reference solution."""
     logger.info("\n=== Running reference simulation (high-quality baseline) ===\n")
     initial_simulation_parameters = replace(
@@ -58,7 +63,10 @@ def run_reference_simulation(initial_simulation_parameters: SimulationParameters
     )
 
     t0 = time.time()
-    reference_densities = [np.zeros_like(initial_simulation_parameters.initial_density_field) for _ in range(len(force_profiles))]
+    reference_densities = [
+        np.zeros_like(initial_simulation_parameters.initial_density_field)
+        for _ in range(len(force_profiles))
+    ]
     for i in range(len(force_profiles)):
         logger.info(f"  → Running reference simulation {i + 1}/{len(force_profiles)}")
         reference_run = replace(
@@ -70,6 +78,7 @@ def run_reference_simulation(initial_simulation_parameters: SimulationParameters
     logger.info(f"Reference simulation runtime: {t1 - t0:.2f}s")
     return reference_densities
 
+
 def parameter_grid() -> Generator[dict[str, float | int], Any, Any]:
     """Yield dictionaries of possible parameter combinations to test. Modify here to change sweep ranges."""
     decay_tol_options = [1, 1.02, 1.04, 1.06, 1.08]
@@ -78,7 +87,10 @@ def parameter_grid() -> Generator[dict[str, float | int], Any, Any]:
     time_steps_options = [50, 100, 150, 200, 250, 300]
 
     for tol_decay, ct0, ct_decay, tsteps in itertools.product(
-        decay_tol_options, ct0_options, ct_decay_options, time_steps_options,
+        decay_tol_options,
+        ct0_options,
+        ct_decay_options,
+        time_steps_options,
     ):
         yield {
             "convergence_tolerance_decay": tol_decay,
@@ -87,15 +99,27 @@ def parameter_grid() -> Generator[dict[str, float | int], Any, Any]:
             "time_steps": tsteps,
         }
 
-def run_parameter_sweep(base_params: SimulationParameters, force_profiles: np.ndarray, density_references: list[np.ndarray], output_csv: Path) -> None:
+
+def run_parameter_sweep(
+    base_params: SimulationParameters,
+    force_profiles: np.ndarray,
+    density_references: list[np.ndarray],
+    output_csv: Path,
+) -> None:
     """Run the full parameter sweep and save results to CSV."""
     logger.info("\n=== Starting parameter sweep ===\n")
     with output_csv.open("w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
-            "tol_decay", "C0", "C_decay", "time_steps",
-            "runtime_s", "l2_error",
-        ])
+        writer.writerow(
+            [
+                "tol_decay",
+                "C0",
+                "C_decay",
+                "time_steps",
+                "runtime_s",
+                "l2_error",
+            ]
+        )
 
         for combo in parameter_grid():
             logger.info(f"Testing params: {combo}")
@@ -107,7 +131,9 @@ def run_parameter_sweep(base_params: SimulationParameters, force_profiles: np.nd
                 convergence_steps_decay=float(combo["convergence_steps_decay"]),
                 time_steps=int(combo["time_steps"]),
             )
-            density = np.zeros((len(force_profiles), *base_params.initial_density_field.shape))
+            density = np.zeros(
+                (len(force_profiles), *base_params.initial_density_field.shape)
+            )
             l2_error = np.zeros(len(force_profiles))
             runtime: float = np.nan
             average_l2_error: float = np.nan
@@ -125,16 +151,19 @@ def run_parameter_sweep(base_params: SimulationParameters, force_profiles: np.nd
             except (RuntimeError, ValueError) as e:
                 logger.error(f"A simulation failed: {e!s}")
 
-            writer.writerow([
-                combo["convergence_tolerance_decay"],
-                combo["convergence_after_steps"],
-                combo["convergence_steps_decay"],
-                combo["time_steps"],
-                runtime,
-                average_l2_error,
-            ])
+            writer.writerow(
+                [
+                    combo["convergence_tolerance_decay"],
+                    combo["convergence_after_steps"],
+                    combo["convergence_steps_decay"],
+                    combo["time_steps"],
+                    runtime,
+                    average_l2_error,
+                ]
+            )
             logger.info(f"  → runtime={runtime:.2f}s, L2 error={average_l2_error:.3e}")
     logger.info(f"\nSweep complete. Results written to: {output_csv}")
+
 
 def datasweep(data_path: Path) -> None:
     """Define a representative loadcase and run a parameter sweep. Saves results to CSV."""
@@ -146,9 +175,18 @@ def datasweep(data_path: Path) -> None:
     force_mask = force_profile_generator.generate_force_mask()
     force_profiles = force_profile_generator.merger(num_samples=20)
 
-    simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], force_mask=force_mask, initial_density_field=initial_density)
-    density_references = run_reference_simulation(simulation_base_parameters, force_profiles)
-    run_parameter_sweep(simulation_base_parameters, force_profiles, density_references, data_path)
+    simulation_base_parameters = SimulationParameters(
+        force_profile=force_profiles[0],
+        force_mask=force_mask,
+        initial_density_field=initial_density,
+    )
+    density_references = run_reference_simulation(
+        simulation_base_parameters, force_profiles
+    )
+    run_parameter_sweep(
+        simulation_base_parameters, force_profiles, density_references, data_path
+    )
+
 
 def pareto_plot(sweep_data_frame: pd.DataFrame) -> None:
     """Generate a Pareto plot from the CSV results."""
@@ -160,10 +198,12 @@ def pareto_plot(sweep_data_frame: pd.DataFrame) -> None:
         dominated = False
         for _j, row_j in sweep_data_frame.iterrows():
             if (
-                (row_j["runtime_s"] <= row_i["runtime_s"]) and
-                (row_j["l2_error"] <= row_i["l2_error"]) and
-                ((row_j["runtime_s"] < row_i["runtime_s"]) or
-                (row_j["l2_error"] < row_i["l2_error"]))
+                (row_j["runtime_s"] <= row_i["runtime_s"])
+                and (row_j["l2_error"] <= row_i["l2_error"])
+                and (
+                    (row_j["runtime_s"] < row_i["runtime_s"])
+                    or (row_j["l2_error"] < row_i["l2_error"])
+                )
             ):
                 dominated = True
                 break
@@ -178,15 +218,31 @@ def pareto_plot(sweep_data_frame: pd.DataFrame) -> None:
     plt.ylabel("Relative L2 error")
     plt.yscale("log")
     plt.title("Parameter sweep — Runtime vs Error")
-    plt.scatter(pareto_df["runtime_s"], pareto_df["l2_error"], color="red", s=30, label="Pareto front")
+    plt.scatter(
+        pareto_df["runtime_s"],
+        pareto_df["l2_error"],
+        color="red",
+        s=30,
+        label="Pareto front",
+    )
     # orinal model
-    plt.scatter(26.849, 0.065, color="black", marker="x", s=100, label="Original model t = 100")
+    plt.scatter(
+        26.849, 0.065, color="black", marker="x", s=100, label="Original model t = 100"
+    )
 
     # Chosen optimum
-    plt.scatter(58.871966, 0.002908, color="red", marker="x", s=100, label="Chosen optimum t = 250")
+    plt.scatter(
+        58.871966,
+        0.002908,
+        color="red",
+        marker="x",
+        s=100,
+        label="Chosen optimum t = 250",
+    )
     plt.grid(visible=True)
     plt.legend()
     plt.show()
+
 
 def performance_comparison(num_samples: int = 100) -> None:
     """Compare performance of selected parameter sets. Logs runtime and L2 error vs. reference."""
@@ -200,16 +256,20 @@ def performance_comparison(num_samples: int = 100) -> None:
     force_profiles = force_profile_generator.merger(num_samples=num_samples)
     force_mask = force_profile_generator.generate_force_mask()
 
-    simulation_base_parameters = SimulationParameters(force_profile=force_profiles[0], force_mask=force_mask, initial_density_field=initial_density)
+    simulation_base_parameters = SimulationParameters(
+        force_profile=force_profiles[0],
+        force_mask=force_mask,
+        initial_density_field=initial_density,
+    )
 
     # Selected parameter sets from sweep
     parameter_reference = replace(
-            simulation_base_parameters,
-            convergence_tolerance_decay=1.01,
-            convergence_after_steps=100,
-            convergence_steps_decay=0.99,
-            time_steps=1000,
-        )
+        simulation_base_parameters,
+        convergence_tolerance_decay=1.01,
+        convergence_after_steps=100,
+        convergence_steps_decay=0.99,
+        time_steps=1000,
+    )
     parameter_sets: list[dict[str, float | int]] = [
         {
             "convergence_tolerance_decay": 1.06,
@@ -230,9 +290,11 @@ def performance_comparison(num_samples: int = 100) -> None:
     t0 = time.time()
     for i in range(num_samples):
         params_i = replace(parameter_reference, force_profile=force_profiles[i])
-        _reference_density[i]  = run_simulation(params_i)
+        _reference_density[i] = run_simulation(params_i)
     reference_runtime = time.time() - t0
-    logger.info(f"Reference simulation runtime for {num_samples} runs: {reference_runtime:.2f}s")
+    logger.info(
+        f"Reference simulation runtime for {num_samples} runs: {reference_runtime:.2f}s"
+    )
     logger.info(f"  → Example profiles: {_reference_density[0]}")
 
     for combo in parameter_sets:
@@ -242,7 +304,7 @@ def performance_comparison(num_samples: int = 100) -> None:
         density = np.zeros((num_samples, profile_length, profile_length))
         for i in range(num_samples):
             params_i = replace(params, force_profile=force_profiles[i])
-            density[i]  = run_simulation(params_i)
+            density[i] = run_simulation(params_i)
             l2_error[i] = compute_l2_error(density[i], _reference_density[i])
         runtime = time.time() - t0
         combined_l2_error = np.mean(l2_error)
@@ -250,6 +312,7 @@ def performance_comparison(num_samples: int = 100) -> None:
         logger.info(f"  → Total runtime for {num_samples} runs: {runtime:.2f}s")
         logger.info(f"  → L2 Error: {combined_l2_error:.4f}")
         logger.info(f"  → Example profile: {density[0]}")
+
 
 def run_forward_sweep(sweep_file: Path, num_samples: int) -> None:
     """Run the full forward model parameter sweep and analysis."""

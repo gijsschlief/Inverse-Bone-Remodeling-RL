@@ -71,13 +71,19 @@ def plot_density_matrix(
     plot_size = max(width, height)
     if width < height:
         offset = 0.5 * (height - width)
-        axis.set_xlim(-offset -1, plot_size - offset + 1)
-        axis.set_ylim(plot_size, -plot_size*0.1 -1)
+        axis.set_xlim(-offset - 1, plot_size - offset + 1)
+        axis.set_ylim(plot_size, -plot_size * 0.1 - 1)
     else:
-        axis.set_xlim(-plot_size*0.1 - 1, plot_size + 1)
-        axis.set_ylim(plot_size, -plot_size*0.1 -1)
+        axis.set_xlim(-plot_size * 0.1 - 1, plot_size + 1)
+        axis.set_ylim(plot_size, -plot_size * 0.1 - 1)
 
-def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarray, shape: tuple[int, int]) -> None:
+
+def _plot_force_band(
+    axis: Axes,
+    force_profile: np.ndarray,
+    force_mask: np.ndarray,
+    shape: tuple[int, int],
+) -> None:
     """Plot a colored band above the density matrix to represent top forces."""
     left_resolution = force_mask[0, :].sum()
     top_resolution = force_mask[1, :].sum()
@@ -88,9 +94,9 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     right_forces = force_profile[2, :right_resolution]
 
     v_min = -np.max(np.abs(force_profile))
-    v_max =  np.max(np.abs(force_profile))
+    v_max = np.max(np.abs(force_profile))
 
-    band_thickness = 0.005*max(shape) + 0.10
+    band_thickness = 0.005 * max(shape) + 0.10
     top_offset = 0.61
 
     height = shape[0]
@@ -98,7 +104,7 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
 
     axis.imshow(
         top_forces[np.newaxis, :],
-        extent=(-0.5, width - 0.5, - top_offset, band_thickness -top_offset),
+        extent=(-0.5, width - 0.5, -top_offset, band_thickness - top_offset),
         cmap="coolwarm",
         aspect="auto",
         vmin=v_min,
@@ -109,7 +115,7 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     left_offset = 0.605
     axis.imshow(
         left_forces[:, np.newaxis],
-        extent=(band_thickness -left_offset, -left_offset, -0.5, height - 0.5),
+        extent=(band_thickness - left_offset, -left_offset, -0.5, height - 0.5),
         cmap="coolwarm",
         aspect="auto",
         vmin=v_min,
@@ -120,7 +126,12 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
     right_offset = 0.4
     axis.imshow(
         right_forces[:, np.newaxis],
-        extent=(width - band_thickness - right_offset, width - right_offset, -0.5, height - 0.5),
+        extent=(
+            width - band_thickness - right_offset,
+            width - right_offset,
+            -0.5,
+            height - 0.5,
+        ),
         cmap="coolwarm",
         aspect="auto",
         vmin=v_min,
@@ -128,24 +139,33 @@ def _plot_force_band(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarr
         alpha=0.8,
     )
 
-def _get_quiver_data(side: str, forces: np.ndarray, height: int, width: int) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
+
+def _get_quiver_data(
+    side: str, forces: np.ndarray, height: int, width: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray] | None:
     offset = 1.0
 
-    if side == 'top':
+    if side == "top":
         x = np.linspace(0, width - 1, len(forces))
         y = np.full_like(forces, -offset)
         u, v = np.zeros_like(forces), -forces
-    elif side == 'left':
+    elif side == "left":
         x = np.full_like(forces, -offset)
         y = np.linspace(height - 1, 0, len(forces))
         u, v = -forces, np.zeros_like(forces)
     else:
-        x = np.full_like(forces, width -1 + offset)
+        x = np.full_like(forces, width - 1 + offset)
         y = np.linspace(height - 1, 0, len(forces))
         u, v = forces, np.zeros_like(forces)
     return x, y, u, v, forces
 
-def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, force_mask: np.ndarray, shape: tuple[int, int]) -> None:
+
+def _plot_force_arrows(
+    axis: Axes,
+    force_profile: np.ndarray,
+    force_mask: np.ndarray,
+    shape: tuple[int, int],
+) -> None:
     """Plot all force arrows (top, left, right) using a single quiver call per side.
 
     Args:
@@ -160,27 +180,34 @@ def _plot_force_arrows(axis: Axes, force_profile: np.ndarray, force_mask: np.nda
     top_resolution = force_mask[1, :].sum()
     right_resolution = force_mask[2, :].sum()
 
-    left_forces  = force_profile[0, :left_resolution]
-    top_forces   = force_profile[1, :top_resolution]
+    left_forces = force_profile[0, :left_resolution]
+    top_forces = force_profile[1, :top_resolution]
     right_forces = force_profile[2, :right_resolution]
 
     height, width = shape
 
-    for side, forces in zip(['left', 'top', 'right'], [left_forces, top_forces, right_forces]):
+    for side, forces in zip(
+        ["left", "top", "right"], [left_forces, top_forces, right_forces]
+    ):
         data = _get_quiver_data(side, forces, height, width)
         if data:
             x, y, u, v, magnitudes = data
             axis.quiver(
-                x, y, u, v, magnitudes,
+                x,
+                y,
+                u,
+                v,
+                magnitudes,
                 cmap="coolwarm",
-                angles='xy',
-                scale_units='xy',
+                angles="xy",
+                scale_units="xy",
                 scale=np.max(np.abs(force_profile)),
-                pivot='middle',
+                pivot="middle",
                 width=0.025,
                 minshaft=2,
                 minlength=1e-12,
             )
+
 
 def plot_density_pyvista(simulation: DensitySimulation) -> None:
     """Plot the density simulation using PyVista.
@@ -196,11 +223,15 @@ def plot_density_pyvista(simulation: DensitySimulation) -> None:
     points_3d = np.zeros((coords.shape[0], 3))
     points_3d[:, :2] = coords
     cells_pv = np.column_stack([np.full(cells.shape[0], 3), cells])
-    base_grid = UnstructuredGrid(cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d)
-    base_grid.cell_data["Density"] = simulation.get_density_function().vector().get_local()
+    base_grid = UnstructuredGrid(
+        cells_pv, np.full(cells.shape[0], 5, dtype=np.uint8), points_3d
+    )
+    base_grid.cell_data["Density"] = (
+        simulation.get_density_function().vector().get_local()
+    )
 
     try:
-        pyvista_plotter = Plotter() # type: ignore
+        pyvista_plotter = Plotter()  # type: ignore
         render_density_pyvista_frame(
             pyvista_plotter,
             base_grid,
@@ -214,7 +245,7 @@ def plot_density_pyvista(simulation: DensitySimulation) -> None:
 
 
 def render_density_pyvista_frame(
-    pyvista_plotter: Plotter, # type: ignore
+    pyvista_plotter: Plotter,  # type: ignore
     grid: UnstructuredGrid,
     scalar_field_name: str,
     step_title: str,
@@ -261,6 +292,7 @@ def example_usage() -> None:
     simulation = DensitySimulation(parameters=simulation_parameters)
     simulation.step()
     plot_density_pyvista(simulation=simulation)
+
 
 if __name__ == "__main__":
     example_usage()

@@ -14,7 +14,10 @@ from bone_remodelling.forward_model.parameters import SimulationParameters
 
 logger = logging.getLogger(__name__)
 
-def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates: list[float]) -> None:
+
+def plot_loss(
+    train_losses: list[float], val_losses: list[float], learning_rates: list[float]
+) -> None:
     """Plot the training and validation loss history with learning rate overlay."""
     if not train_losses or not val_losses or not learning_rates:
         logger.error("One or more training history lists are empty.")
@@ -25,15 +28,17 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
     axes = fig.add_subplot(1, 1, 1)
 
     # Plot Losses on the primary Y-axis
-    line1, = axes.plot(train_losses, label="Train Loss", color="tab:blue")
-    line2, = axes.plot(val_losses, label="Validation Loss", color="tab:orange")
+    (line1,) = axes.plot(train_losses, label="Train Loss", color="tab:blue")
+    (line2,) = axes.plot(val_losses, label="Validation Loss", color="tab:orange")
     axes.set_yscale("log")
     axes.set_ylabel("Loss")
     axes.grid(visible=True, which="both", linestyle="--", alpha=0.3)
 
     # Create secondary Y-axis for Learning Rate
     ax2 = axes.twinx()
-    line3, = ax2.plot(learning_rates, color="gray", linestyle=":", label="Learning Rate", alpha=0.7)
+    (line3,) = ax2.plot(
+        learning_rates, color="gray", linestyle=":", label="Learning Rate", alpha=0.7
+    )
     ax2.set_yscale("log")
     ax2.set_ylabel("Learning Rate", color="gray")
     ax2.grid(visible=False)
@@ -42,11 +47,14 @@ def plot_loss(train_losses: list[float], val_losses: list[float], learning_rates
     lines = [line1, line2, line3]
     legend_labels = [str(line.get_label()) for line in lines]
     axes.legend(lines, legend_labels, loc="upper right")
-    axes.set_title("Training Progress: Loss & Learning Rate", fontsize=12, fontweight='bold')
+    axes.set_title(
+        "Training Progress: Loss & Learning Rate", fontsize=12, fontweight="bold"
+    )
     axes.set_xlabel("Epoch")
     plt.tight_layout()
     plt.show(block=False)
     plt.pause(0.1)
+
 
 @dataclass
 class PlottingParameters:
@@ -55,6 +63,7 @@ class PlottingParameters:
     color_scale_min: float = -100
     color_scale_max: float = 100
     color_bar: bool = False
+
 
 def plot_difference_matrix(
     predicted_matrix: np.ndarray,
@@ -114,6 +123,7 @@ def plot_difference_matrix(
     if plotting_parameters.color_bar:
         plt.colorbar(difference_image, ax=axis, fraction=0.046, pad=0.04)
 
+
 def plot_surrogate(
     mean_pred: np.ndarray,
     std_pred: np.ndarray,
@@ -160,6 +170,7 @@ def plot_surrogate(
     plt.tight_layout()
     plt.show()
 
+
 def demonstrate_visualization() -> None:
     """Demonstrate the surrogate model visualization using example data."""
     predicted_matrices = np.random.randn(10, 10)
@@ -179,9 +190,10 @@ def demonstrate_visualization() -> None:
         (None, None),
         "Test Matrix",
         ax,
-        color_scale = (0, 1),
+        color_scale=(0, 1),
     )
     plt.show()
+
 
 if __name__ == "__main__":
     demonstrate_visualization()

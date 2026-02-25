@@ -21,21 +21,27 @@ from bone_remodelling.forward_model.parameters import (
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
 def shannon_energy_entropy(density: np.ndarray) -> float:
     """Shannon entropy of the energy-normalised density field."""
     e = density.ravel() ** 2
     p = e / e.sum()
     return -np.sum(p * np.log(p))
 
+
 def matrix_saturation(density: np.ndarray, max_density: float = 1.74) -> np.bool:
     """Calculate the saturation level of the density matrix."""
     return np.sum(density >= max_density)
+
 
 def matrix_undersaturation(density: np.ndarray, min_density: float = 0.01) -> np.bool:
     """Calculate the level of undersaturation of the density matrix."""
     return np.sum(density <= min_density)
 
-def generate_force_batches(force_max_values: list[float], batch_size: int = 20) -> list[np.ndarray]:
+
+def generate_force_batches(
+    force_max_values: list[float], batch_size: int = 20
+) -> list[np.ndarray]:
     """Generate batches of force profiles for given max force values."""
     gen = ForceProfileGenerator(profile_top_and_sides=(10, 10), batch_seed=42)
     batches = []
@@ -45,6 +51,7 @@ def generate_force_batches(force_max_values: list[float], batch_size: int = 20) 
         batches.append(profiles)
 
     return batches
+
 
 def run_sweep(data_path: Path) -> None:
     """Run the max force sweep simulations."""
@@ -66,7 +73,7 @@ def run_sweep(data_path: Path) -> None:
     data_generator = TrainingDataGenerator(
         force_profiles=force_profiles,
         simulation_parameters=simulation_parameters,
-        forward_data_manager=ForwardDataManager(data_path)
+        forward_data_manager=ForwardDataManager(data_path),
     )
     start_time = time.time()
     data_generator.generate_parallel()
@@ -75,16 +82,29 @@ def run_sweep(data_path: Path) -> None:
     elapsed_time = stop_time - start_time
     logger.info(f"Simulation completed in {elapsed_time:.2f} seconds.")
 
+
 def force_profile_energy(force_profile: np.ndarray) -> float:
     """Calculate the energy of a force profile using the sum of all values squared."""
-    return np.sum(force_profile ** 2)
+    return np.sum(force_profile**2)
 
-def plot_oversaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float], bin_means: list[float], saturation_threshold: float = 5e4) -> None:
+
+def plot_oversaturation(
+    x: np.ndarray,
+    y: np.ndarray,
+    bin_centers: list[float],
+    bin_means: list[float],
+    saturation_threshold: float = 5e4,
+) -> None:
     """Plot oversaturation analysis from the sweep results."""
-    plt.figure(num=1,figsize=(8, 6))
+    plt.figure(num=1, figsize=(8, 6))
     plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
     plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
-    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
+    plt.axvline(
+        x=saturation_threshold,
+        color="black",
+        linestyle="--",
+        label=f"Saturation Threshold {saturation_threshold:.1E}",
+    )
     plt.xlabel("Force Profile Energy")
     plt.ylabel("Matrix Oversaturation")
     plt.xscale("log")
@@ -93,12 +113,24 @@ def plot_oversaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float], 
     plt.grid(visible=True)
     plt.legend()
 
-def plot_undersaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float], bin_means: list[float], saturation_threshold: float = 1e2) -> None:
+
+def plot_undersaturation(
+    x: np.ndarray,
+    y: np.ndarray,
+    bin_centers: list[float],
+    bin_means: list[float],
+    saturation_threshold: float = 1e2,
+) -> None:
     """Plot undersaturation analysis from the sweep results."""
-    plt.figure(num=2,figsize=(8, 6))
+    plt.figure(num=2, figsize=(8, 6))
     plt.scatter(x, y, s=10, alpha=0.4, label="Raw samples")
     plt.plot(bin_centers, bin_means, "-o", color="red", label="Binned trend")
-    plt.axvline(x=saturation_threshold, color="black", linestyle="--", label=f"Saturation Threshold {saturation_threshold:.1E}")
+    plt.axvline(
+        x=saturation_threshold,
+        color="black",
+        linestyle="--",
+        label=f"Saturation Threshold {saturation_threshold:.1E}",
+    )
     plt.xlabel("Force Profile Energy")
     plt.ylabel("Matrix Undersaturation")
     plt.xscale("log")
@@ -107,6 +139,7 @@ def plot_undersaturation(x: np.ndarray, y: np.ndarray, bin_centers: list[float],
     plt.grid(visible=True)
     plt.legend()
     plt.show()
+
 
 def analyse_sweep(force_profiles: np.ndarray, densities: np.ndarray) -> None:
     """Analyse the results of the max force sweep simulations."""
@@ -142,7 +175,9 @@ def analyse_sweep(force_profiles: np.ndarray, densities: np.ndarray) -> None:
             bin_centers_oversaturated.append((bins[i] + bins[i + 1]) / 2)
             bin_means_oversaturated.append(np.mean(y_oversaturated[mask]))
 
-    plot_oversaturation(x, y_oversaturated, bin_centers_oversaturated, bin_means_oversaturated)
+    plot_oversaturation(
+        x, y_oversaturated, bin_centers_oversaturated, bin_means_oversaturated
+    )
 
     # THE SAME BUT FOR UNDERSATURATION
     y_undersaturated = undersaturations_array[idx]
@@ -157,7 +192,10 @@ def analyse_sweep(force_profiles: np.ndarray, densities: np.ndarray) -> None:
             bin_centers_undersaturated.append((bins[i] + bins[i + 1]) / 2)
             bin_means_undersaturated.append(np.mean(y_undersaturated[mask]))
 
-    plot_undersaturation(x, y_undersaturated, bin_centers_undersaturated, bin_means_undersaturated)
+    plot_undersaturation(
+        x, y_undersaturated, bin_centers_undersaturated, bin_means_undersaturated
+    )
+
 
 def run_sweep_and_analyse(data_path: Path) -> None:
     """Run the max force sweep simulations and analyse the results."""
@@ -177,6 +215,9 @@ def run_sweep_and_analyse(data_path: Path) -> None:
     _, force_profiles, densities = data
     analyse_sweep(force_profiles, densities)
 
+
 if __name__ == "__main__":
-    data_path = Path(__file__).parent.parent.parent / Path("data", "sweeps", "max_force_sweep")
+    data_path = Path(__file__).parent.parent.parent / Path(
+        "data", "sweeps", "max_force_sweep"
+    )
     run_sweep_and_analyse(data_path=data_path)

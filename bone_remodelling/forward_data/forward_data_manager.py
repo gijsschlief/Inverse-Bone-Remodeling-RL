@@ -10,6 +10,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 class ForwardDataManager:
     """Manager for storing and retrieving forward model data."""
 
@@ -25,16 +26,18 @@ class ForwardDataManager:
     def save_data(self, force_profiles: Iterable, final_densities: Iterable) -> None:
         """Save data to the JSONL file, appending to it if it already exists."""
         with self.storage_path.open("a") as f:
-                    for force_profile, density in zip(force_profiles, final_densities):
-                        entry = {
-                            "serial_number": self.serial_number,
-                            "force_profile": force_profile.tolist(),
-                            "final_output_density": density.tolist(),
-                        }
-                        f.write(json.dumps(entry) + "\n")
-                        self.serial_number += 1
+            for force_profile, density in zip(force_profiles, final_densities):
+                entry = {
+                    "serial_number": self.serial_number,
+                    "force_profile": force_profile.tolist(),
+                    "final_output_density": density.tolist(),
+                }
+                f.write(json.dumps(entry) + "\n")
+                self.serial_number += 1
 
-    def load_file(self, file_path: Path | None = None) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
+    def load_file(
+        self, file_path: Path | None = None
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
         """Read the entire dataset back into memory for training."""
         if file_path is None:
             file_path = self.storage_path
@@ -42,7 +45,11 @@ class ForwardDataManager:
             logger.error(f"No data found at {file_path}")
             return None
 
-        entries = [json.loads(stripped) for line in file_path.open("r") if (stripped := line.strip())]
+        entries = [
+            json.loads(stripped)
+            for line in file_path.open("r")
+            if (stripped := line.strip())
+        ]
         if not entries:
             return None
         return self._convert_to_numpy(entries)
@@ -50,8 +57,10 @@ class ForwardDataManager:
     def load_directory(self) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
         """Read and parse all JSON files in the storage directory."""
         if not self.storage_path.parent.exists():
-                logger.error(f"Storage directory does not exist: {self.storage_path.parent}")
-                return None
+            logger.error(
+                f"Storage directory does not exist: {self.storage_path.parent}"
+            )
+            return None
 
         file_paths = sorted(self.storage_path.parent.glob("sim_*.jsonl"))
         all_serials, all_forces, all_densities = [], [], []
@@ -73,9 +82,13 @@ class ForwardDataManager:
             np.concatenate(all_densities),
         )
 
-    def _convert_to_numpy(self, data: list[dict]) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    def _convert_to_numpy(
+        self, data: list[dict]
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         serials = np.array([e["serial_number"] for e in data])
         self.serial_number = int(serials.max()) + 1 if serials.size > 0 else 0
         forces = np.array([e["force_profile"] for e in data], dtype=np.float32)
-        densities = np.array([e["final_output_density"] for e in data], dtype=np.float32)
+        densities = np.array(
+            [e["final_output_density"] for e in data], dtype=np.float32
+        )
         return serials, forces, densities

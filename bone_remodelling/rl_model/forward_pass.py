@@ -73,7 +73,10 @@ class SurrogateForwarder(ForwardPass):
         """
         x_flat = force_profile.flatten()
         x_input = x_flat[np.newaxis, :]
-        return predict_with_surrogates(self.predictors, x_input, batch_size=self.batch_size)[0].reshape(self.density_shape)
+        return predict_with_surrogates(
+            self.predictors, x_input, batch_size=self.batch_size
+        )[0].reshape(self.density_shape)
+
 
 class FenicsForwarder(ForwardPass):
     """Forward model for predicting bone density based on force profile."""
@@ -84,12 +87,17 @@ class FenicsForwarder(ForwardPass):
         force_profile: np.ndarray,
     ) -> None:
         """Initialize the ForwardModel in fenics."""
-        force_generator = ForceProfileGenerator((config.force_top_resolution, config.force_side_resolution))
+        force_generator = ForceProfileGenerator(
+            (config.force_top_resolution, config.force_side_resolution)
+        )
         force_mask = force_generator.generate_force_mask()
         simulation_parameters = SimulationParameters(
             force_profile=force_profile,
             force_mask=force_mask,
-            initial_density_field=np.ones((config.mesh_top_resolution, config.mesh_side_resolution)) * 0.8,
+            initial_density_field=np.ones(
+                (config.mesh_top_resolution, config.mesh_side_resolution)
+            )
+            * 0.8,
         )
         self.density_simulation = DensitySimulation(parameters=simulation_parameters)
 

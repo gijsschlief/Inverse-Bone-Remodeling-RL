@@ -1,6 +1,5 @@
 """Splitting and loading module for bone remodeling surrogate model."""
 
-from pathlib import Path
 from typing import NamedTuple
 
 import numpy as np

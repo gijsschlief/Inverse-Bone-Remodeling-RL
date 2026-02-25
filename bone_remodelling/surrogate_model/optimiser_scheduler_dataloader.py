@@ -8,11 +8,12 @@ from bone_remodelling.surrogate_model.surrogate_parameters import (
 
 
 def build_optimizer(
-        model: torch.nn.Module,
-        train_parameters: TrainParameters,
-    ) -> torch.optim.AdamW:
+    model: torch.nn.Module,
+    train_parameters: TrainParameters,
+) -> torch.optim.AdamW:
     """Get an optimizer for the surrogate model."""
     return torch.optim.AdamW(model.parameters(), lr=train_parameters.learning_rate)
+
 
 def build_learning_rate_scheduler(
     optimizer: torch.optim.Optimizer,
@@ -37,6 +38,7 @@ def build_learning_rate_scheduler(
         patience=train_parameters.patience_lr_scheduler,
         cooldown=train_parameters.cooldown_lr_scheduler,
     )
+
 
 def build_dataloader(
     input_features: torch.Tensor,

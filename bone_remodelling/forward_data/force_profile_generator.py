@@ -37,18 +37,21 @@ class ForceProfileGenerator:
         self._force_max = force_bounds[1]
         self._energy_bounds = energy_bounds
 
-
     def impulse(
         self,
     ) -> np.ndarray:
         """Generate random force profiles on the profile."""
         total_elements = self._profile_top + 2 * self._profile_sides
-        force_profile = np.zeros((3, self._max_length), dtype=float) # 3 sides
+        force_profile = np.zeros((3, self._max_length), dtype=float)  # 3 sides
 
         force_count = self._log_normal_sampling(mean=0.5, sigma=0.8)[0].astype(int)
         force_count = min(force_count, total_elements)
-        random_location = self._rng.choice(total_elements, size=force_count, replace=False)
-        force_magnitude = self._rng.uniform(self._force_min, self._force_max, size=force_count)
+        random_location = self._rng.choice(
+            total_elements, size=force_count, replace=False
+        )
+        force_magnitude = self._rng.uniform(
+            self._force_min, self._force_max, size=force_count
+        )
         force_sign = self._rng.choice([-1, 1], size=force_count)
         force_value = force_magnitude * force_sign
 
@@ -67,7 +70,11 @@ class ForceProfileGenerator:
     def _get_random_side(self) -> tuple[int, int]:
         """Randomly select a side based on the number of elements and return its length."""
         total_elements = self._profile_top + 2 * self._profile_sides
-        weights = [self._profile_sides / total_elements, self._profile_top / total_elements, self._profile_sides / total_elements]
+        weights = [
+            self._profile_sides / total_elements,
+            self._profile_top / total_elements,
+            self._profile_sides / total_elements,
+        ]
         side = self._rng.choice([0, 1, 2], p=weights)
         length = self._profile_top if side == 1 else self._profile_sides
         return side, length
@@ -97,7 +104,7 @@ class ForceProfileGenerator:
         end_position = max(position_1, position_2)
         height = self._rng.uniform(self._force_min, self._force_max)
         height = height if self._rng.choice([True, False]) else -height
-        force_profile[side, start_position:end_position+1] = height
+        force_profile[side, start_position : end_position + 1] = height
         return force_profile
 
     def gaussian(self) -> np.ndarray:
@@ -135,16 +142,18 @@ class ForceProfileGenerator:
             else:
                 start_position -= 1
 
-        x = np.arange(profile_length)[start_position:end_position+1]
+        x = np.arange(profile_length)[start_position : end_position + 1]
         xp = [start_position, end_position]
         fp = [0, height] if self._rng.choice([True, False]) else [height, 0]
         ramp = np.interp(x, xp, fp)
-        force_profile[side, start_position:end_position+1] = ramp
+        force_profile[side, start_position : end_position + 1] = ramp
         return force_profile
 
     def merger(self, num_samples: int, lower_energy_bound: float = 1e-12) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
-        profile_count = self._log_normal_sampling(mean=0.5, sigma=0.8, size=num_samples).astype(int)
+        profile_count = self._log_normal_sampling(
+            mean=0.5, sigma=0.8, size=num_samples
+        ).astype(int)
 
         profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
 
@@ -166,7 +175,9 @@ class ForceProfileGenerator:
             profiles[i] *= scaling_factor
         return profiles
 
-    def triangular_only(self, num_samples: int, lower_energy_bound: float = 1e-12) -> np.ndarray:
+    def triangular_only(
+        self, num_samples: int, lower_energy_bound: float = 1e-12
+    ) -> np.ndarray:
         """Generate merged force profiles from different shapes."""
         profiles = np.zeros((num_samples, 3, self._max_length), dtype=float)
         for i in range(num_samples):
@@ -178,17 +189,21 @@ class ForceProfileGenerator:
     def generate_force_mask(self) -> np.ndarray:
         """Generate a force mask based on the profile dimensions."""
         force_mask = np.zeros((3, self._max_length), dtype=bool)
-        force_mask[0, :self._profile_sides] = True
-        force_mask[1, :self._profile_top] = True
-        force_mask[2, :self._profile_sides] = True
+        force_mask[0, : self._profile_sides] = True
+        force_mask[1, : self._profile_top] = True
+        force_mask[2, : self._profile_sides] = True
         return force_mask
 
-    def _energy_scaling(self, force_profile: np.ndarray, lower_energy_bound: float = 1e-12) -> float:
+    def _energy_scaling(
+        self, force_profile: np.ndarray, lower_energy_bound: float = 1e-12
+    ) -> float:
         """Scale force profiles to match target energy levels."""
         target_energy = self._log_uniform_sampling().item()
         actual_energy = np.sum(force_profile**2)
         if actual_energy < lower_energy_bound:
-            logger.warning(f"Force profile has zero energy; skipping scaling. {force_profile}")
+            logger.warning(
+                f"Force profile has zero energy; skipping scaling. {force_profile}"
+            )
             return 1.0
         return np.sqrt(target_energy / actual_energy)
 
@@ -198,13 +213,21 @@ class ForceProfileGenerator:
         log_high = np.log(self._energy_bounds[1])
         return np.exp(self._rng.uniform(log_low, log_high, size=size))
 
-    def _log_normal_sampling(self, mean: float = 0.0, sigma: float = 1.0, size: int = 1) -> np.ndarray:
+    def _log_normal_sampling(
+        self, mean: float = 0.0, sigma: float = 1.0, size: int = 1
+    ) -> np.ndarray:
         """Sample from a log-normal distribution with given mean and sigma."""
         return np.clip(self._rng.lognormal(mean, sigma, size=size).astype(int), 1, None)
 
+
 def example_usage() -> None:
     """Use of the ForceProfileGenerator."""
-    generator = ForceProfileGenerator(profile_top_and_sides=(10, 10), force_bounds=(0.1, 10.0), energy_bounds=(1e2, 5e4), batch_seed=42)
+    generator = ForceProfileGenerator(
+        profile_top_and_sides=(10, 10),
+        force_bounds=(0.1, 10.0),
+        energy_bounds=(1e2, 5e4),
+        batch_seed=42,
+    )
     force_profiles = generator.merger(num_samples=100_000)
     logger.info(f"Generated force profiles shape: {force_profiles.shape}")
 

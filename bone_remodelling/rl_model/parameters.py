@@ -46,6 +46,7 @@ class RLParameters:
     per_step_force_change: float = 10.0
     per_step_location_change: float = 1.0
 
+
 @dataclass
 class RunConfiguration:
     """Configuration for running the RL training.
@@ -78,7 +79,13 @@ class RunConfiguration:
         """Initialize path fields based on output_dir."""
         self.output_dir = Path(self.output_dir).resolve()
 
-        self.reward_plot_path = self.output_dir / Path("figures", "reward_curve_extra_action_ensemble_RL_20mil.png")
-        self.agent_path = self.output_dir / Path("agents", "surrogate_agent_extra_action_best_20mil.zip")
+        self.reward_plot_path = self.output_dir / Path(
+            "figures", "reward_curve_extra_action_ensemble_RL_20mil.png"
+        )
+        self.agent_path = self.output_dir / Path(
+            "agents", "surrogate_agent_extra_action_best_20mil.zip"
+        )
         self.data_path = self.output_dir / Path("raw", "triangular")
-        self.surrogate_path = self.output_dir / Path("surrogate_models", "surrogate.pth")
+        self.surrogate_path = self.output_dir / Path(
+            "surrogate_models", "surrogate.pth"
+        )

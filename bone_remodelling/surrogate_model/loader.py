@@ -68,7 +68,13 @@ class SurrogatePredictor:
 
     def load_state_dictionary(self) -> None:
         """Load the state dictionary and set model to evaluation model."""
-        self.model.load_state_dict(torch.load(self.train_parameters.model_path, map_location=self.train_parameters.device, weights_only=False))
+        self.model.load_state_dict(
+            torch.load(
+                self.train_parameters.model_path,
+                map_location=self.train_parameters.device,
+                weights_only=False,
+            )
+        )
         self.model.eval()
 
     def load_normalization_params(self) -> None:
@@ -82,8 +88,10 @@ class SurrogatePredictor:
         normalization_path = self.train_parameters.model_path.with_suffix(".npz")
 
         if not normalization_path.exists():
-                    logger.warning(f"Normalization file not found at {normalization_path}. Using defaults.")
-                    return
+            logger.warning(
+                f"Normalization file not found at {normalization_path}. Using defaults."
+            )
+            return
 
         with np.load(normalization_path) as data:
             self.x_mean = data.get("x_mean").copy() if "x_mean" in data else None
@@ -102,11 +110,17 @@ class SurrogatePredictor:
         history_path = self.train_parameters.model_path.with_suffix(".npz")
 
         if not history_path.exists():
-            logger.warning(f"History file not found at {history_path}. Returning empty history.")
+            logger.warning(
+                f"History file not found at {history_path}. Returning empty history."
+            )
             return {}
 
         with np.load(history_path) as data:
-            return {key: data[key].copy() for key in data.files if key not in {"x_mean", "x_std", "y_mean", "y_std"}}
+            return {
+                key: data[key].copy()
+                for key in data.files
+                if key not in {"x_mean", "x_std", "y_mean", "y_std"}
+            }
 
     def predict(self, x_raw: np.ndarray) -> np.ndarray:
         """Run forward estimation on the given data points.
@@ -121,10 +135,14 @@ class SurrogatePredictor:
 
         """
         if self.x_mean is None or self.x_std is None:
-            x_normalised = torch.tensor(x_raw, dtype=torch.float32).to(self.train_parameters.device)
+            x_normalised = torch.tensor(x_raw, dtype=torch.float32).to(
+                self.train_parameters.device
+            )
         else:
             x_normalised_array = self.normalize_input(x_raw)
-            x_normalised = torch.tensor(x_normalised_array, dtype=torch.float32).to(self.train_parameters.device)
+            x_normalised = torch.tensor(x_normalised_array, dtype=torch.float32).to(
+                self.train_parameters.device
+            )
         with torch.no_grad():
             y_normalised = self.model(x_normalised)
         if self.y_mean is None or self.y_std is None:
@@ -155,7 +173,9 @@ class SurrogatePredictor:
     ) -> np.ndarray:
         """Normalize input data."""
         if self.x_mean is None or self.x_std is None:
-            logger.warning("Input normalization parameters are not set. Returning raw input.")
+            logger.warning(
+                "Input normalization parameters are not set. Returning raw input."
+            )
             return x_raw
         return (x_raw - self.x_mean) / self.x_std
 
@@ -165,7 +185,9 @@ class SurrogatePredictor:
     ) -> np.ndarray:
         """Normalize output data."""
         if self.y_mean is None or self.y_std is None:
-            logger.warning("Output normalization parameters are not set. Returning raw output.")
+            logger.warning(
+                "Output normalization parameters are not set. Returning raw output."
+            )
             return y_raw
         return (y_raw - self.y_mean) / self.y_std
 
@@ -175,7 +197,9 @@ class SurrogatePredictor:
     ) -> np.ndarray:
         """Unnormalize input data."""
         if self.x_mean is None or self.x_std is None:
-            logger.warning("Input normalization parameters are not set. Returning normalized input.")
+            logger.warning(
+                "Input normalization parameters are not set. Returning normalized input."
+            )
             return x_normalized
         return x_normalized * self.x_std + self.x_mean
 
@@ -185,11 +209,15 @@ class SurrogatePredictor:
     ) -> np.ndarray:
         """Unnormalize output data."""
         if self.y_mean is None or self.y_std is None:
-            logger.warning("Output normalization parameters are not set. Returning normalized output.")
+            logger.warning(
+                "Output normalization parameters are not set. Returning normalized output."
+            )
             return y_normalized
         return y_normalized * self.y_std + self.y_mean
 
-    def save_model_with_versioning(self, path: Path, history: dict[str, list[float]] | None = None) -> None:
+    def save_model_with_versioning(
+        self, path: Path, history: dict[str, list[float]] | None = None
+    ) -> None:
         """Save the model to a file, ensuring no overwriting of existing files."""
         try:
             if self.train_parameters.model_path.exists():
@@ -200,25 +228,29 @@ class SurrogatePredictor:
                     counter += 1
                 path = Path(f"{base_path}_{counter}{ext}")
         except OSError as e:
-            logger.warning(f"Safely saving model failed ({e}), overwriting existing file.")
+            logger.warning(
+                f"Safely saving model failed ({e}), overwriting existing file."
+            )
         self.store_model_parameters(path, history=history)
 
-    def store_model_parameters(self, path: Path, history: dict[str, list[float]] | None = None) -> None:
+    def store_model_parameters(
+        self, path: Path, history: dict[str, list[float]] | None = None
+    ) -> None:
         """Store the model parameters to the specified path."""
         torch.save(self.model.state_dict(), path)
         save_dict: dict[str, np.ndarray] = {}
         if self.x_mean is not None:
-            save_dict['x_mean'] = self.x_mean
+            save_dict["x_mean"] = self.x_mean
         if self.x_std is not None:
-            save_dict['x_std'] = self.x_std
+            save_dict["x_std"] = self.x_std
         if self.y_mean is not None:
-            save_dict['y_mean'] = self.y_mean
+            save_dict["y_mean"] = self.y_mean
         if self.y_std is not None:
-            save_dict['y_std'] = self.y_std
+            save_dict["y_std"] = self.y_std
         if history is not None:
             for key, values in history.items():
                 save_dict[key] = np.array(values)
-        np.savez_compressed(file=path.with_suffix(".npz"), **save_dict) # type: ignore
+        np.savez_compressed(file=path.with_suffix(".npz"), **save_dict)  # type: ignore
 
 
 def load_surrogate_models(
@@ -248,6 +280,7 @@ def load_surrogate_models(
 
     return predictors
 
+
 def predict_with_surrogates(
     predictors: list[SurrogatePredictor],
     x: np.ndarray,
@@ -255,13 +288,13 @@ def predict_with_surrogates(
 ) -> tuple[np.ndarray, np.ndarray]:
     """Predict using surrogate models and returns a list of the mean scores and the standard deviations."""
     if not predictors:
-            raise ValueError("The list of predictors is empty. Cannot perform inference.")
+        raise ValueError("The list of predictors is empty. Cannot perform inference.")
 
     all_predictor_outputs = []
     for predictor in predictors:
         model_batches = []
         for i in range(0, len(x), batch_size):
-            batch = x[i:i+batch_size]
+            batch = x[i : i + batch_size]
             prediction = predictor(batch)
             model_batches.append(prediction)
 

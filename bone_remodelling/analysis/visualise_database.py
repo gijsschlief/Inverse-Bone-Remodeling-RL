@@ -117,6 +117,7 @@ def visualize_force_comparison(
     axes_array[1].grid(visible=True)
     plt.show()
 
+
 def analyse_raw_data(data_path: Path) -> None:
     """Load and visualize forward model data."""
     forward_data_manager = ForwardDataManager(data_path)
@@ -155,6 +156,7 @@ def analyse_raw_data(data_path: Path) -> None:
             title=f"Data at: {random_index}",
         )
     plt.show()
+
 
 if __name__ == "__main__":
     data_path = Path(__file__).parent.parent.parent / Path("data", "raw")

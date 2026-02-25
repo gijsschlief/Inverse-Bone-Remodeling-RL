@@ -63,7 +63,6 @@ class InverseModel(torch.nn.Module):
             torch.nn.Linear(128, 31),
         )
 
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the inverse model."""
         # x: (N, 10, 10)
@@ -88,4 +87,3 @@ class InverseModel(torch.nn.Module):
     def save_model(self, file_path: Path) -> None:
         """Save the model state to a file."""
         torch.save(self.state_dict(), file_path)
-

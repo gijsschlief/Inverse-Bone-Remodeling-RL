@@ -15,6 +15,7 @@ def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]
 
     return peak_location, peak_side, peak_height
 
+
 def params_to_force_profile(
     peak_location: int,
     peak_side: int,
@@ -35,10 +36,13 @@ def params_to_force_profile(
         if j < peak_location and peak_location > 0:
             force_profile[peak_side, j] = peak_height * (j / peak_location)
         elif j > peak_location and peak_location < length - 1:
-            force_profile[peak_side, j] = peak_height * ((length - 1 - j) / (length - 1 - peak_location))
+            force_profile[peak_side, j] = peak_height * (
+                (length - 1 - j) / (length - 1 - peak_location)
+            )
         else:
             force_profile[peak_side, j] = peak_height
     return force_profile
+
 
 def reshape_input_features_for_model(unconverted_data: np.ndarray) -> np.ndarray:
     """Convert new data to tensor format for the model.
@@ -60,6 +64,7 @@ def reshape_input_features_for_model(unconverted_data: np.ndarray) -> np.ndarray
         force_location_vector[class_index] = 100.0
         converted_data[i] = np.concatenate([force_location_vector, [magnitude]])
     return converted_data
+
 
 def reshape_features_back_to_params(model_output: np.ndarray) -> np.ndarray:
     """Convert model output back to parameters (location, side, magnitude).

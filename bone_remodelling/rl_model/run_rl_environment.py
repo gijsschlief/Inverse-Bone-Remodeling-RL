@@ -1,6 +1,7 @@
 """Run a reinforcement learning environment for bone remodeling."""
 
 import os
+
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 import argparse
@@ -128,7 +129,12 @@ def initialize_new_model(
     )
 
 
-def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfiguration, rl_parameters: RLParameters, surrogate_parameters: TrainParameters) -> None:
+def train_rl_agent(
+    config: ConfigurationParameters,
+    run_parameters: RunConfiguration,
+    rl_parameters: RLParameters,
+    surrogate_parameters: TrainParameters,
+) -> None:
     """Designs and trains a reinforcement learning agent for bone remodeling.
 
     This function initializes the bone remodeling environment, loads the surrogate model,
@@ -152,7 +158,9 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
         train_densities,
         validation_densities,
         _,
-    ) = load_and_split_data(forward_data_manager, random_state=run_parameters.random_state)
+    ) = load_and_split_data(
+        forward_data_manager, random_state=run_parameters.random_state
+    )
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
     metrics = MetricsContainer()
@@ -171,7 +179,8 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
         )
 
     validation_environment_builder = ValidationEnvironmentBuilder(
-        forwarder, rl_parameters,
+        forwarder,
+        rl_parameters,
     )
 
     number_of_environments: int = run_parameters.number_of_environments
@@ -220,26 +229,35 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
     try:
         callbacks: list[BaseCallback] = [
             RenderCallback(
-                force_generator=ForceProfileGenerator((config.force_top_resolution, config.force_side_resolution)),
+                force_generator=ForceProfileGenerator(
+                    (config.force_top_resolution, config.force_side_resolution)
+                ),
                 render_freq=run_parameters.render_frequency,
                 environment_index=0,
                 rl_parameters=rl_parameters,
             ),
         ]
         if run_parameters.reward_plot_path is not None:
-            callbacks.append(RewardSavingCallback(
+            callbacks.append(
+                RewardSavingCallback(
+                    metrics=metrics,
+                    out_path=run_parameters.reward_plot_path,
+                )
+            )
+        callbacks.append(
+            ValidationCallback(
                 metrics=metrics,
-                out_path=run_parameters.reward_plot_path,
-            ))
-        callbacks.append(ValidationCallback(
-            metrics=metrics,
-            learning_rate_container=current_learning_rate,
-            validation_data=(validation_forces[:run_parameters.validation_size], validation_densities[:run_parameters.validation_size]),
-            validation_environment_builder=validation_environment_builder,
-            final_forwarder=forwarder,
-            rl_parameters=rl_parameters,
-            validation_frequency=run_parameters.validation_frequency,
-        ))
+                learning_rate_container=current_learning_rate,
+                validation_data=(
+                    validation_forces[: run_parameters.validation_size],
+                    validation_densities[: run_parameters.validation_size],
+                ),
+                validation_environment_builder=validation_environment_builder,
+                final_forwarder=forwarder,
+                rl_parameters=rl_parameters,
+                validation_frequency=run_parameters.validation_frequency,
+            )
+        )
         model.learn(
             total_timesteps=run_parameters.total_timesteps,
             callback=callbacks,
@@ -250,19 +268,24 @@ def train_rl_agent(config: ConfigurationParameters, run_parameters: RunConfigura
     finally:
         vectorized_environment.close()
 
+
 def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
     """Command-line interface for running the RL training."""
     parser = argparse.ArgumentParser(description="Generate density animations.")
     parser.add_argument(
         "--forward-type",
-        choices=["fenics","surrogate"],
+        choices=["fenics", "surrogate"],
         default="surrogate",
         help="Forward pass to use for the RL environment.",
     )
     args = parser.parse_args(remaining_args)
-    run_parameters = RunConfiguration(output_dir=config.output_dir, forward_type=args.forward_type)
+    run_parameters = RunConfiguration(
+        output_dir=config.output_dir, forward_type=args.forward_type
+    )
     rl_parameters = RLParameters()
-    model_path = (Path(config.output_dir) / Path("surrogate_models", "surrogate.pth")).resolve()
+    model_path = (
+        Path(config.output_dir) / Path("surrogate_models", "surrogate.pth")
+    ).resolve()
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     surrogate_parameters = SurrogateTrainParameters(model_path, device)
     train_rl_agent(config, run_parameters, rl_parameters, surrogate_parameters)

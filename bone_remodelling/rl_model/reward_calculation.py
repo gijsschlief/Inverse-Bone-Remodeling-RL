@@ -99,6 +99,7 @@ def _mse(ref: np.ndarray, cmp: np.ndarray, baseline: float, *_: float) -> float:
     metric: float = float(np.mean((ref - cmp) ** 2))
     return _norm_err(metric, baseline)
 
+
 def _mae(ref: np.ndarray, cmp: np.ndarray, baseline: float, *_: float) -> float:
     metric: float = float(np.mean(np.abs(ref - cmp)))
     return _norm_err(metric, baseline)

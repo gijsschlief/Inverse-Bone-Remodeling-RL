@@ -1,4 +1,3 @@
-
 """Compute simple dataset diversity metrics for biomechanical force profiles."""
 
 import logging
@@ -12,6 +11,7 @@ from bone_remodelling.forward_data.forward_data_manager import ForwardDataManage
 from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
 
 logger = logging.getLogger(__name__)
+
 
 def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
     """Compute simple dataset diversity metrics for biomechanical force profiles."""
@@ -48,6 +48,7 @@ def compute_diversity_metrics(force_profiles: np.ndarray) -> dict[str, float]:
         "energy_varience": energy_varience,
     }
 
+
 def run_diversity_metrics(data_dir: Path) -> None:
     """Compute simple dataset diversity metrics for biomechanical force profiles."""
     forward_data_manager = ForwardDataManager(data_dir)
@@ -73,7 +74,7 @@ def run_diversity_metrics(data_dir: Path) -> None:
         axis=plt.gca(),
     )
     plt.show()
-    triangular_dir = (Path(data_dir) /  Path("triangular")).resolve()
+    triangular_dir = (Path(data_dir) / Path("triangular")).resolve()
     if not triangular_dir.exists():
         logger.error(f"Triangular data cannot be loaded from: {triangular_dir}")
     forward_data_manager_triangular = ForwardDataManager(triangular_dir)
@@ -82,20 +83,30 @@ def run_diversity_metrics(data_dir: Path) -> None:
     if result_triangular is not None:
         _, force_profiles_triangular, output_densities_triangular = result_triangular
     else:
-        logger.error("Failed to load data from triangular dataset: forward_data_reader returned None.")
+        logger.error(
+            "Failed to load data from triangular dataset: forward_data_reader returned None."
+        )
 
     force_profile_energy = np.zeros(force_profiles.shape[0])
-    force_profile_flat = np.zeros((force_profiles.shape[0], force_profiles.shape[1]*force_profiles.shape[2]))
+    force_profile_flat = np.zeros(
+        (force_profiles.shape[0], force_profiles.shape[1] * force_profiles.shape[2])
+    )
     for i in range(force_profiles.shape[0]):
         force_profile_energy[i] = np.square(force_profiles[i]).sum()
         force_profile_flat[i] = force_profiles[i].flatten()
 
     force_profile_energy_triangular = np.zeros(force_profiles_triangular.shape[0])
-    force_profile_flat_triangular = np.zeros((force_profiles_triangular.shape[0], force_profiles_triangular.shape[1]*force_profiles_triangular.shape[2]))
+    force_profile_flat_triangular = np.zeros(
+        (
+            force_profiles_triangular.shape[0],
+            force_profiles_triangular.shape[1] * force_profiles_triangular.shape[2],
+        )
+    )
     for i in range(force_profiles_triangular.shape[0]):
-        force_profile_energy_triangular[i] = np.square(force_profiles_triangular[i]).sum()
+        force_profile_energy_triangular[i] = np.square(
+            force_profiles_triangular[i]
+        ).sum()
         force_profile_flat_triangular[i] = force_profiles_triangular[i].flatten()
-
 
     plot_force_distribution(force_profiles, force_profiles_triangular)
     plot_output_density(output_densities, output_densities_triangular)
@@ -103,7 +114,9 @@ def run_diversity_metrics(data_dir: Path) -> None:
     compare_diversity_metrics(force_profile_flat, force_profile_flat_triangular)
 
 
-def plot_force_distribution(force_profiles: np.ndarray, force_profiles_triangular: np.ndarray) -> None:
+def plot_force_distribution(
+    force_profiles: np.ndarray, force_profiles_triangular: np.ndarray
+) -> None:
     """Plot Force profile distributions for two datasets."""
     plt.figure(1)
     plt.hist(force_profiles.flatten(), bins=200)
@@ -114,7 +127,10 @@ def plot_force_distribution(force_profiles: np.ndarray, force_profiles_triangula
     plt.ylabel("Frequency")
     plt.legend(["Dataset Supervised Learning", "Dataset RL"])
 
-def plot_output_density(output_densities: np.ndarray, output_densities_triangular: np.ndarray) -> None:
+
+def plot_output_density(
+    output_densities: np.ndarray, output_densities_triangular: np.ndarray
+) -> None:
     """Plot_output_density for two datasets."""
     plt.figure(2)
     plt.hist(output_densities.flatten(), bins=200)
@@ -125,7 +141,10 @@ def plot_output_density(output_densities: np.ndarray, output_densities_triangula
     plt.ylabel("Frequency")
     plt.legend(["Dataset Supervised Learning", "Dataset RL"])
 
-def plot_energy_distribution(force_profile_energy: np.ndarray, force_profile_energy_triangular: np.ndarray) -> None:
+
+def plot_energy_distribution(
+    force_profile_energy: np.ndarray, force_profile_energy_triangular: np.ndarray
+) -> None:
     """Plot_energy_distribution for two datasets."""
     plt.figure(3)
     plt.hist(force_profile_energy, bins=200)
@@ -137,14 +156,20 @@ def plot_energy_distribution(force_profile_energy: np.ndarray, force_profile_ene
     plt.legend(["Dataset Supervised Learning", "Dataset RL"])
     plt.show()
 
-def compare_diversity_metrics(force_profile_flat: np.ndarray, force_profile_flat_triangular: np.ndarray) -> None:
+
+def compare_diversity_metrics(
+    force_profile_flat: np.ndarray, force_profile_flat_triangular: np.ndarray
+) -> None:
     """Print diversity metrics for biomechanical force profiles."""
     metrics_supervised = compute_diversity_metrics(force_profile_flat)
     metrics_rl = compute_diversity_metrics(force_profile_flat_triangular)
     logger.info("Metric | Supervised | RL")
     logger.info("--------------------------------------")
     for key in metrics_supervised:
-        logger.info(f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}")
+        logger.info(
+            f"{key:25s} | {metrics_supervised[key]:8.3f} | {metrics_rl[key]:8.3f}"
+        )
+
 
 if __name__ == "__main__":
     data_dir = Path(__file__).resolve().parent.parent.parent / Path("data", "raw")

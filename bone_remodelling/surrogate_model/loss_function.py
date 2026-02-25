@@ -25,10 +25,10 @@ def ssim_loss(estimated_output: Tensor, reference_output: Tensor) -> Tensor:
         estimated_output,
         reference_output,
         win_size=3,
-        data_range=data_range, # type: ignore
+        data_range=data_range,  # type: ignore
         size_average=True,
     )
-    return 1.0 - ssim_value # type: ignore
+    return 1.0 - ssim_value  # type: ignore
 
 
 def combined_loss(
