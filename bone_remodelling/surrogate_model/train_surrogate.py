@@ -110,11 +110,14 @@ def run_surrogate_training(
         train_parameters = SurrogateTrainParameters(
             model_path=model_path,
             device=device,
+            learning_rate=best_parameters["learning_rate"],
             batch_size=best_parameters["batch_size"],
             weight_decay=best_parameters["weight_decay"],
             width=best_parameters["width"],
             depth=best_parameters["depth"],
             dropout=best_parameters["dropout"],
+            patience_lr_scheduler=best_parameters["patience_lr_scheduler"],
+            patience=best_parameters["patience_lr_scheduler"]*3,
         )
     else:
         train_parameters = SurrogateTrainParameters(
@@ -134,21 +137,26 @@ def run_surrogate_training(
 def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarray], validation_data: tuple[np.ndarray, np.ndarray], model_path: Path, device: torch.device) -> float:
     """Objective defined for the optuna training."""
     hyperparameters = {
+        "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
         "batch_size": trial.suggest_int("batch_size", 16, 256),
         "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
-        "width": trial.suggest_categorical("width", [512, 1024, 2048]),
-        "depth": trial.suggest_categorical("depth", [4, 6, 8]),
+        "width": trial.suggest_categorical("width", [128, 256, 512, 1024, 2048]),
+        "depth": trial.suggest_categorical("depth", [4, 6, 8, 10]),
         "dropout": trial.suggest_float("dropout", 0.0, 0.5),
+        "patience_lr_scheduler": trial.suggest_int("patience_lr_scheduler", 5, 20),
     }
 
     trial_params = SurrogateTrainParameters(
         model_path=model_path,
         device=device,
+        learning_rate=hyperparameters["learning_rate"],
         batch_size=hyperparameters["batch_size"],
         weight_decay=hyperparameters["weight_decay"],
         width=hyperparameters["width"],
         depth=hyperparameters["depth"],
         dropout=hyperparameters["dropout"],
+        patience_lr_scheduler=hyperparameters["patience_lr_scheduler"],
+        patience=hyperparameters["patience_lr_scheduler"]*3,
     )
 
     predictor = SurrogatePredictor(
@@ -178,14 +186,22 @@ def hyperparameter_search(
     db_path = model_path.parent / Path(f"{study_name}.db")
     storage_name = f"sqlite:///{db_path.resolve()}"
 
+    random_first_trials = 10
+    warmup_epochs = 20
+
     study = optuna.create_study(
         study_name=study_name,
         storage=storage_name,
         direction="minimize",
         load_if_exists=True,
-        # TPE is great for correlated params like width/depth
-        sampler=optuna.samplers.TPESampler(multivariate=True),
-        pruner=optuna.pruners.MedianPruner(),
+        sampler=optuna.samplers.TPESampler(
+            multivariate=True,
+            n_startup_trials=random_first_trials,
+        ),
+        pruner=optuna.pruners.MedianPruner(
+            n_startup_trials=random_first_trials,
+            n_warmup_steps=warmup_epochs,
+        ),
     )
 
     objective_function = partial(
