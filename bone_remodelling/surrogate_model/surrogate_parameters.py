@@ -1,11 +1,13 @@
 """Stores parameters used for training the surrogate model."""
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
 import torch
 
+logger = logging.getLogger(__name__)
 
 class TrainParameters(ABC):
     """Abstract base class for training parameters."""
@@ -70,3 +72,9 @@ class SurrogateTrainParameters(TrainParameters):
         """Ensure that the model path exists."""
         if not self.model_path.parent.exists():
             self.model_path.parent.mkdir(parents=True, exist_ok=True)
+        minimal_depth: int = 4
+        if self.depth < minimal_depth:
+            logger.warning(f"Model depth below buildable range, using minimun of {minimal_depth}.")
+        minimal_width: int = 128
+        if self.width < minimal_width:
+            logger.warning(f"Model width below buildable range, using minimun of {minimal_width}.")

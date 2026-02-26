@@ -115,7 +115,6 @@ def run_surrogate_training(
             width=best_parameters["width"],
             depth=best_parameters["depth"],
             dropout=best_parameters["dropout"],
-            alpha=best_parameters["alpha"],
         )
     else:
         train_parameters = SurrogateTrainParameters(
@@ -140,7 +139,6 @@ def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarra
         "width": trial.suggest_categorical("width", [512, 1024, 2048]),
         "depth": trial.suggest_categorical("depth", [4, 6, 8]),
         "dropout": trial.suggest_float("dropout", 0.0, 0.5),
-        "alpha": trial.suggest_float("alpha", 0.0, 1.0),
     }
 
     trial_params = SurrogateTrainParameters(
@@ -151,7 +149,6 @@ def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarra
         width=hyperparameters["width"],
         depth=hyperparameters["depth"],
         dropout=hyperparameters["dropout"],
-        alpha=hyperparameters["alpha"],
     )
 
     predictor = SurrogatePredictor(

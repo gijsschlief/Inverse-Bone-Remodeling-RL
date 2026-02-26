@@ -3,6 +3,7 @@
 import logging
 from pathlib import Path
 
+import numpy as np
 import torch
 
 logger = logging.getLogger(__name__)
@@ -17,6 +18,7 @@ class SurrogateModel(torch.nn.Module):
         self.width = width
         self.depth = depth
         self.dropout = dropout
+        self.max_channel = self.width // 16
 
         self.input_fc = self._build_linear_encoder()
         self.conv_block = self._build_conv_decoder()
@@ -28,25 +30,20 @@ class SurrogateModel(torch.nn.Module):
         """Build the encoder based on the width and depth of the model."""
         num_linear_layers = self.depth // 2
         linear_layers = []
-
-        # Initial expansion
         linear_layers.append(torch.nn.Flatten())
-        linear_layers.append(torch.nn.Linear(30, self.width // 2))
-        linear_layers.append(torch.nn.ReLU())
-        linear_layers.append(torch.nn.Linear(self.width // 2, self.width))
-        linear_layers.append(torch.nn.ReLU())
 
-        # Intermediate linear layers
-        for _ in range(num_linear_layers - 3):
-            linear_layers.append(torch.nn.Linear(self.width, self.width))
+        widths = np.linspace(30, self.width, num_linear_layers).astype(int)
+
+        # Linear layers
+        for i in range(len(widths) - 1):
+            linear_layers.append(torch.nn.Linear(widths[i], widths[i+1]))
             linear_layers.append(torch.nn.ReLU())
 
         if self.dropout > 0:
             linear_layers.append(torch.nn.Dropout(self.dropout))
 
-        # Project to spatial dimensions (128 channels at 5x5)
-        self.spatial_ch = 128
-        linear_layers.append(torch.nn.Linear(self.width, self.spatial_ch * 5 * 5))
+        # Project to spatial dimensions (width/16) channels at 4x4)
+        linear_layers.append(torch.nn.Linear(self.width, self.max_channel * 4 * 4))
         linear_layers.append(torch.nn.ReLU())
 
         return torch.nn.Sequential(*linear_layers)
@@ -55,35 +52,34 @@ class SurrogateModel(torch.nn.Module):
         """Build the decoder based on the depth of the model."""
         num_conv_layers = self.depth // 2
         conv_layers = []
+        minimal_channel = 1
+        next_channel = max(minimal_channel, self.max_channel // 2)
 
-        # Layer 1: Upsample 5x5 -> 10x10
+        # Layer 1: Upsample 4x4 -> 10x10
         conv_layers.append(
             torch.nn.ConvTranspose2d(
-                self.spatial_ch,
-                64,
-                kernel_size=3,
+                self.max_channel,
+                next_channel,
+                kernel_size=4,
                 stride=2,
-                padding=1,
-                output_padding=1,
             ),
         )
         conv_layers.append(torch.nn.ReLU())
-        conv_layers.append(torch.nn.BatchNorm2d(64))
+        conv_layers.append(torch.nn.BatchNorm2d(next_channel))
 
-        # Intermediate refinement layers (stay at 10x10)
-        # We decrease channels progressively towards 1
-        current_ch = 64
+        # Inbetween layers dependent on the depth
+        current_channel = next_channel
         for _ in range(num_conv_layers - 2):
-            next_ch = max(32, current_ch // 2)
+            next_channel = max(minimal_channel, current_channel // 2)
             conv_layers.append(
-                torch.nn.Conv2d(current_ch, next_ch, kernel_size=3, padding=1),
+                torch.nn.Conv2d(current_channel, next_channel, kernel_size=3, padding=1),
             )
             conv_layers.append(torch.nn.ReLU())
-            conv_layers.append(torch.nn.BatchNorm2d(next_ch))
-            current_ch = next_ch
+            conv_layers.append(torch.nn.BatchNorm2d(next_channel))
+            current_channel = next_channel
 
         # Final output layer to get 1 channel
-        conv_layers.append(torch.nn.Conv2d(current_ch, 1, kernel_size=3, padding=1))
+        conv_layers.append(torch.nn.Conv2d(current_channel, 1, kernel_size=3, padding=1))
         return torch.nn.Sequential(*conv_layers)
 
     def update(self, width: int, depth: int, dropout: float) -> None:
@@ -93,6 +89,7 @@ class SurrogateModel(torch.nn.Module):
         self.width = width
         self.depth = depth
         self.dropout = dropout
+        self.max_channel = self.width // 16
 
         self.input_fc = self._build_linear_encoder()
         self.conv_block = self._build_conv_decoder()
@@ -100,8 +97,8 @@ class SurrogateModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass of the model."""
-        x = self.input_fc(x)  # (N, 128*5*5)
-        x = x.view(-1, 128, 5, 5)  # (N, 128, 5, 5)
+        x = self.input_fc(x)  # (N, max_channel*4*4)
+        x = x.view(-1, self.max_channel, 4, 4)
         x = self.conv_block(x)  # (N, 1, 10, 10)
         return x.squeeze(1)  # (N, 10, 10)
 
