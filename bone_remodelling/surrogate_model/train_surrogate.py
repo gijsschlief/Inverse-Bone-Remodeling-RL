@@ -140,7 +140,7 @@ def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarra
         "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
         "batch_size": trial.suggest_int("batch_size", 16, 256),
         "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
-        "width": trial.suggest_categorical("width", [128, 256, 512, 1024, 2048, 3076, 4096]),
+        "width": trial.suggest_categorical("width", [128, 256, 512, 1024, 2048]),
         "depth": trial.suggest_categorical("depth", [4, 6, 8, 10]),
         "dropout": trial.suggest_float("dropout", 0.0, 0.5),
         "patience_lr_scheduler": trial.suggest_int("patience_lr_scheduler", 5, 20),
