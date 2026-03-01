@@ -202,7 +202,8 @@ def run(
     config: ConfigurationParameters,
     samples: int,
     force_type: str,
-    append: bool,
+    *,
+    append: bool = False,
 ) -> None:
     """Generate training data for bone remodeling simulations.
 
