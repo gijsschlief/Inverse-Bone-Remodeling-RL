@@ -50,8 +50,8 @@ class SurrogateTrainParameters(TrainParameters):
     batch_size: int = 180
     weight_decay: float = 2.5e-5
     alpha: float = 0.5
-    width: int = 2048
-    depth: int = 8
+    width: int = 4096 #2048
+    depth: int = 10 #8
     dropout: float = 0.43
 
     # Learning rate variables

@@ -2,9 +2,11 @@
 
 import argparse
 import logging
+from functools import partial
 from pathlib import Path
 
 import numpy as np
+import optuna
 import torch
 
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
@@ -31,6 +33,8 @@ def run_inverse_training(
     model_path: Path,
     random_state: int,
     ensemble_seed: int,
+    *,
+    tune: bool = False,
 ) -> None:
     """Train and evaluate the inverse model."""
     forward_data_manager = ForwardDataManager(data_file_path)
@@ -73,10 +77,32 @@ def run_inverse_training(
     logger.info(
         f"Training with random_state: {random_state} and ensemble_seed: {ensemble_seed}",
     )
-    train_parameters = InverseTrainParameters(
-        model_path=model_path,
-        device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
-    )
+
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    if tune:
+        logger.info("Running hyperparameter tuning...")
+        best_parameters = hyperparameter_search(
+            (x_train_np, y_train_np), (x_val_np, y_val_np), model_path, device,
+        )
+        train_parameters = InverseTrainParameters(
+            model_path=model_path,
+            device=device,
+            learning_rate=best_parameters["learning_rate"],
+            batch_size=best_parameters["batch_size"],
+            weight_decay=best_parameters["weight_decay"],
+            width=best_parameters["width"],
+            depth=best_parameters["depth"],
+            dropout=best_parameters["dropout"],
+            patience_lr_scheduler=best_parameters["patience_lr_scheduler"],
+            patience=best_parameters["patience_lr_scheduler"]*3,
+        )
+    else:
+        train_parameters = InverseTrainParameters(
+            model_path=model_path,
+            device=device,
+        )
+
     predictor = SurrogatePredictor(InverseModel, train_parameters)
     inverse_trainer = SurrogateModelTrainer(
         predictor,
@@ -85,6 +111,86 @@ def run_inverse_training(
     )
     inverse_trainer.time_training((x_train_np, y_train_np), (x_val_np, y_val_np))
 
+def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarray], validation_data: tuple[np.ndarray, np.ndarray], model_path: Path, device: torch.device) -> float:
+    """Objective defined for the optuna training."""
+    hyperparameters = {
+        "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
+        "batch_size": trial.suggest_int("batch_size", 16, 256),
+        "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
+        "width": trial.suggest_categorical("width", [128, 256, 512, 1024, 2048]),
+        "depth": trial.suggest_categorical("depth", [4, 6, 8, 10]),
+        "dropout": trial.suggest_float("dropout", 0.0, 0.5),
+        "patience_lr_scheduler": trial.suggest_int("patience_lr_scheduler", 5, 20),
+    }
+
+    trial_params = InverseTrainParameters(
+        model_path=model_path,
+        device=device,
+        learning_rate=hyperparameters["learning_rate"],
+        batch_size=hyperparameters["batch_size"],
+        weight_decay=hyperparameters["weight_decay"],
+        width=hyperparameters["width"],
+        depth=hyperparameters["depth"],
+        dropout=hyperparameters["dropout"],
+        patience_lr_scheduler=hyperparameters["patience_lr_scheduler"],
+        patience=hyperparameters["patience_lr_scheduler"]*3,
+    )
+
+    predictor = SurrogatePredictor(
+        InverseModel,
+        trial_params,
+    )
+
+    trainer = SurrogateModelTrainer(predictor, trial_params, torch.nn.MSELoss())
+
+    try:
+        trainer.train(train_data, validation_data, trial=trial)
+    except optuna.exceptions.TrialPruned:
+        # Re-raise so Optuna knows it was pruned
+        raise
+
+    return trainer.best_val_loss
+
+def hyperparameter_search(
+    train_data: tuple[np.ndarray, np.ndarray],
+    validation_data: tuple[np.ndarray, np.ndarray],
+    model_path: Path,
+    device: torch.device,
+) -> dict:
+    """Hyperparameter tuning function."""
+    study_name = "inverse_baseline_tuning"
+    db_path = model_path.parent / Path(f"{study_name}.db")
+    storage_name = f"sqlite:///{db_path.resolve()}"
+
+    random_first_trials = 10
+    warmup_epochs = 20
+
+    study = optuna.create_study(
+        study_name=study_name,
+        storage=storage_name,
+        direction="minimize",
+        load_if_exists=True,
+        sampler=optuna.samplers.TPESampler(
+            multivariate=True,
+            n_startup_trials=random_first_trials,
+        ),
+        pruner=optuna.pruners.MedianPruner(
+            n_startup_trials=random_first_trials,
+            n_warmup_steps=warmup_epochs,
+        ),
+    )
+
+    objective_function = partial(
+        objective,
+        train_data=train_data,
+        validation_data=validation_data,
+        model_path=model_path,
+        device=device,
+    )
+    study.optimize(objective_function, n_trials=100)  # Start with 50-100 trials
+    logger.info("Best Trial:")
+    logger.info(study.best_trial.params)
+    return study.best_params
 
 def cli(
     configuration_parameters: ConfigurationParameters,
@@ -113,12 +219,18 @@ def cli(
         default=configuration_parameters.seed,
         help="Ensemble seed for training.",
     )
+    parser.add_argument(
+        "--tune",
+        action="store_true",
+        help="Hyperparameter tuning for the inverse model training.",
+    )
     args = parser.parse_args(cli_args)
     run_inverse_training(
         data_file_path,
         model_path,
         random_state=configuration_parameters.seed,
         ensemble_seed=args.ensemble_seed,
+        tune=args.tune,
     )
 
 
