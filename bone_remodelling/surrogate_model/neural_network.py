@@ -12,11 +12,12 @@ logger = logging.getLogger(__name__)
 class SurrogateModel(torch.nn.Module):
     """Surrogate Neural Network Model for bone remodeling simulation."""
 
-    def __init__(self, width: int = 1024, depth: int = 6, dropout: float = 0.3) -> None:
+    def __init__(self, width: int = 1024, encoder_depth: int = 6, decoder_depth: int = 4, dropout: float = 0.3) -> None:
         """Initialize the SurrogateModel."""
         super().__init__()
         self.width = width
-        self.depth = depth
+        self.encoder_depth = encoder_depth
+        self.decoder_depth = decoder_depth
         self.dropout = dropout
         self.max_channel = self.width // 16
 
@@ -27,12 +28,11 @@ class SurrogateModel(torch.nn.Module):
         self.val_losses: list[torch.Tensor] = []
 
     def _build_linear_encoder(self) -> torch.nn.Sequential:
-        """Build the encoder based on the width and depth of the model."""
-        num_linear_layers = self.depth // 2
+        """Build the encoder based on the width and encoder depth of the model."""
         linear_layers = []
         linear_layers.append(torch.nn.Flatten())
 
-        widths = np.linspace(30, self.width, num_linear_layers).astype(int)
+        widths = np.linspace(30, self.width, self.encoder_depth).astype(int)
 
         # Linear layers
         for i in range(len(widths) - 1):
@@ -49,8 +49,7 @@ class SurrogateModel(torch.nn.Module):
         return torch.nn.Sequential(*linear_layers)
 
     def _build_conv_decoder(self) -> torch.nn.Sequential:
-        """Build the decoder based on the depth of the model."""
-        num_conv_layers = self.depth // 2
+        """Build the decoder based on the decoder depth of the model."""
         conv_layers = []
         minimal_channel = 1
         next_channel = max(minimal_channel, self.max_channel // 2)
@@ -67,13 +66,13 @@ class SurrogateModel(torch.nn.Module):
         conv_layers.append(torch.nn.ReLU())
         conv_layers.append(torch.nn.BatchNorm2d(next_channel))
 
-        # Inbetween layers dependent on the depth
+        # Inbetween layers dependent on the decoderdepth
         current_channel = next_channel
-        for _ in range(num_conv_layers - 2):
+        for _ in range(self.decoder_depth - 2):
             next_channel = max(minimal_channel, current_channel // 2)
             conv_layers.append(
                 torch.nn.Conv2d(
-                    current_channel, next_channel, kernel_size=3, padding=1
+                    current_channel, next_channel, kernel_size=3, padding=1,
                 ),
             )
             conv_layers.append(torch.nn.ReLU())
@@ -82,16 +81,17 @@ class SurrogateModel(torch.nn.Module):
 
         # Final output layer to get 1 channel
         conv_layers.append(
-            torch.nn.Conv2d(current_channel, 1, kernel_size=3, padding=1)
+            torch.nn.Conv2d(current_channel, 1, kernel_size=3, padding=1),
         )
         return torch.nn.Sequential(*conv_layers)
 
-    def update(self, width: int, depth: int, dropout: float) -> None:
+    def update(self, width: int, encoder_depth: int, decoder_depth: int, dropout: float) -> None:
         """Update the size of the neural network."""
         current_device = next(self.parameters()).device
 
         self.width = width
-        self.depth = depth
+        self.encoder_depth = encoder_depth
+        self.decoder_depth = decoder_depth
         self.dropout = dropout
         self.max_channel = self.width // 16
 

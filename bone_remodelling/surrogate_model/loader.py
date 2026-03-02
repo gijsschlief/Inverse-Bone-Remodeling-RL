@@ -47,7 +47,8 @@ class SurrogatePredictor:
         """
         self.model: torch.nn.Module = model_class(
             train_parameters.width,
-            train_parameters.depth,
+            train_parameters.encoder_depth,
+            train_parameters.decoder_depth,
             train_parameters.dropout,
         )
         self.train_parameters = train_parameters
@@ -76,7 +77,8 @@ class SurrogatePredictor:
         """Update the models size based on the loaded training parameters."""
         self.model.update(
             self.train_parameters.width,
-            self.train_parameters.depth,
+            self.train_parameters.encoder_depth,
+            self.train_parameters.decoder_depth,
             self.train_parameters.dropout,
         )
 
@@ -109,7 +111,8 @@ class SurrogatePredictor:
 
         with np.load(normalization_path) as data:
             self.train_parameters.width = int(data.get("width"))
-            self.train_parameters.depth = int(data.get("depth"))
+            self.train_parameters.encoder_depth = int(data.get("encoder_depth"))
+            self.train_parameters.decoder_depth = int(data.get("decoder_depth"))
             self.train_parameters.dropout = float(data.get("dropout"))
             self.x_mean = data.get("x_mean").copy() if "x_mean" in data else None
             self.x_std = data.get("x_std").copy() if "x_std" in data else None
@@ -261,7 +264,8 @@ class SurrogatePredictor:
         torch.save(self.model.state_dict(), path)
         save_dict: dict[str, np.ndarray | int | float] = {}
         save_dict["width"] = self.train_parameters.width
-        save_dict["depth"] = self.train_parameters.depth
+        save_dict["encoder_depth"] = self.train_parameters.encoder_depth
+        save_dict["decoder_depth"] = self.train_parameters.decoder_depth
         save_dict["dropout"] = self.train_parameters.dropout
 
         if self.x_mean is not None:

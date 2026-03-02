@@ -95,7 +95,8 @@ def run_inverse_training(
             batch_size=best_parameters["batch_size"],
             weight_decay=best_parameters["weight_decay"],
             width=best_parameters["width"],
-            depth=best_parameters["depth"],
+            encoder_depth=best_parameters["encoder_depth"],
+            decoder_depth=best_parameters["decoder_depth"],
             dropout=best_parameters["dropout"],
             patience_lr_scheduler=best_parameters["patience_lr_scheduler"],
             patience=best_parameters["patience_lr_scheduler"] * 3,
@@ -126,11 +127,10 @@ def objective(
     hyperparameters = {
         "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
         "batch_size": trial.suggest_int("batch_size", 16, 256),
-        "weight_decay": trial.suggest_float("weight_decay", 1e-6, 1e-2, log=True),
         "width": trial.suggest_categorical("width", [128, 256, 512, 1024, 2048]),
-        "depth": trial.suggest_categorical("depth", [4, 6, 8, 10]),
+        "encoder_depth": trial.suggest_int("encoder_depth", 1, 5),
+        "decoder_depth": trial.suggest_int("decoder_depth", 1, 5),
         "dropout": trial.suggest_float("dropout", 0.0, 0.5),
-        "patience_lr_scheduler": trial.suggest_int("patience_lr_scheduler", 5, 20),
     }
 
     trial_params = InverseTrainParameters(
@@ -138,12 +138,10 @@ def objective(
         device=device,
         learning_rate=hyperparameters["learning_rate"],
         batch_size=hyperparameters["batch_size"],
-        weight_decay=hyperparameters["weight_decay"],
         width=hyperparameters["width"],
-        depth=hyperparameters["depth"],
+        encoder_depth=hyperparameters["encoder_depth"],
+        decoder_depth=hyperparameters["decoder_depth"],
         dropout=hyperparameters["dropout"],
-        patience_lr_scheduler=hyperparameters["patience_lr_scheduler"],
-        patience=hyperparameters["patience_lr_scheduler"] * 3,
     )
 
     predictor = SurrogatePredictor(

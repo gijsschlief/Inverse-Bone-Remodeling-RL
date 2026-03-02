@@ -20,7 +20,8 @@ class TrainParameters(ABC):
     weight_decay: float
     alpha: float
     width: int
-    depth: int
+    encoder_depth: int
+    decoder_depth: int
     dropout: float
     learning_rate: float
     patience_lr_scheduler: int
@@ -49,10 +50,11 @@ class SurrogateTrainParameters(TrainParameters):
 
     # Hyperparameters
     batch_size: int = 180
-    weight_decay: float = 2.5e-5
+    weight_decay: float = 1e-5
     alpha: float = 0.5
     width: int = 4096  # 2048
-    depth: int = 10  # 8
+    encoder_depth: int = 4
+    decoder_depth: int = 4
     dropout: float = 0.43
 
     # Learning rate variables
@@ -60,7 +62,7 @@ class SurrogateTrainParameters(TrainParameters):
     patience_lr_scheduler: int = 10
     factor_lr_scheduler: float = 0.5
     cooldown_lr_scheduler: int = 0
-    patience: int = 20
+    patience: int = 30
     min_delta: float = 1e-4
 
     # Plotting variables
@@ -73,10 +75,15 @@ class SurrogateTrainParameters(TrainParameters):
         """Ensure that the model path exists."""
         if not self.model_path.parent.exists():
             self.model_path.parent.mkdir(parents=True, exist_ok=True)
-        minimal_depth: int = 4
-        if self.depth < minimal_depth:
+        minimal_encoder_depth: int = 2
+        if self.encoder_depth < minimal_encoder_depth:
             logger.warning(
-                f"Model depth below buildable range, using minimun of {minimal_depth}."
+                f"Model encoder depth below buildable range, using minimun of {minimal_encoder_depth}."
+            )
+        minimal_decoder_depth: int = 2
+        if self.decoder_depth < minimal_decoder_depth:
+            logger.warning(
+                f"Model decoder depth below buildable range, using minimun of {minimal_decoder_depth}."
             )
         minimal_width: int = 128
         if self.width < minimal_width:

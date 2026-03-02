@@ -34,11 +34,12 @@ class ResidualBlock(torch.nn.Module):
 class InverseModel(torch.nn.Module):
     """Inverse Neural Network Model for bone remodeling simulation."""
 
-    def __init__(self, width: int = 1024, depth: int = 6, dropout: float = 0.3) -> None:
+    def __init__(self, width: int = 1024, encoder_depth: int = 6, decoder_depth: int = 4, dropout: float = 0.3) -> None:
         """Initialize the SurrogateModel."""
         super().__init__()
         self.width = width
-        self.depth = depth
+        self.encoder_depth = encoder_depth
+        self.decoder_depth = decoder_depth
         self.dropout = dropout
         self.max_channel = self.width // 16
 
@@ -61,17 +62,16 @@ class InverseModel(torch.nn.Module):
 
     def _build_conv_encoder(self) -> torch.nn.Sequential:
         """Build the encoder based on the width and depth of the model."""
-        num_conv_layers = self.depth // 2
         conv_layers = []
 
         current_channel = 3  # Start with 3 channels (density + x + y)
         next_channel = (
-            max(4, self.max_channel // (2 ** (num_conv_layers - 2)))
-            if num_conv_layers > 1
+            max(4, self.max_channel // (2 ** (self.encoder_depth - 2)))
+            if self.encoder_depth > 1
             else self.max_channel
         )
 
-        for _ in range(num_conv_layers - 1):
+        for _ in range(self.encoder_depth - 1):
             conv_layers.append(ResidualBlock(current_channel, next_channel))
             current_channel = next_channel
             next_channel = min(self.max_channel, current_channel * 2)
@@ -91,7 +91,6 @@ class InverseModel(torch.nn.Module):
 
     def _build_linear_decoder(self) -> torch.nn.Sequential:
         """Build the decoder based on the depth of the model."""
-        num_linear_layers = self.depth // 2
         linear_layers = []
 
         linear_layers.append(torch.nn.Flatten())
@@ -101,7 +100,7 @@ class InverseModel(torch.nn.Module):
         if self.dropout > 0:
             linear_layers.append(torch.nn.Dropout(self.dropout))
 
-        widths = np.linspace(self.width, 31, num_linear_layers).astype(int)
+        widths = np.linspace(self.width, 31, self.decoder_depth).astype(int)
 
         for i in range(len(widths) - 1):
             linear_layers.append(torch.nn.Linear(widths[i], widths[i + 1]))
@@ -109,12 +108,13 @@ class InverseModel(torch.nn.Module):
                 linear_layers.append(torch.nn.ReLU())
         return torch.nn.Sequential(*linear_layers)
 
-    def update(self, width: int, depth: int, dropout: float) -> None:
+    def update(self, width: int, encoder_depth: int, decoder_depth: int, dropout: float) -> None:
         """Update the size of the neural network dynamically."""
         current_device = next(self.parameters()).device
 
         self.width = width
-        self.depth = depth
+        self.encoder_depth = encoder_depth
+        self.decoder_depth = decoder_depth
         self.dropout = dropout
         self.max_channel = self.width // 16
 
