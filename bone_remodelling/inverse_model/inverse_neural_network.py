@@ -20,6 +20,15 @@ class InverseModel(torch.nn.Module):
         self.dropout = dropout
         self.max_channel = self.width // 16
 
+        self.register_buffer(
+            "coord_x",
+            torch.linspace(-1, 1, 10).repeat(10, 1).unsqueeze(0).unsqueeze(0),
+        )
+        self.register_buffer(
+            "coord_y",
+            torch.linspace(-1, 1, 10).repeat(10, 1).t().unsqueeze(0).unsqueeze(0),
+        )
+
         self.conv_encoder = self._build_conv_encoder()
         self.output_fc = self._build_linear_decoder()
 
@@ -31,8 +40,8 @@ class InverseModel(torch.nn.Module):
         num_conv_layers = self.depth // 2
         conv_layers = []
 
-        current_channel = 1
-        next_channel = max(1, self.max_channel // (2**(num_conv_layers - 2))) if num_conv_layers > 1 else self.max_channel
+        current_channel = 3  # Start with 3 channels (density + x + y)
+        next_channel = max(4, self.max_channel // (2**(num_conv_layers - 2))) if num_conv_layers > 1 else self.max_channel
 
         for _ in range(num_conv_layers - 1):
             conv_layers.append(torch.nn.Conv2d(current_channel, next_channel, kernel_size=3, padding=1))
@@ -89,7 +98,12 @@ class InverseModel(torch.nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Forward pass: Density Image -> Conv Encoder -> Linear Decoder -> Parameters."""
+        n = x.shape[0]
+        coord_x = self.coord_x.repeat(n, 1, 1, 1)
+        coord_y = self.coord_y.repeat(n, 1, 1, 1)
+
         x = x.unsqueeze(1)
+        x = torch.cat([x, coord_x, coord_y], dim=1)
 
         x = self.conv_encoder(x)
         return self.output_fc(x)
