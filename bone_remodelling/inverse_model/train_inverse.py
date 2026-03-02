@@ -83,7 +83,10 @@ def run_inverse_training(
     if tune:
         logger.info("Running hyperparameter tuning...")
         best_parameters = hyperparameter_search(
-            (x_train_np, y_train_np), (x_val_np, y_val_np), model_path, device,
+            (x_train_np, y_train_np),
+            (x_val_np, y_val_np),
+            model_path,
+            device,
         )
         train_parameters = InverseTrainParameters(
             model_path=model_path,
@@ -95,7 +98,7 @@ def run_inverse_training(
             depth=best_parameters["depth"],
             dropout=best_parameters["dropout"],
             patience_lr_scheduler=best_parameters["patience_lr_scheduler"],
-            patience=best_parameters["patience_lr_scheduler"]*3,
+            patience=best_parameters["patience_lr_scheduler"] * 3,
         )
     else:
         train_parameters = InverseTrainParameters(
@@ -111,7 +114,14 @@ def run_inverse_training(
     )
     inverse_trainer.time_training((x_train_np, y_train_np), (x_val_np, y_val_np))
 
-def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarray], validation_data: tuple[np.ndarray, np.ndarray], model_path: Path, device: torch.device) -> float:
+
+def objective(
+    trial: optuna.trial.Trial,
+    train_data: tuple[np.ndarray, np.ndarray],
+    validation_data: tuple[np.ndarray, np.ndarray],
+    model_path: Path,
+    device: torch.device,
+) -> float:
     """Objective defined for the optuna training."""
     hyperparameters = {
         "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
@@ -133,7 +143,7 @@ def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarra
         depth=hyperparameters["depth"],
         dropout=hyperparameters["dropout"],
         patience_lr_scheduler=hyperparameters["patience_lr_scheduler"],
-        patience=hyperparameters["patience_lr_scheduler"]*3,
+        patience=hyperparameters["patience_lr_scheduler"] * 3,
     )
 
     predictor = SurrogatePredictor(
@@ -150,6 +160,7 @@ def objective(trial: optuna.trial.Trial, train_data: tuple[np.ndarray, np.ndarra
         raise
 
     return trainer.best_val_loss
+
 
 def hyperparameter_search(
     train_data: tuple[np.ndarray, np.ndarray],
@@ -191,6 +202,7 @@ def hyperparameter_search(
     logger.info("Best Trial:")
     logger.info(study.best_trial.params)
     return study.best_params
+
 
 def cli(
     configuration_parameters: ConfigurationParameters,

@@ -46,7 +46,9 @@ class SurrogatePredictor:
 
         """
         self.model: torch.nn.Module = model_class(
-            train_parameters.width, train_parameters.depth, train_parameters.dropout,
+            train_parameters.width,
+            train_parameters.depth,
+            train_parameters.dropout,
         )
         self.train_parameters = train_parameters
         self.model.to(self.train_parameters.device)

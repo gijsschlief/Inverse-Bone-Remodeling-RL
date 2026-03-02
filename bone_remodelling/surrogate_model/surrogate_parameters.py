@@ -9,6 +9,7 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+
 class TrainParameters(ABC):
     """Abstract base class for training parameters."""
 
@@ -50,8 +51,8 @@ class SurrogateTrainParameters(TrainParameters):
     batch_size: int = 180
     weight_decay: float = 2.5e-5
     alpha: float = 0.5
-    width: int = 4096 #2048
-    depth: int = 10 #8
+    width: int = 4096  # 2048
+    depth: int = 10  # 8
     dropout: float = 0.43
 
     # Learning rate variables
@@ -74,7 +75,11 @@ class SurrogateTrainParameters(TrainParameters):
             self.model_path.parent.mkdir(parents=True, exist_ok=True)
         minimal_depth: int = 4
         if self.depth < minimal_depth:
-            logger.warning(f"Model depth below buildable range, using minimun of {minimal_depth}.")
+            logger.warning(
+                f"Model depth below buildable range, using minimun of {minimal_depth}."
+            )
         minimal_width: int = 128
         if self.width < minimal_width:
-            logger.warning(f"Model width below buildable range, using minimun of {minimal_width}.")
+            logger.warning(
+                f"Model width below buildable range, using minimun of {minimal_width}."
+            )

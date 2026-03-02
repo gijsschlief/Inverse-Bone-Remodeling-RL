@@ -10,6 +10,7 @@ from bone_remodelling.surrogate_model.surrogate_parameters import TrainParameter
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class InverseTrainParameters(TrainParameters):
     """Parameters for training the inverse model."""
@@ -45,7 +46,11 @@ class InverseTrainParameters(TrainParameters):
             self.model_path.parent.mkdir(parents=True, exist_ok=True)
         minimal_depth: int = 4
         if self.depth < minimal_depth:
-            logger.warning(f"Model depth below buildable range, using minimun of {minimal_depth}.")
+            logger.warning(
+                f"Model depth below buildable range, using minimun of {minimal_depth}."
+            )
         minimal_width: int = 128
         if self.width < minimal_width:
-            logger.warning(f"Model width below buildable range, using minimun of {minimal_width}.")
+            logger.warning(
+                f"Model width below buildable range, using minimun of {minimal_width}."
+            )

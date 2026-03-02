@@ -9,6 +9,28 @@ import torch
 logger = logging.getLogger(__name__)
 
 
+class ResidualBlock(torch.nn.Module):
+    """Residual Block for the convolutional encoder."""
+
+    def __init__(self, in_channels: int, out_channels: int) -> None:
+        """Initialize the Residual Block."""
+        super().__init__()
+        self.conv = torch.nn.Conv2d(in_channels, out_channels, kernel_size=3, padding=1)
+        self.bn = torch.nn.BatchNorm2d(out_channels)
+        self.relu = torch.nn.ReLU()
+
+        self.shortcut = torch.nn.Sequential()
+        if in_channels != out_channels:
+            self.shortcut = torch.nn.Sequential(
+                torch.nn.Conv2d(in_channels, out_channels, kernel_size=1),
+                torch.nn.BatchNorm2d(out_channels),
+            )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """Forward pass for the Residual Block."""
+        return self.relu(self.conv(x) + self.shortcut(x))
+
+
 class InverseModel(torch.nn.Module):
     """Inverse Neural Network Model for bone remodeling simulation."""
 
@@ -43,12 +65,14 @@ class InverseModel(torch.nn.Module):
         conv_layers = []
 
         current_channel = 3  # Start with 3 channels (density + x + y)
-        next_channel = max(4, self.max_channel // (2**(num_conv_layers - 2))) if num_conv_layers > 1 else self.max_channel
+        next_channel = (
+            max(4, self.max_channel // (2 ** (num_conv_layers - 2)))
+            if num_conv_layers > 1
+            else self.max_channel
+        )
 
         for _ in range(num_conv_layers - 1):
-            conv_layers.append(torch.nn.Conv2d(current_channel, next_channel, kernel_size=3, padding=1))
-            conv_layers.append(torch.nn.ReLU())
-            conv_layers.append(torch.nn.BatchNorm2d(next_channel))
+            conv_layers.append(ResidualBlock(current_channel, next_channel))
             current_channel = next_channel
             next_channel = min(self.max_channel, current_channel * 2)
 
@@ -80,7 +104,7 @@ class InverseModel(torch.nn.Module):
         widths = np.linspace(self.width, 31, num_linear_layers).astype(int)
 
         for i in range(len(widths) - 1):
-            linear_layers.append(torch.nn.Linear(widths[i], widths[i+1]))
+            linear_layers.append(torch.nn.Linear(widths[i], widths[i + 1]))
             if i < len(widths) - 2:
                 linear_layers.append(torch.nn.ReLU())
         return torch.nn.Sequential(*linear_layers)

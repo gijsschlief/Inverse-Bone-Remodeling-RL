@@ -36,7 +36,7 @@ class SurrogateModel(torch.nn.Module):
 
         # Linear layers
         for i in range(len(widths) - 1):
-            linear_layers.append(torch.nn.Linear(widths[i], widths[i+1]))
+            linear_layers.append(torch.nn.Linear(widths[i], widths[i + 1]))
             linear_layers.append(torch.nn.ReLU())
 
         if self.dropout > 0:
@@ -72,14 +72,18 @@ class SurrogateModel(torch.nn.Module):
         for _ in range(num_conv_layers - 2):
             next_channel = max(minimal_channel, current_channel // 2)
             conv_layers.append(
-                torch.nn.Conv2d(current_channel, next_channel, kernel_size=3, padding=1),
+                torch.nn.Conv2d(
+                    current_channel, next_channel, kernel_size=3, padding=1
+                ),
             )
             conv_layers.append(torch.nn.ReLU())
             conv_layers.append(torch.nn.BatchNorm2d(next_channel))
             current_channel = next_channel
 
         # Final output layer to get 1 channel
-        conv_layers.append(torch.nn.Conv2d(current_channel, 1, kernel_size=3, padding=1))
+        conv_layers.append(
+            torch.nn.Conv2d(current_channel, 1, kernel_size=3, padding=1)
+        )
         return torch.nn.Sequential(*conv_layers)
 
     def update(self, width: int, depth: int, dropout: float) -> None:

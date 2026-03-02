@@ -12,7 +12,11 @@ def build_optimizer(
     train_parameters: TrainParameters,
 ) -> torch.optim.AdamW:
     """Get an optimizer for the surrogate model."""
-    return torch.optim.AdamW(model.parameters(), lr=train_parameters.learning_rate, weight_decay=train_parameters.weight_decay)
+    return torch.optim.AdamW(
+        model.parameters(),
+        lr=train_parameters.learning_rate,
+        weight_decay=train_parameters.weight_decay,
+    )
 
 
 def build_learning_rate_scheduler(
