@@ -23,10 +23,12 @@ class InverseModel(torch.nn.Module):
         self.register_buffer(
             "coord_x",
             torch.linspace(-1, 1, 10).repeat(10, 1).unsqueeze(0).unsqueeze(0),
+            persistent=False,
         )
         self.register_buffer(
             "coord_y",
             torch.linspace(-1, 1, 10).repeat(10, 1).t().unsqueeze(0).unsqueeze(0),
+            persistent=False,
         )
 
         self.conv_encoder = self._build_conv_encoder()

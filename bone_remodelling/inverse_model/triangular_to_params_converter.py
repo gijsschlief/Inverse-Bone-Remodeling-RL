@@ -8,10 +8,11 @@ def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]
     total_sides = 3
     if force_profile.shape[0] != total_sides:
         raise ValueError("Force profile must have shape (3, N)")
+    absolute_profile = np.abs(force_profile)
 
-    peak_side = int(np.argmax(np.max(force_profile, axis=1)))
-    peak_height = float(np.max(force_profile[peak_side]))
-    peak_location = int(np.argmax(force_profile[peak_side]))
+    peak_side = int(np.argmax(np.max(absolute_profile, axis=1)))
+    peak_height = float(np.max(absolute_profile[peak_side]))
+    peak_location = int(np.argmax(absolute_profile[peak_side]))
 
     return peak_location, peak_side, peak_height
 
