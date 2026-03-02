@@ -47,10 +47,10 @@ class InverseTrainParameters(TrainParameters):
         minimal_depth: int = 4
         if self.depth < minimal_depth:
             logger.warning(
-                f"Model depth below buildable range, using minimun of {minimal_depth}."
+                f"Model depth below buildable range, using minimun of {minimal_depth}.",
             )
         minimal_width: int = 128
         if self.width < minimal_width:
             logger.warning(
-                f"Model width below buildable range, using minimun of {minimal_width}."
+                f"Model width below buildable range, using minimun of {minimal_width}.",
             )
