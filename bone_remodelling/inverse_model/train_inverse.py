@@ -93,13 +93,10 @@ def run_inverse_training(
             device=device,
             learning_rate=best_parameters["learning_rate"],
             batch_size=best_parameters["batch_size"],
-            weight_decay=best_parameters["weight_decay"],
             width=best_parameters["width"],
             encoder_depth=best_parameters["encoder_depth"],
             decoder_depth=best_parameters["decoder_depth"],
             dropout=best_parameters["dropout"],
-            patience_lr_scheduler=best_parameters["patience_lr_scheduler"],
-            patience=best_parameters["patience_lr_scheduler"] * 3,
         )
     else:
         train_parameters = InverseTrainParameters(
