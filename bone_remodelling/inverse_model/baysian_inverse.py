@@ -35,7 +35,7 @@ class BayesianParameters:
     regularization_lambda: float = 0.1
     force_dim: tuple[int, int] = (3, 10)
     param_dim: int = 3
-    max_iterations: int = 20
+    max_iterations: int = 5
     max_peak_height: float = 200.0
 
 def map_inverse(
@@ -118,7 +118,7 @@ if __name__ == "__main__":
 
     bayesian_parameters = BayesianParameters(device=device)
 
-    representative_subset: int = min(10, density_test.shape[0])
+    representative_subset: int = min(1000, density_test.shape[0])
     estimated_forces: np.ndarray = np.zeros((representative_subset, *bayesian_parameters.force_dim), dtype=np.float32)
 
     for i in range(representative_subset):
