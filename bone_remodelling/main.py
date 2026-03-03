@@ -203,9 +203,6 @@ def evaluate_all(configuration_parameters: ConfigurationParameters) -> None:
     rl_evaluation(configuration_parameters)
 
 
-# TODO(gijsschlief): Hyperparameter tuning for surrogate model (add residual layer to the surrogate model and see if it improves performance)
-# https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/issues/18
-
 # TODO(gijsschlief): Add parameters to the parser of the RL model to give more freedom to the user
 # https://github.com/gijsschlief/Inverse-Bone-Remodeling-RL/issues/20
 
