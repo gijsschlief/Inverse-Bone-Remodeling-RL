@@ -13,7 +13,7 @@ from bone_remodelling.inverse_model.evaluate_inverse import (
     inverse_model_metrics,
 )
 from bone_remodelling.inverse_model.triangular_to_params_converter import (
-    params_to_force_profile,
+    params_to_force_profile_torch,
 )
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
@@ -60,10 +60,11 @@ def map_inverse(
 
             def closure() -> torch.Tensor:
                 optimizer.zero_grad()
-                force_np = params_to_force_profile(
-                    peak_location, peak_side, peak_height[0],
-                )
-                force_tensor = torch.tensor(force_np, dtype=torch.float32, device=bayesian_parameters.device).unsqueeze(0)
+                force_tensor = params_to_force_profile_torch(
+                    peak_location, peak_side, peak_height,
+                    device=bayesian_parameters.device,
+                ).unsqueeze(0)
+
                 # Compute surrogate prediction
                 density_pred = surrogate_model.torch_prediction(force_tensor)
                 # Loss = data + prior
@@ -77,7 +78,7 @@ def map_inverse(
                 optimizer.step(closure)
 
             # Evaluate final loss
-            force_np = params_to_force_profile(peak_location, peak_side, peak_height.item())
+            force_np = params_to_force_profile_torch(peak_location, peak_side, peak_height, device=bayesian_parameters.device).detach().numpy()
             force_tensor = torch.tensor(force_np, dtype=torch.float32, device=bayesian_parameters.device).unsqueeze(0)
             final_pred = surrogate_model.torch_prediction(force_tensor)
             final_loss = torch.mean((final_pred - observed_density) ** 2).item()
@@ -117,14 +118,13 @@ if __name__ == "__main__":
 
     bayesian_parameters = BayesianParameters(device=device)
 
-    estimated_forces: np.ndarray = np.zeros((density_test.shape[0], *bayesian_parameters.force_dim), dtype=np.float32)
-
-    representative_subset: int = min(100, density_test.shape[0])
+    representative_subset: int = min(10, density_test.shape[0])
+    estimated_forces: np.ndarray = np.zeros((representative_subset, *bayesian_parameters.force_dim), dtype=np.float32)
 
     for i in range(representative_subset):
         logger.info("Processing sample %d", i)
         observed_density = torch.tensor(density_test[i], device=bayesian_parameters.device, dtype=torch.float32).unsqueeze(0)
         estimated_forces[i] = map_inverse(surrogate_model, observed_density, bayesian_parameters)
 
-    inverse_model_metrics(estimated_forces, force_test)
+    inverse_model_metrics(estimated_forces, force_test[:representative_subset])
     evaluate_predictions_with_surrogate(surrogate_path, device, force_predictions=estimated_forces, true_densities=density_test[:representative_subset], metric="ssim", true_forces=force_test[:representative_subset])

@@ -1,6 +1,7 @@
 """Module for converting between triangular force profiles and their parameterized representations (peak location, peak side, peak height)."""
 
 import numpy as np
+import torch
 
 
 def force_profile_to_params(force_profile: np.ndarray) -> tuple[int, int, float]:
@@ -44,6 +45,41 @@ def params_to_force_profile(
             force_profile[peak_side, j] = peak_height
     return force_profile
 
+def params_to_force_profile_torch(
+    peak_location: int,
+    peak_side: int,
+    peak_height: torch.Tensor, # This must be a 1D tensor with requires_grad=True
+    length: int = 10,
+    device: torch.device = torch.device("cpu"),
+) -> torch.Tensor:
+    """Differentiable conversion of peak_height to a triangular force profile.
+
+    peak_location and peak_side remain discrete indices.
+
+    """
+    j = torch.arange(length, dtype=torch.float32, device=device)
+
+    force_profile = torch.zeros((3, length), dtype=torch.float32, device=device)
+
+    if peak_location > 0:
+        left_mask = (j < peak_location).float()
+        left_slope = (j / peak_location)
+    else:
+        left_mask = torch.zeros_like(j)
+        left_slope = 0.0
+
+    if peak_location < length - 1:
+        right_mask = (j > peak_location).float()
+        right_slope = (length - 1 - j) / (length - 1 - peak_location)
+    else:
+        right_mask = torch.zeros_like(j)
+        right_slope = 0.0
+
+    center_mask = (j == peak_location).float()
+
+    row_values = peak_height * (left_mask * left_slope + right_mask * right_slope + center_mask)
+    force_profile[peak_side, :] = row_values
+    return force_profile
 
 def reshape_input_features_for_model(unconverted_data: np.ndarray) -> np.ndarray:
     """Convert new data to tensor format for the model.
