@@ -169,8 +169,8 @@ def inverse_prediction(
 def evaluate_predictions_with_surrogate(
     surrogate_model_path: Path,
     device: torch.device,
-    force_predictions: tuple[np.ndarray, np.ndarray, np.ndarray],
-    true_densities: tuple[np.ndarray, np.ndarray, np.ndarray],
+    force_predictions: tuple[np.ndarray, np.ndarray, np.ndarray] | np.ndarray,
+    true_densities: tuple[np.ndarray, np.ndarray, np.ndarray] | np.ndarray,
     metric: str,
 ) -> None:
     """Evaluate the predicted parameters by converting them back to force profiles and using the surrogate model to predict the resulting densities, then comparing those to the true densities."""
@@ -184,6 +184,10 @@ def evaluate_predictions_with_surrogate(
         surrogate_train_parameters,
     )
 
+    if isinstance(force_predictions, np.ndarray):
+        force_predictions = (force_predictions, force_predictions, force_predictions)
+    if isinstance(true_densities, np.ndarray):
+        true_densities = (true_densities, true_densities, true_densities)
     x_train, x_val, x_test = force_predictions
     y_train, y_val, y_test = true_densities
 

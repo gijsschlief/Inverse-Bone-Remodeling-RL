@@ -169,6 +169,15 @@ class SurrogatePredictor:
             return y_normalised.cpu().numpy()
         return self.unnormalize_output(y_normalised.cpu().numpy())
 
+    def torch_prediction(self, x_tensor: torch.Tensor) -> torch.Tensor:
+        """Prediction with torch tensors, so it is differentiable."""
+        if self.x_mean is not None and self.x_std is not None:
+            x_tensor = self.normalize_input(x_tensor)
+        y = self.model(x_tensor)
+        if self.y_mean is not None and self.y_std is not None:
+            y = self.unnormalize_output(y)
+        return y
+
     def set_input_normalize(
         self,
         x_raw: np.ndarray,
@@ -189,51 +198,67 @@ class SurrogatePredictor:
 
     def normalize_input(
         self,
-        x_raw: np.ndarray,
-    ) -> np.ndarray:
+        x_raw: np.ndarray | torch.Tensor,
+    ) -> np.ndarray | torch.Tensor:
         """Normalize input data."""
         if self.x_mean is None or self.x_std is None:
             logger.warning(
                 "Input normalization parameters are not set. Returning raw input.",
             )
             return x_raw
-        return (x_raw - self.x_mean) / self.x_std
+        if isinstance(x_raw, torch.Tensor):
+            return (x_raw - torch.tensor(self.x_mean, device=self.train_parameters.device)) / torch.tensor(self.x_std, device=self.train_parameters.device)
+        if isinstance(x_raw, np.ndarray):
+            return (x_raw - self.x_mean) / self.x_std
+        raise TypeError("x_raw must be either a torch.Tensor or a np.ndarray")
 
     def normalize_output(
         self,
-        y_raw: np.ndarray,
-    ) -> np.ndarray:
+        y_raw: np.ndarray | torch.Tensor,
+    ) -> np.ndarray | torch.Tensor:
         """Normalize output data."""
         if self.y_mean is None or self.y_std is None:
             logger.warning(
                 "Output normalization parameters are not set. Returning raw output.",
             )
             return y_raw
-        return (y_raw - self.y_mean) / self.y_std
+        if isinstance(y_raw, torch.Tensor):
+            return (y_raw - torch.tensor(self.y_mean, device=self.train_parameters.device)) / torch.tensor(self.y_std, device=self.train_parameters.device)
+        if isinstance(y_raw, np.ndarray):
+            return (y_raw - self.y_mean) / self.y_std
+        raise TypeError("y_raw must be either a torch.Tensor or a np.ndarray")
 
     def unnormalize_input(
         self,
-        x_normalized: np.ndarray,
-    ) -> np.ndarray:
+        x_normalized: np.ndarray | torch.Tensor,
+    ) -> np.ndarray | torch.Tensor:
         """Unnormalize input data."""
         if self.x_mean is None or self.x_std is None:
             logger.warning(
                 "Input normalization parameters are not set. Returning normalized input.",
             )
             return x_normalized
-        return x_normalized * self.x_std + self.x_mean
+        if isinstance(x_normalized, torch.Tensor):
+            return x_normalized * torch.tensor(self.x_std, device=self.train_parameters.device) + torch.tensor(self.x_mean, device=self.train_parameters.device)
+        if isinstance(x_normalized, np.ndarray):
+            return x_normalized * self.x_std + self.x_mean
+        raise TypeError("x_normalized must be either a torch.Tensor or a np.ndarray")
 
     def unnormalize_output(
         self,
-        y_normalized: np.ndarray,
-    ) -> np.ndarray:
+        y_normalized: np.ndarray | torch.Tensor,
+    ) -> np.ndarray | torch.Tensor:
         """Unnormalize output data."""
         if self.y_mean is None or self.y_std is None:
             logger.warning(
                 "Output normalization parameters are not set. Returning normalized output.",
             )
             return y_normalized
-        return y_normalized * self.y_std + self.y_mean
+        if isinstance(y_normalized, torch.Tensor):
+            return y_normalized * torch.tensor(self.y_std, device=self.train_parameters.device) + torch.tensor(self.y_mean, device=self.train_parameters.device)
+        if isinstance(y_normalized, np.ndarray):
+            return y_normalized * self.y_std + self.y_mean
+        raise TypeError("y_normalized must be either a torch.Tensor or a np.ndarray")
 
     def save_model_with_versioning(
         self,
