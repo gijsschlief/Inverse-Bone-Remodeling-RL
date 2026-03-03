@@ -18,6 +18,8 @@ from bone_remodelling.inverse_model.triangular_to_params_converter import (
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.surrogate_model.loader import SurrogatePredictor
 from bone_remodelling.surrogate_model.neural_network import SurrogateModel
+from bone_remodelling.surrogate_model.sanitizer import sanitize_data
+from bone_remodelling.surrogate_model.splitter import splitting
 from bone_remodelling.surrogate_model.surrogate_parameters import (
     SurrogateTrainParameters,
 )
@@ -90,8 +92,9 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     data_path = ConfigurationParameters().output_dir.resolve()
-    surogate_path = data_path / Path("surrogate_models", "model_1_19.pth")
-    train_parameters = SurrogateTrainParameters(model_path=surogate_path, device=device)
+    random_state = ConfigurationParameters().seed
+    surrogate_path = data_path / Path("surrogate_models", "model_1_19.pth")
+    train_parameters = SurrogateTrainParameters(model_path=surrogate_path, device=device)
     surrogate_model = SurrogatePredictor(SurrogateModel, train_parameters)
     surrogate_model.load_model()
 
@@ -99,16 +102,27 @@ if __name__ == "__main__":
     data = ForwardDataManager(raw_path).load_directory()
     if data is None:
         raise ValueError("Failed to load data")
-    _, true_forces, output_density = data
+    _, force_profiles, final_output_densities = data
+
+    force_profiles, final_output_densities = sanitize_data(
+        force_profiles,
+        final_output_densities,
+    )
+
+    _, _, force_test, _, _, density_test = splitting(
+        force_profiles,
+        final_output_densities,
+        random_state=random_state,
+    )
+
     bayesian_parameters = BayesianParameters(device=device)
 
-    number_of_samples: int = 10
-    estimated_forces: np.ndarray = np.zeros((number_of_samples, *bayesian_parameters.force_dim), dtype=np.float32)
+    estimated_forces: np.ndarray = np.zeros((density_test.shape[0], *bayesian_parameters.force_dim), dtype=np.float32)
 
-    for i in range(number_of_samples):
+    for i in range(density_test.shape[0]):
         logger.info("Processing sample %d", i)
-        observed_density = torch.tensor(output_density[i], device=bayesian_parameters.device, dtype=torch.float32).unsqueeze(0)
+        observed_density = torch.tensor(density_test[i], device=bayesian_parameters.device, dtype=torch.float32).unsqueeze(0)
         estimated_forces[i] = map_inverse(surrogate_model, observed_density, bayesian_parameters)
 
-    inverse_model_metrics(estimated_forces, true_forces[:number_of_samples])
-    evaluate_predictions_with_surrogate(surogate_path, device, force_predictions=estimated_forces, true_densities=output_density[:number_of_samples], metric="ssim", true_forces=true_forces[:number_of_samples])
+    inverse_model_metrics(estimated_forces, force_test)
+    evaluate_predictions_with_surrogate(surrogate_path, device, force_predictions=estimated_forces, true_densities=density_test, metric="ssim", true_forces=force_test)
