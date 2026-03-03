@@ -43,7 +43,7 @@ def map_inverse(
 ) -> np.ndarray:
     """Perform MAP estimation to find the force vector that best explains the observed density."""
     best_loss = float("inf")
-    best_force = None
+    best_force = np.zeros(bayesian_parameters.force_dim, dtype=np.float32)
 
     for peak_side in range(3):
         for peak_location in range(10):
@@ -83,7 +83,6 @@ def map_inverse(
             if final_loss < best_loss:
                 best_loss = final_loss
                 best_force = force_np
-
     return best_force
 
 if __name__ == "__main__":
