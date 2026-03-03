@@ -112,4 +112,4 @@ if __name__ == "__main__":
         estimated_forces[i] = map_inverse(surrogate_model, observed_density, bayesian_parameters)
 
     inverse_model_metrics(estimated_forces, true_forces[:number_of_samples])
-    evaluate_predictions_with_surrogate(surogate_path, device, force_predictions=estimated_forces, true_densities=output_density[:number_of_samples], metric="ssim")
+    evaluate_predictions_with_surrogate(surogate_path, device, force_predictions=estimated_forces, true_densities=output_density[:number_of_samples], metric="ssim", true_forces=true_forces[:number_of_samples])

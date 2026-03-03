@@ -137,6 +137,7 @@ def plot_surrogate(
     std_pred: np.ndarray,
     true_matrices: np.ndarray,
     force_profiles: np.ndarray,
+    estimated_forces: np.ndarray | None = None,
 ) -> None:
     """Plot the surrogate model predictions against the true values.
 
@@ -146,13 +147,13 @@ def plot_surrogate(
         std_pred (np.ndarray): The standard deviation of the predictions from the surrogate model.
         true_matrices (np.ndarray): The true values to compare against.
         force_profiles (np.ndarray): The force profiles used for prediction.
-
+        estimated_forces (np.ndarray | None): The estimated force profiles.
     """
     force_mask = np.ones_like(force_profiles, dtype=bool)
     axes = plt.subplots(2, 2, figsize=(12, 12))[1]
     plot_density_matrix(
         matrix=mean_pred,
-        force_data=(force_profiles, force_mask),
+        force_data=(estimated_forces if estimated_forces is not None else force_profiles, force_mask),
         title="Surrogate Model Mean Prediction",
         axis=axes[0, 0],
     )

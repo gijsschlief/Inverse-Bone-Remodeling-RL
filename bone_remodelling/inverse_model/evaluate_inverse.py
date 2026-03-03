@@ -133,6 +133,7 @@ def inverse_model_evaluation(
             force_predictions=(y_train_predicted, y_val_predicted, y_test_predicted),
             true_densities=(x_train, x_val, x_test),
             metric=metric,
+            true_forces=(y_train, y_val, y_test),
         )
     except OSError as e:
         logger.error(f"Could not load surrogate model for evaluation: {e}")
@@ -172,6 +173,7 @@ def evaluate_predictions_with_surrogate(
     force_predictions: tuple[np.ndarray, np.ndarray, np.ndarray] | np.ndarray,
     true_densities: tuple[np.ndarray, np.ndarray, np.ndarray] | np.ndarray,
     metric: str,
+    true_forces: tuple[np.ndarray, np.ndarray, np.ndarray] | np.ndarray,
 ) -> None:
     """Evaluate the predicted parameters by converting them back to force profiles and using the surrogate model to predict the resulting densities, then comparing those to the true densities."""
     surrogate_train_parameters = SurrogateTrainParameters(
@@ -184,26 +186,30 @@ def evaluate_predictions_with_surrogate(
         surrogate_train_parameters,
     )
 
+    if isinstance(true_forces, np.ndarray):
+        true_forces = (true_forces, true_forces, true_forces)
     if isinstance(force_predictions, np.ndarray):
         force_predictions = (force_predictions, force_predictions, force_predictions)
     if isinstance(true_densities, np.ndarray):
         true_densities = (true_densities, true_densities, true_densities)
-    x_train, x_val, x_test = force_predictions
+    _, _, x_test = true_forces
+    x_train_pred, x_val_pred, x_test_pred = force_predictions
+
     y_train, y_val, y_test = true_densities
 
     y_train_predicted, _ = predict_with_surrogates(
         surrogate_predictors,
-        x_train,
+        x_train_pred,
         batch_size=surrogate_train_parameters.batch_size,
     )
     y_val_predicted, _ = predict_with_surrogates(
         surrogate_predictors,
-        x_val,
+        x_val_pred,
         batch_size=surrogate_train_parameters.batch_size,
     )
     y_test_predicted, y_test_std = predict_with_surrogates(
         surrogate_predictors,
-        x_test,
+        x_test_pred,
         batch_size=surrogate_train_parameters.batch_size,
     )
 
@@ -250,6 +256,8 @@ def evaluate_predictions_with_surrogate(
         y_test_std[worst_index].squeeze(),
         y_test[worst_index],
         x_test[worst_index],
+        x_test_pred[worst_index],
+
     )
 
     for k in np.random.choice(len(x_test), size=5, replace=False):
@@ -258,6 +266,7 @@ def evaluate_predictions_with_surrogate(
             y_test_std[k].squeeze(),
             y_test[k],
             x_test[k],
+            x_test_pred[k],
         )
 
 
