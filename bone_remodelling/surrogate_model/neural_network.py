@@ -12,7 +12,13 @@ logger = logging.getLogger(__name__)
 class SurrogateModel(torch.nn.Module):
     """Surrogate Neural Network Model for bone remodeling simulation."""
 
-    def __init__(self, width: int = 1024, encoder_depth: int = 6, decoder_depth: int = 4, dropout: float = 0.3) -> None:
+    def __init__(
+        self,
+        width: int = 1024,
+        encoder_depth: int = 6,
+        decoder_depth: int = 4,
+        dropout: float = 0.3,
+    ) -> None:
         """Initialize the SurrogateModel."""
         super().__init__()
         self.width = width
@@ -72,7 +78,10 @@ class SurrogateModel(torch.nn.Module):
             next_channel = max(minimal_channel, current_channel // 2)
             conv_layers.append(
                 torch.nn.Conv2d(
-                    current_channel, next_channel, kernel_size=3, padding=1,
+                    current_channel,
+                    next_channel,
+                    kernel_size=3,
+                    padding=1,
                 ),
             )
             conv_layers.append(torch.nn.ReLU())
@@ -85,7 +94,9 @@ class SurrogateModel(torch.nn.Module):
         )
         return torch.nn.Sequential(*conv_layers)
 
-    def update(self, width: int, encoder_depth: int, decoder_depth: int, dropout: float) -> None:
+    def update(
+        self, width: int, encoder_depth: int, decoder_depth: int, dropout: float,
+    ) -> None:
         """Update the size of the neural network."""
         current_device = next(self.parameters()).device
 

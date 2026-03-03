@@ -34,7 +34,13 @@ class ResidualBlock(torch.nn.Module):
 class InverseModel(torch.nn.Module):
     """Inverse Neural Network Model for bone remodeling simulation."""
 
-    def __init__(self, width: int = 1024, encoder_depth: int = 6, decoder_depth: int = 4, dropout: float = 0.3) -> None:
+    def __init__(
+        self,
+        width: int = 1024,
+        encoder_depth: int = 6,
+        decoder_depth: int = 4,
+        dropout: float = 0.3,
+    ) -> None:
         """Initialize the SurrogateModel."""
         super().__init__()
         self.width = width
@@ -108,7 +114,9 @@ class InverseModel(torch.nn.Module):
                 linear_layers.append(torch.nn.ReLU())
         return torch.nn.Sequential(*linear_layers)
 
-    def update(self, width: int, encoder_depth: int, decoder_depth: int, dropout: float) -> None:
+    def update(
+        self, width: int, encoder_depth: int, decoder_depth: int, dropout: float,
+    ) -> None:
         """Update the size of the neural network dynamically."""
         current_device = next(self.parameters()).device
 

@@ -78,15 +78,15 @@ class SurrogateTrainParameters(TrainParameters):
         minimal_encoder_depth: int = 2
         if self.encoder_depth < minimal_encoder_depth:
             logger.warning(
-                f"Model encoder depth below buildable range, using minimun of {minimal_encoder_depth}."
+                f"Model encoder depth below buildable range, using minimun of {minimal_encoder_depth}.",
             )
         minimal_decoder_depth: int = 2
         if self.decoder_depth < minimal_decoder_depth:
             logger.warning(
-                f"Model decoder depth below buildable range, using minimun of {minimal_decoder_depth}."
+                f"Model decoder depth below buildable range, using minimun of {minimal_decoder_depth}.",
             )
         minimal_width: int = 128
         if self.width < minimal_width:
             logger.warning(
-                f"Model width below buildable range, using minimun of {minimal_width}."
+                f"Model width below buildable range, using minimun of {minimal_width}.",
             )
