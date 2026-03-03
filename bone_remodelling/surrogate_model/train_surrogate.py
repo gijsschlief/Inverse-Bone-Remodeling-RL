@@ -149,8 +149,8 @@ def objective(
         "learning_rate": trial.suggest_float("learning_rate", 1e-5, 1e-2, log=True),
         "batch_size": trial.suggest_int("batch_size", 16, 256),
         "width": trial.suggest_categorical("width", [128, 256, 512, 1024, 2048]),
-        "encoder_depth": trial.suggest_int("encoder_depth", 2, 10),
-        "decoder_depth": trial.suggest_int("decoder_depth", 2, 10),
+        "encoder_depth": trial.suggest_int("encoder_depth", 2, 5),
+        "decoder_depth": trial.suggest_int("decoder_depth", 2, 5),
         "dropout": trial.suggest_float("dropout", 0.0, 0.5),
     }
 
