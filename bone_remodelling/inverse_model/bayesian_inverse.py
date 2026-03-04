@@ -34,7 +34,7 @@ class BayesianParameters:
 
     device: torch.device
     config_parameters: ConfigurationParameters
-    learning_rate: float = 0.01
+    learning_rate: float = 1.0
     regularization_lambda: float = 0.1
     param_dim: int = 3
     max_iterations: int = 20
