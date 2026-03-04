@@ -2,7 +2,7 @@
 
 import argparse
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
@@ -33,12 +33,17 @@ class BayesianParameters:
     """Parameters for the Bayesian inverse model."""
 
     device: torch.device
+    config_parameters: ConfigurationParameters
     learning_rate: float = 0.01
     regularization_lambda: float = 0.1
-    force_dim: tuple[int, int] = (3, 10)
     param_dim: int = 3
     max_iterations: int = 5
     max_peak_height: float = 200.0
+    force_dim: tuple[int, int] = field(default_factory=lambda: (3, 0))
+
+    def __post_init__(self) -> None:
+        """Initialize force_dim based on config_parameters."""
+        self.force_dim = (3, max(self.config_parameters.force_top_resolution, self.config_parameters.force_side_resolution))
 
 
 def map_inverse(
@@ -51,7 +56,7 @@ def map_inverse(
     best_force = np.zeros(bayesian_parameters.force_dim, dtype=np.float32)
 
     for peak_side in range(3):
-        for peak_location in range(10):
+        for peak_location in range(bayesian_parameters.force_dim[1]):
             peak_height = torch.tensor(
                 [bayesian_parameters.max_peak_height / 2],
                 dtype=torch.float32,
@@ -76,27 +81,20 @@ def map_inverse(
                     ),
                 )
             # Evaluate final loss
-            force_np = (
-                params_to_force_profile_torch(
+            with torch.no_grad():
+                final_force_tensor = params_to_force_profile_torch(
                     peak_location,
                     peak_side,
                     peak_height,
+                    bayesian_parameters.force_dim[1],
                     device=bayesian_parameters.device,
                 )
-                .detach()
-                .numpy()
-            )
-            force_tensor = torch.tensor(
-                force_np,
-                dtype=torch.float32,
-                device=bayesian_parameters.device,
-            ).unsqueeze(0)
-            final_pred = surrogate_model.torch_prediction(force_tensor)
-            final_loss = torch.mean((final_pred - observed_density) ** 2).item()
+                final_pred = surrogate_model.torch_prediction(final_force_tensor.unsqueeze(0))
+                final_loss = torch.mean((final_pred - observed_density) ** 2).item()
 
-            if final_loss < best_loss:
-                best_loss = final_loss
-                best_force = force_np
+                if final_loss < best_loss:
+                    best_loss = final_loss
+                    best_force = final_force_tensor.cpu().numpy()
     return best_force
 
 
@@ -114,6 +112,7 @@ def closure(
         location,
         side,
         peak_height,
+        bayesian_parameters.force_dim[1],
         device=bayesian_parameters.device,
     ).unsqueeze(0)
     density_pred = surrogate_model.torch_prediction(force_tensor)
@@ -158,7 +157,7 @@ def evaluate_bayesian(
         random_state=configuration_parameters.seed,
     )
 
-    bayesian_parameters = BayesianParameters(device=device)
+    bayesian_parameters = BayesianParameters(device=device, config_parameters=configuration_parameters)
 
     if sample_count is None:
         sample_count = len(density_test)
@@ -231,5 +230,5 @@ if __name__ == "__main__":
         "model_1_19.pth",
     )
     evaluate_bayesian(
-        ConfigurationParameters(), device, surrogate_path, sample_count=10
+        ConfigurationParameters(), device, surrogate_path, sample_count=10,
     )
