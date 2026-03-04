@@ -204,12 +204,19 @@ def cli(
         type=int,
         help="Number of samples for inverse Bayesian evaluation.",
     )
+    parser.add_argument(
+        "--surrogate_model",
+        type=str,
+        help="Path to the surrogate model for Bayesian evaluation.",
+    )
+    args = parser.parse_args(remaining_args)
+    if not args.surrogate_model:
+        args.surrogate_model = "model_1.pth"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     surrogate_path = configuration_parameters.output_dir / Path(
         "surrogate_models",
-        "model_1_19.pth",
+        args.surrogate_model,
     )
-    args = parser.parse_args(remaining_args)
     evaluate_bayesian(
         configuration_parameters,
         device,
