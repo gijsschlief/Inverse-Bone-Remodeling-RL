@@ -207,7 +207,9 @@ class SurrogatePredictor:
             )
             return x_raw
         if isinstance(x_raw, torch.Tensor):
-            return (x_raw - torch.tensor(self.x_mean, device=self.train_parameters.device)) / torch.tensor(self.x_std, device=self.train_parameters.device)
+            return (
+                x_raw - torch.tensor(self.x_mean, device=self.train_parameters.device)
+            ) / torch.tensor(self.x_std, device=self.train_parameters.device)
         if isinstance(x_raw, np.ndarray):
             return (x_raw - self.x_mean) / self.x_std
         raise TypeError("x_raw must be either a torch.Tensor or a np.ndarray")
@@ -223,7 +225,9 @@ class SurrogatePredictor:
             )
             return y_raw
         if isinstance(y_raw, torch.Tensor):
-            return (y_raw - torch.tensor(self.y_mean, device=self.train_parameters.device)) / torch.tensor(self.y_std, device=self.train_parameters.device)
+            return (
+                y_raw - torch.tensor(self.y_mean, device=self.train_parameters.device)
+            ) / torch.tensor(self.y_std, device=self.train_parameters.device)
         if isinstance(y_raw, np.ndarray):
             return (y_raw - self.y_mean) / self.y_std
         raise TypeError("y_raw must be either a torch.Tensor or a np.ndarray")
@@ -239,7 +243,10 @@ class SurrogatePredictor:
             )
             return x_normalized
         if isinstance(x_normalized, torch.Tensor):
-            return x_normalized * torch.tensor(self.x_std, device=self.train_parameters.device) + torch.tensor(self.x_mean, device=self.train_parameters.device)
+            return x_normalized * torch.tensor(
+                self.x_std,
+                device=self.train_parameters.device,
+            ) + torch.tensor(self.x_mean, device=self.train_parameters.device)
         if isinstance(x_normalized, np.ndarray):
             return x_normalized * self.x_std + self.x_mean
         raise TypeError("x_normalized must be either a torch.Tensor or a np.ndarray")
@@ -255,7 +262,10 @@ class SurrogatePredictor:
             )
             return y_normalized
         if isinstance(y_normalized, torch.Tensor):
-            return y_normalized * torch.tensor(self.y_std, device=self.train_parameters.device) + torch.tensor(self.y_mean, device=self.train_parameters.device)
+            return y_normalized * torch.tensor(
+                self.y_std,
+                device=self.train_parameters.device,
+            ) + torch.tensor(self.y_mean, device=self.train_parameters.device)
         if isinstance(y_normalized, np.ndarray):
             return y_normalized * self.y_std + self.y_mean
         raise TypeError("y_normalized must be either a torch.Tensor or a np.ndarray")

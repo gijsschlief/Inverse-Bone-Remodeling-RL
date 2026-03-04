@@ -45,10 +45,11 @@ def params_to_force_profile(
             force_profile[peak_side, j] = peak_height
     return force_profile
 
+
 def params_to_force_profile_torch(
     peak_location: int,
     peak_side: int,
-    peak_height: torch.Tensor, # This must be a 1D tensor with requires_grad=True
+    peak_height: torch.Tensor,  # This must be a 1D tensor with requires_grad=True
     length: int = 10,
     device: torch.device = torch.device("cpu"),
 ) -> torch.Tensor:
@@ -63,7 +64,7 @@ def params_to_force_profile_torch(
 
     if peak_location > 0:
         left_mask = (j < peak_location).float()
-        left_slope = (j / peak_location)
+        left_slope = j / peak_location
     else:
         left_mask = torch.zeros_like(j)
         left_slope = 0.0
@@ -77,9 +78,12 @@ def params_to_force_profile_torch(
 
     center_mask = (j == peak_location).float()
 
-    row_values = peak_height * (left_mask * left_slope + right_mask * right_slope + center_mask)
+    row_values = peak_height * (
+        left_mask * left_slope + right_mask * right_slope + center_mask
+    )
     force_profile[peak_side, :] = row_values
     return force_profile
+
 
 def reshape_input_features_for_model(unconverted_data: np.ndarray) -> np.ndarray:
     """Convert new data to tensor format for the model.

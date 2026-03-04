@@ -63,15 +63,16 @@ def main() -> None:  # noqa: C901, PLR0912
             "generate_forward_data",
             "train_surrogate",
             "evaluate_surrogate",
-            "train_inverse",
-            "evaluate_inverse",
+            "train_inverse_nn",
+            "evaluate_inverse_nn",
+            "bayesian_inverse",
             "train_rl",
             "evaluate_rl",
             "analysis",
             "train_all",
             "evaluate_all",
         ],
-        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse, evaluate_inverse, train_rl, evaluate_rl, analysis, train_all, evaluate_all.",
+        help="The module to run. Choices are: animate_forward_model, generate_forward_data, train_surrogate, evaluate_surrogate, train_inverse_nn, evaluate_inverse_nn, bayesian_inverse, train_rl, evaluate_rl, analysis, train_all, evaluate_all.",
     )
     args, remaining_args = parser.parse_known_args()
     configuration_parameters = build_configuration_parameters()
@@ -108,19 +109,26 @@ def main() -> None:  # noqa: C901, PLR0912
 
             surrogate_evaluation(configuration_parameters, remaining_args)
 
-        elif args.module == "train_inverse":
+        elif args.module == "train_inverse_nn":
             from bone_remodelling.inverse_model.train_inverse import (  # noqa: PLC0415
                 cli as inverse_training,
             )
 
             inverse_training(configuration_parameters, remaining_args)
 
-        elif args.module == "evaluate_inverse":
+        elif args.module == "evaluate_inverse_nn":
             from bone_remodelling.inverse_model.evaluate_inverse import (  # noqa: PLC0415
                 cli as inverse_evaluation,
             )
 
             inverse_evaluation(configuration_parameters, remaining_args)
+
+        elif args.module == "bayesian_inverse":
+            from bone_remodelling.inverse_model.bayesian_inverse import (  # noqa: PLC0415
+                cli as bayesian_inverse,
+            )
+
+            bayesian_inverse(configuration_parameters, remaining_args)
 
         elif args.module == "train_rl":
             import matplotlib  # noqa: ICN001, PLC0415

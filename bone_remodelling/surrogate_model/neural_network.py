@@ -95,7 +95,11 @@ class SurrogateModel(torch.nn.Module):
         return torch.nn.Sequential(*conv_layers)
 
     def update(
-        self, width: int, encoder_depth: int, decoder_depth: int, dropout: float,
+        self,
+        width: int,
+        encoder_depth: int,
+        decoder_depth: int,
+        dropout: float,
     ) -> None:
         """Update the size of the neural network."""
         current_device = next(self.parameters()).device

@@ -257,7 +257,6 @@ def evaluate_predictions_with_surrogate(
         y_test[worst_index],
         x_test[worst_index],
         x_test_pred[worst_index],
-
     )
 
     for k in np.random.choice(len(x_test), size=5, replace=False):

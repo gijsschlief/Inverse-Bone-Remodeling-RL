@@ -115,7 +115,11 @@ class InverseModel(torch.nn.Module):
         return torch.nn.Sequential(*linear_layers)
 
     def update(
-        self, width: int, encoder_depth: int, decoder_depth: int, dropout: float,
+        self,
+        width: int,
+        encoder_depth: int,
+        decoder_depth: int,
+        dropout: float,
     ) -> None:
         """Update the size of the neural network dynamically."""
         current_device = next(self.parameters()).device
