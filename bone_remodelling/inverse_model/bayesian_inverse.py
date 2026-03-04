@@ -37,7 +37,7 @@ class BayesianParameters:
     learning_rate: float = 0.01
     regularization_lambda: float = 0.1
     param_dim: int = 3
-    max_iterations: int = 5
+    max_iterations: int = 20
     max_peak_height: float = 200.0
     force_dim: tuple[int, int] = field(default_factory=lambda: (3, 0))
 
@@ -67,19 +67,18 @@ def map_inverse(
             optimiser = torch.optim.LBFGS(
                 [peak_height],
                 lr=bayesian_parameters.learning_rate,
+                max_iter=bayesian_parameters.max_iterations,
             )
-
-            for _ in range(bayesian_parameters.max_iterations):
-                params = (peak_location, peak_side, peak_height)
-                optimiser.step(
-                    lambda params=params, optimiser=optimiser: closure(
-                        surrogate_model,
-                        observed_density,
-                        bayesian_parameters,
-                        params,
-                        optimiser,
-                    ),
-                )
+            params = (peak_location, peak_side, peak_height)
+            optimiser.step(
+                lambda params=params, optimiser=optimiser: closure(
+                    surrogate_model,
+                    observed_density,
+                    bayesian_parameters,
+                    params,
+                    optimiser,
+                ),
+            )
             # Evaluate final loss
             with torch.no_grad():
                 final_force_tensor = params_to_force_profile_torch(
