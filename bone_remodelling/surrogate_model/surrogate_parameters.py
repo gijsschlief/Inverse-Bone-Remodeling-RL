@@ -49,7 +49,7 @@ class SurrogateTrainParameters(TrainParameters):
     epochs: int = 1_000
 
     # Hyperparameters
-    batch_size: int = 18
+    batch_size: int = 20
     weight_decay: float = 1e-5
     alpha: float = 0.5
     width: int = 2048
@@ -58,7 +58,7 @@ class SurrogateTrainParameters(TrainParameters):
     dropout: float = 0.4
 
     # Learning rate variables
-    learning_rate: float = 0.002
+    learning_rate: float = 0.0015
     patience_lr_scheduler: int = 10
     factor_lr_scheduler: float = 0.5
     cooldown_lr_scheduler: int = 0
