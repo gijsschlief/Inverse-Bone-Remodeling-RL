@@ -20,15 +20,15 @@ class InverseTrainParameters(TrainParameters):
     epochs: int = 1_000
 
     # Hyperparameters
-    batch_size: int = 180
+    batch_size: int = 154
     weight_decay: float = 1e-5
     width: int = 2048
-    encoder_depth: int = 4
-    decoder_depth: int = 4
-    dropout: float = 0.43
+    encoder_depth: int = 5
+    decoder_depth: int = 5
+    dropout: float = 0.35
 
     # Learning rate variables
-    learning_rate: float = 0.003
+    learning_rate: float = 0.0008
     patience_lr_scheduler: int = 10
     factor_lr_scheduler: float = 0.5
     cooldown_lr_scheduler: int = 0
