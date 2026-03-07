@@ -90,7 +90,7 @@ def inverse_model_evaluation(
 ) -> None:
     """Load data, preprocess it, load the inverse model, and evaluate its performance."""
     np.random.seed(random_state)
-    raw_path = data_path / Path("raw")
+    raw_path = data_path / Path("raw", "triangular")
     data = ForwardDataManager(raw_path).load_directory()
     if data is None:
         logger.error("Failed to load the forward model data.")
@@ -307,7 +307,7 @@ if __name__ == "__main__":
     # Developer convenience entry point.
     # For reproducible runs, use the unified CLI (main.py).
     config = ConfigurationParameters(
-        output_dir=Path(__file__).parent.parent.parent / Path("data"),
+        output_dir=Path(__file__).parent.parent.parent / Path("data", "triangular"),
     )
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model_path = (config.output_dir / Path("inverse_models", "model.pth")).resolve()
