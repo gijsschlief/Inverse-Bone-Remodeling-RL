@@ -33,9 +33,9 @@ class RLParameters:
     force_boundary: float = 200
     density_constraint: float = 1.73
     n_steps: int = 2048
-    batch_size: int = 64
-    ent_coef: float = 0.01
-    learning_rate: float = 1e-3
+    batch_size: int = 512
+    ent_coef: float = 0.005
+    learning_rate: float = 3e-4
     learning_rate_decay: float = 0.1
     minimum_learning_rate: float = 1e-5
     seed: int = 42
