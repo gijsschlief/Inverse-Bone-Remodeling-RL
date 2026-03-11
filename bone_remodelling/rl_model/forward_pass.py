@@ -55,7 +55,7 @@ class SurrogateForwarder(ForwardPass):
             train_parameters (TrainParameters): Training parameters for the surrogate model.
 
         """
-        self.batch_size = config.seed
+        self.batch_size = train_parameters.batch_size
         self.density_shape = (config.mesh_top_resolution, config.mesh_side_resolution)
         self.predictors = load_surrogate_models(model_class, train_parameters)
 
@@ -71,8 +71,7 @@ class SurrogateForwarder(ForwardPass):
             np.ndarray: The predicted density from the surrogate model.
 
         """
-        x_flat = force_profile.flatten()
-        x_input = x_flat[np.newaxis, :]
+        x_input = force_profile[np.newaxis, :, :]
         return predict_with_surrogates(
             self.predictors,
             x_input,
