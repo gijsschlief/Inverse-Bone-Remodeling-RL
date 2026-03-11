@@ -43,7 +43,13 @@ class BayesianParameters:
 
     def __post_init__(self) -> None:
         """Initialize force_dim based on config_parameters."""
-        self.force_dim = (3, max(self.config_parameters.force_top_resolution, self.config_parameters.force_side_resolution))
+        self.force_dim = (
+            3,
+            max(
+                self.config_parameters.force_top_resolution,
+                self.config_parameters.force_side_resolution,
+            ),
+        )
 
 
 def map_inverse(
@@ -88,7 +94,9 @@ def map_inverse(
                     bayesian_parameters.force_dim[1],
                     device=bayesian_parameters.device,
                 )
-                final_pred = surrogate_model.torch_prediction(final_force_tensor.unsqueeze(0))
+                final_pred = surrogate_model.torch_prediction(
+                    final_force_tensor.unsqueeze(0)
+                )
                 final_loss = torch.mean((final_pred - observed_density) ** 2).item()
 
                 if final_loss < best_loss:
@@ -156,7 +164,9 @@ def evaluate_bayesian(
         random_state=configuration_parameters.seed,
     )
 
-    bayesian_parameters = BayesianParameters(device=device, config_parameters=configuration_parameters)
+    bayesian_parameters = BayesianParameters(
+        device=device, config_parameters=configuration_parameters
+    )
 
     if sample_count is None:
         sample_count = len(density_test)
@@ -236,5 +246,8 @@ if __name__ == "__main__":
         "model_1_19.pth",
     )
     evaluate_bayesian(
-        ConfigurationParameters(), device, surrogate_path, sample_count=10,
+        ConfigurationParameters(),
+        device,
+        surrogate_path,
+        sample_count=10,
     )

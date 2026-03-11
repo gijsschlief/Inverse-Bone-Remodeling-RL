@@ -97,6 +97,8 @@ class BoneRemodelingEnvironment(Env):
         # Episode variables
         self.current_step = 0
         self.last_predicted_density = np.zeros(self.density_shape, dtype=np.float32)
+        self.previous_ssim = 0.0
+        self.target_density = target_densities[0]
 
     def reset(
         self,
@@ -121,7 +123,6 @@ class BoneRemodelingEnvironment(Env):
         super().reset(seed=seed)
         np.random.seed(seed)
         self.current_step = 0
-        self.reward = 0.0
         self.peak_magnitude = np.float32(0.0)
         self.peak_location = np.int8(0)
 
@@ -140,6 +141,14 @@ class BoneRemodelingEnvironment(Env):
         episode_observation = np.vstack(
             [difference, np.zeros(self.force_profile.shape, dtype=np.float32)],
         )
+
+        initial_ssim = calculate_similarity(
+            reference_matrix=self.target_density,
+            comparison_matrix=self.last_predicted_density,  # This is zeros right now
+            method="ssim",
+        )
+        self.previous_ssim = initial_ssim
+
         info: dict = {}
         info["sample_index"] = self.current_sample_index
         info["target_density"] = self.target_density
@@ -182,7 +191,7 @@ class BoneRemodelingEnvironment(Env):
         predicted_density = self.forwarder.forward_pass(
             force_profile=self.force_profile,
         )
-        reward = calculate_similarity(
+        current_ssim = calculate_similarity(
             reference_matrix=self.target_density,
             comparison_matrix=predicted_density,
             method="ssim",
@@ -196,27 +205,19 @@ class BoneRemodelingEnvironment(Env):
         )
 
         self.current_step += 1
-        self.reward = reward
-
-        # check success: is the error (observation) small everywhere?
-        success = np.allclose(density_difference, 0.0, atol=0.05)
+        self.reward = current_ssim - self.previous_ssim
+        self.previous_ssim = current_ssim
 
         # base termination: either out of steps or success
-        terminated = success or (self.current_step >= self.max_steps)
+        ssim_threshold = 0.99
+        success = current_ssim >= ssim_threshold
+        terminated = (self.current_step >= self.max_steps or success)
         truncated = False
-
-        # if success, give a big bonus on top of the normal reward
-        if success:
-            remaining_steps = self.max_steps - self.current_step
-            reward += remaining_steps * 1.0
-            logger.info(
-                f"Sample {self.current_sample_index} succeeded at step {self.current_step} with reward {reward:.4f}",
-            )
 
         info = {
             "force_profile": self.force_profile,
             "predicted_density": predicted_density,
-            "reward": reward,
+            "reward": self.reward,
             "success": success,
             "current_step": self.current_step,
             "sample_index": self.current_sample_index,
@@ -225,7 +226,7 @@ class BoneRemodelingEnvironment(Env):
         observation = np.vstack(
             [density_difference, self.force_profile.astype(np.float32)],
         )  # Append action to observation
-        return observation, reward, terminated, truncated, info
+        return observation, self.reward, terminated, truncated, info
 
     def _generate_triangular_profile(
         self,
