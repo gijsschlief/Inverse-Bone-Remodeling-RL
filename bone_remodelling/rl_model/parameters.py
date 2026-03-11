@@ -64,7 +64,7 @@ class RunConfiguration:
 
     output_dir: Path
     forward_type: str = "surrogate"
-    total_timesteps: int = 20_000_001
+    total_timesteps: int = 1_000_001
     render_frequency: int = 100_000
     validation_frequency: int = 200_000
     validation_size: int = 100
@@ -81,13 +81,13 @@ class RunConfiguration:
 
         self.reward_plot_path = self.output_dir / Path(
             "figures",
-            "reward_curve_extra_action_ensemble_RL_20mil.png",
+            "reward_curve.png",
         )
         self.agent_path = self.output_dir / Path(
             "agents",
-            "surrogate_agent_extra_action_best_20mil.zip",
+            "agent.zip",
         )
-        self.data_path = self.output_dir / Path("raw", "triangular")
+        self.data_path = self.output_dir / Path("raw")
         self.surrogate_path = self.output_dir / Path(
             "surrogate_models",
             "surrogate.pth",

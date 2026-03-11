@@ -48,15 +48,13 @@ class BoneRemodelingEnvironment(Env):
 
         # Define the action space
         self.per_step_force_change = rl_parameters.per_step_force_change
-        self.action_space = spaces.Dict({
-            "location": spaces.Discrete(30),
-            "magnitude": spaces.Box(
-                low=-rl_parameters.per_step_force_change,
-                high=rl_parameters.per_step_force_change,
-                shape=(1,),
-                dtype=np.float32,
-            ),
-        })
+        action_space_lower_bounds = np.array([0.0] * 30 + [-self.per_step_force_change], dtype=np.float32)
+        action_space_upper_bounds = np.array([1.0] * 30 + [self.per_step_force_change], dtype=np.float32)
+        self.action_space = spaces.Box(
+            low=action_space_lower_bounds,
+            high=action_space_upper_bounds,
+            dtype=np.float32,
+        )
 
         # Define the observation space
         self.grid_size = int(np.prod(self.density_shape))
@@ -136,7 +134,7 @@ class BoneRemodelingEnvironment(Env):
         info["target_force"] = self.target_force
         return self._get_observation(), info
 
-    def step(self, action: dict) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Perform a step in the environment.
 
         Args:
@@ -148,10 +146,9 @@ class BoneRemodelingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        location_index = int(action["location"])
-        magnitude = float(action["magnitude"])
+        location_index = np.argmax(action[:30])
         side_index, peak_position = np.divmod(location_index, self._profile_length)
-        self.force_profile[side_index, peak_position] += magnitude
+        self.force_profile[side_index, peak_position] += action[30].item()
         self.force_profile = np.clip(
             self.force_profile, -self.force_boundary, self.force_boundary,
         )

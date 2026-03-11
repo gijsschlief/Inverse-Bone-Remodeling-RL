@@ -120,11 +120,11 @@ def initialize_new_model(
     policy_kwargs = {
         "features_extractor_class": BoneFeaturesExtractor,
         "activation_fn": torch.nn.ReLU,
-        "net_arch": {"pi": [64, 64], "vf": [64, 64]},
+        "net_arch": {"pi": [256, 128], "vf": [256, 128]},
     }
 
     return PPO(
-        policy="MultiInputPolicy",
+        policy="MlpPolicy",
         env=environment,
         verbose=rl_parameters.verbose,
         n_steps=rl_parameters.n_steps,
