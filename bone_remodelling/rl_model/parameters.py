@@ -29,7 +29,7 @@ class RLParameters:
 
     """
 
-    max_steps: int = 25
+    max_steps: int = 50
     force_boundary: float = 200
     density_constraint: float = 1.73
     n_steps: int = 2048
