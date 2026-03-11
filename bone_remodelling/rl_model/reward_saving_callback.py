@@ -59,6 +59,7 @@ class RewardSavingCallback(BaseCallback):
         episode_x = np.array(self.metrics.episode_end_timesteps)
         val_steps = self.metrics.validation_steps
         val_scores = self.metrics.validation_ssim
+        self.out_path.parent.mkdir(parents=True, exist_ok=True)
 
         if len(rewards) == 0:
             logger.warning("No rewards collected, skipping plot.")
@@ -82,7 +83,7 @@ class RewardSavingCallback(BaseCallback):
             )
             small_smoothed_x = episode_x[small_window - 1 :]
 
-        fig, reward_axis = plt.subplots(figsize=(12, 5))
+        _, reward_axis = plt.subplots(figsize=(12, 5))
 
         # Reward curve (left y-axis)
         if small_smoothed is not None and small_smoothed_x is not None:

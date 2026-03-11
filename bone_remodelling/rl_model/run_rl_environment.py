@@ -48,6 +48,7 @@ current_learning_rate = {"value": RLParameters().learning_rate}
 
 def save_model_safely(model: PPO, path: Path) -> Path:
     """Save the model to a file, ensuring no overwriting of existing files."""
+    path.parent.mkdir(parents=True, exist_ok=True)
     if Path.exists(path):
         directory = path.parent
         base_path = path.stem
