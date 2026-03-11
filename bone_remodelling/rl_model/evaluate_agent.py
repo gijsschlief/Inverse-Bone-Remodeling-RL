@@ -165,7 +165,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     rl_parameters = RLParameters()
 
     surrogate_parameters = SurrogateTrainParameters(
-        model_path=(run_parameters.data_path / Path("surrogate_models", "surrogate.pth")).resolve(),
+        model_path=(config.output_dir / Path("surrogate_models", "surrogate.pth")).resolve(),
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
 
