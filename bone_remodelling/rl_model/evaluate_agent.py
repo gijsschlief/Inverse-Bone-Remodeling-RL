@@ -11,9 +11,6 @@ from stable_baselines3 import PPO
 from bone_remodelling.forward_data.force_profile_generator import ForceProfileGenerator
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.forward_model.density_visualizer import plot_density_matrix
-from bone_remodelling.inverse_model.evaluate_inverse import (
-    inverse_model_metrics,
-)
 from bone_remodelling.parameters import ConfigurationParameters
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import (
@@ -150,7 +147,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     run_parameters = RunConfiguration(output_dir=config.output_dir)
 
     forward_data_manager = ForwardDataManager(
-        (run_parameters.data_path / Path("raw", "triangular")).resolve(),
+        (run_parameters.data_path / Path("raw")).resolve(),
     )
     result = forward_data_manager.load_directory()
     if result is None:
@@ -168,7 +165,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     rl_parameters = RLParameters()
 
     surrogate_parameters = SurrogateTrainParameters(
-        model_path=(run_parameters.data_path / Path("surrogate_models")).resolve(),
+        model_path=(run_parameters.data_path / Path("surrogate_models", "surrogate.pth")).resolve(),
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
 
@@ -191,38 +188,18 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
         render=False,
     )
 
-    # Force Magnitude Comparison
-    test_peaks = np.max(
-        np.abs(np.array(evaluation_result["sample_forces"])),
-        axis=(1, 2),
-    )
-    eval_peaks = np.max(np.abs(np.array(evaluation_result["forces"])), axis=(1, 2))
-    eps = 1e-3
-    test_peaks, eval_peaks = (
-        np.clip(test_peaks, eps, None),
-        np.clip(eval_peaks, eps, None),
-    )
-    plt.figure(num=2)
-    plt.scatter(test_peaks, eval_peaks, alpha=0.4)
-    max_test, max_eval = test_peaks.max(), eval_peaks.max()
-    min_test, min_eval = test_peaks.min(), eval_peaks.min()
-    max_val, min_val = max(max_test, max_eval), min(min_test, min_eval)
-    plt.plot([min_val, max_val], [min_val, max_val], "k--", linewidth=2)
-    plt.xscale("log")
-    plt.yscale("log")
-    plt.xlim(min_test, max_test)
-    plt.ylim(min_eval, max_eval)
-    plt.xlabel("True Peak Force")
-    plt.ylabel("Predicted Peak Force")
-    plt.title("Absolute Peak Force Magnitude Accuracy")
-    plt.grid(visible=True)
-    plt.show()
-
     sample_forces = np.array(evaluation_result["sample_forces"])
     predicted_forces = np.array(evaluation_result["forces"])
     sample_densities = np.array(evaluation_result["sample_densities"])
     predicted_densities = np.array(evaluation_result["predicted_densities"])
-    inverse_model_metrics(sample_forces, predicted_forces)
+
+    # Plot distribution of SSIM scores
+    plt.figure(figsize=(10, 6))
+    plt.hist(evaluation_result["ssim_scores"], bins=30, color='skyblue', edgecolor='black')
+    plt.title("Distribution of SSIM Scores across Test Set")
+    plt.xlabel("SSIM")
+    plt.ylabel("Frequency")
+    plt.show()
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
