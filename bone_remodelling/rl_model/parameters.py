@@ -38,7 +38,7 @@ class RLParameters:
     learning_rate: float = 3e-4
     learning_rate_decay: float = 0.1
     minimum_learning_rate: float = 1e-5
-    seed: int = 42
+    seed: int = 1
     verbose: int = 1
     device: str = "cpu"
     patience: int = 20
