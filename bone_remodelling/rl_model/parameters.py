@@ -65,7 +65,7 @@ class RunConfiguration:
     output_dir: Path
     forward_type: str = "surrogate"
     total_timesteps: int = 1_000_001
-    render_frequency: int = 100_000
+    render_frequency: int = 100_001
     validation_frequency: int = 200_000
     validation_size: int = 100
     number_of_environments: int = 10
