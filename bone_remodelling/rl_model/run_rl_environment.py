@@ -120,7 +120,7 @@ def initialize_new_model(
     policy_kwargs = {
         "features_extractor_class": BoneFeaturesExtractor,
         "activation_fn": torch.nn.ReLU,
-        "net_arch": {"pi": [1024, 1024, 512, 512], "vf": [1024, 1024, 512, 256]},
+        "net_arch": {"pi": [1024, 1024, 512, 512], "vf": [1024, 1024, 512, 512]},
     }
 
     return PPO(
