@@ -18,6 +18,7 @@ from stable_baselines3.common.vec_env import SubprocVecEnv, VecNormalize
 from bone_remodelling.forward_data.force_profile_generator import ForceProfileGenerator
 from bone_remodelling.forward_data.forward_data_manager import ForwardDataManager
 from bone_remodelling.parameters import ConfigurationParameters
+from bone_remodelling.rl_model.custum_actor import BoneFeaturesExtractor
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import (
     FenicsForwarder,
@@ -116,8 +117,14 @@ def initialize_new_model(
 
     """
     logger.info("Initializing a new PPO model.")
+    policy_kwargs = {
+        "features_extractor_class": BoneFeaturesExtractor,
+        "activation_fn": torch.nn.ReLU,
+        "net_arch": {"pi": [64, 64], "vf": [64, 64]},
+    }
+
     return PPO(
-        policy="MlpPolicy",
+        policy="MultiInputPolicy",
         env=environment,
         verbose=rl_parameters.verbose,
         n_steps=rl_parameters.n_steps,
@@ -126,6 +133,7 @@ def initialize_new_model(
         learning_rate=learning_rate_container,
         seed=rl_parameters.seed,
         device=rl_parameters.device,
+        policy_kwargs=policy_kwargs,
     )
 
 

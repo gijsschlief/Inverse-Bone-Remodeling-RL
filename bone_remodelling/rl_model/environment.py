@@ -48,31 +48,15 @@ class BoneRemodelingEnvironment(Env):
 
         # Define the action space
         self.per_step_force_change = rl_parameters.per_step_force_change
-        self.per_step_dead_zone = rl_parameters.per_step_dead_zone
-        self.per_step_location_change = rl_parameters.per_step_location_change
-
-        self.action_space = spaces.Box(
-            low=np.array(
-                [
-                    -self.per_step_force_change,
-                    -self.per_step_dead_zone,
-                    -self.per_step_location_change,
-                ],
+        self.action_space = spaces.Dict({
+            "location": spaces.Discrete(30),
+            "magnitude": spaces.Box(
+                low=-rl_parameters.per_step_force_change,
+                high=rl_parameters.per_step_force_change,
+                shape=(1,),
                 dtype=np.float32,
             ),
-            high=np.array(
-                [
-                    self.per_step_force_change,
-                    self.per_step_dead_zone,
-                    self.per_step_location_change,
-                ],
-                dtype=np.float32,
-            ),
-            dtype=np.float32,
-        )
-
-        self.peak_magnitude = np.float32(0.0)
-        self.peak_location = np.int8(0)
+        })
 
         # Define the observation space
         self.grid_size = int(np.prod(self.density_shape))
@@ -100,6 +84,10 @@ class BoneRemodelingEnvironment(Env):
         self.previous_ssim = 0.0
         self.target_density = target_densities[0]
 
+    def _get_observation(self) -> np.ndarray:
+        density_difference = (self.target_density - self.last_predicted_density).astype(np.float32)
+        return np.vstack([density_difference, self.force_profile.astype(np.float32)])
+
     def reset(
         self,
         *,
@@ -122,29 +110,22 @@ class BoneRemodelingEnvironment(Env):
         """
         super().reset(seed=seed)
         np.random.seed(seed)
-        self.current_step = 0
-        self.peak_magnitude = np.float32(0.0)
-        self.peak_location = np.int8(0)
 
         # Pick a new random sample
         self.current_sample_index = np.random.randint(self.num_samples)
-
-        # Update target for this episode
         self.target_density = self.target_densities[self.current_sample_index]
         self.target_force = self.target_forces[self.current_sample_index]
 
-        # reset observation
+        # Reset predictions
+        self.current_step = 0
         self.last_predicted_density = np.zeros(self.density_shape, dtype=np.float32)
-        difference = (
-            self.target_density.astype(np.float32) - self.last_predicted_density
-        ).astype(np.float32)
-        episode_observation = np.vstack(
-            [difference, np.zeros(self.force_profile.shape, dtype=np.float32)],
+        self.force_profile = np.zeros(
+            self.force_shape,
+            dtype=np.float32,
         )
-
         initial_ssim = calculate_similarity(
             reference_matrix=self.target_density,
-            comparison_matrix=self.last_predicted_density,  # This is zeros right now
+            comparison_matrix=self.last_predicted_density,
             method="ssim",
         )
         self.previous_ssim = initial_ssim
@@ -153,9 +134,9 @@ class BoneRemodelingEnvironment(Env):
         info["sample_index"] = self.current_sample_index
         info["target_density"] = self.target_density
         info["target_force"] = self.target_force
-        return episode_observation, info
+        return self._get_observation(), info
 
-    def step(self, action: np.ndarray) -> tuple[np.ndarray, float, bool, bool, dict]:
+    def step(self, action: dict) -> tuple[np.ndarray, float, bool, bool, dict]:
         """Perform a step in the environment.
 
         Args:
@@ -167,25 +148,12 @@ class BoneRemodelingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        peak_action, dead_zone, location_action = action
-        self.peak_magnitude = self.peak_magnitude + np.float32(peak_action)
-        if self.peak_magnitude < -self.force_boundary:
-            self.peak_magnitude = np.float32(-self.force_boundary)
-        elif self.peak_magnitude > self.force_boundary:
-            self.peak_magnitude = np.float32(self.force_boundary)
-
-        move_peak = np.int8(0) if dead_zone > 0 else np.int8(np.sign(location_action))
-        self.peak_location = np.mod(
-            self.peak_location + move_peak,
-            self._profile_length * 3,
-        )
-
-        side_index, peak_position = np.divmod(self.peak_location, self._profile_length)
-
-        self.force_profile = self._generate_triangular_profile(
-            peak_position=int(peak_position),
-            side=int(np.round(side_index)),
-            peak_height=float(self.peak_magnitude),
+        location_index = int(action["location"])
+        magnitude = float(action["magnitude"])
+        side_index, peak_position = np.divmod(location_index, self._profile_length)
+        self.force_profile[side_index, peak_position] += magnitude
+        self.force_profile = np.clip(
+            self.force_profile, -self.force_boundary, self.force_boundary,
         )
 
         predicted_density = self.forwarder.forward_pass(
@@ -200,9 +168,6 @@ class BoneRemodelingEnvironment(Env):
         )
 
         self.last_predicted_density = predicted_density.astype(np.float32)
-        density_difference = (
-            self.target_density.astype(np.float32) - self.last_predicted_density
-        )
 
         self.current_step += 1
         self.reward = current_ssim - self.previous_ssim
@@ -223,33 +188,7 @@ class BoneRemodelingEnvironment(Env):
             "sample_index": self.current_sample_index,
         }
 
-        observation = np.vstack(
-            [density_difference, self.force_profile.astype(np.float32)],
-        )  # Append action to observation
-        return observation, self.reward, terminated, truncated, info
-
-    def _generate_triangular_profile(
-        self,
-        peak_position: int,
-        side: int,
-        peak_height: float,
-    ) -> np.ndarray:
-        """Generate a 3xN force profile with one triangular peak on the selected side."""
-        profile = np.zeros((3, self._profile_length), dtype=np.float32)
-        peak_position = int(np.clip(peak_position, 0, self._profile_length - 1))
-
-        # Create a triangular profile
-        for j in range(self._profile_length):
-            if j < peak_position:
-                profile[side, j] = (peak_height / peak_position) * j
-            elif j > peak_position:
-                denomerator = self._profile_length - 1 - peak_position
-                profile[side, j] = (peak_height / max(denomerator, 1e-6)) * (
-                    self._profile_length - 1 - j
-                )
-            else:
-                profile[side, j] = peak_height
-        return profile
+        return self._get_observation(), self.reward, terminated, truncated, info
 
     def get_data_for_visualization(
         self,
