@@ -48,8 +48,12 @@ class BoneRemodelingEnvironment(Env):
 
         # Define the action space
         self.per_step_force_change = rl_parameters.per_step_force_change
-        action_space_lower_bounds = np.array([0.0] * 30 + [-self.per_step_force_change], dtype=np.float32)
-        action_space_upper_bounds = np.array([1.0] * 30 + [self.per_step_force_change], dtype=np.float32)
+        action_space_lower_bounds = np.array(
+            [0.0] * 30 + [-self.per_step_force_change], dtype=np.float32
+        )
+        action_space_upper_bounds = np.array(
+            [1.0] * 30 + [self.per_step_force_change], dtype=np.float32
+        )
         self.action_space = spaces.Box(
             low=action_space_lower_bounds,
             high=action_space_upper_bounds,
@@ -83,7 +87,9 @@ class BoneRemodelingEnvironment(Env):
         self.target_density = target_densities[0]
 
     def _get_observation(self) -> np.ndarray:
-        density_difference = (self.target_density - self.last_predicted_density).astype(np.float32)
+        density_difference = (self.target_density - self.last_predicted_density).astype(
+            np.float32
+        )
         return np.vstack([density_difference, self.force_profile.astype(np.float32)])
 
     def reset(
@@ -150,7 +156,9 @@ class BoneRemodelingEnvironment(Env):
         side_index, peak_position = np.divmod(location_index, self._profile_length)
         self.force_profile[side_index, peak_position] += action[30].item()
         self.force_profile = np.clip(
-            self.force_profile, -self.force_boundary, self.force_boundary,
+            self.force_profile,
+            -self.force_boundary,
+            self.force_boundary,
         )
 
         predicted_density = self.forwarder.forward_pass(
@@ -173,7 +181,7 @@ class BoneRemodelingEnvironment(Env):
         # base termination: either out of steps or success
         ssim_threshold = 0.99
         success = current_ssim >= ssim_threshold
-        terminated = (self.current_step >= self.max_steps or success)
+        terminated = self.current_step >= self.max_steps or success
         truncated = False
 
         info = {
