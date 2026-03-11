@@ -42,9 +42,7 @@ class RLParameters:
     verbose: int = 1
     device: str = "cpu"
     patience: int = 20
-    per_step_dead_zone: float = 1.0
-    per_step_force_change: float = 10.0
-    per_step_location_change: float = 1.0
+    per_step_force_change: float = 100.0
 
 
 @dataclass
