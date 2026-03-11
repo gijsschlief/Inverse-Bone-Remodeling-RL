@@ -85,6 +85,8 @@ class BoneRemodelingEnvironment(Env):
         self.last_predicted_density = np.zeros(self.density_shape, dtype=np.float32)
         self.previous_ssim = 0.0
         self.target_density = target_densities[0]
+        self.target_force = target_forces[0]
+        self.reward = 0.0
 
     def _get_observation(self) -> np.ndarray:
         density_difference = (self.target_density - self.last_predicted_density).astype(

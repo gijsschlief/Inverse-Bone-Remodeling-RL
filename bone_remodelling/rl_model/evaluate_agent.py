@@ -147,7 +147,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     run_parameters = RunConfiguration(output_dir=config.output_dir)
 
     forward_data_manager = ForwardDataManager(
-        (run_parameters.data_path / Path("raw")).resolve(),
+        (config.output_dir / "raw").resolve(),
     )
     result = forward_data_manager.load_directory()
     if result is None:
