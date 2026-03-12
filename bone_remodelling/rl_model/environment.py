@@ -49,10 +49,10 @@ class BoneRemodelingEnvironment(Env):
         # Define the action space
         self.per_step_force_change = rl_parameters.per_step_force_change
         action_space_lower_bounds = np.array(
-            [0.0] * 30 + [-self.per_step_force_change], dtype=np.float32
+            [-10.0] * 30 + [-self.per_step_force_change], dtype=np.float32,
         )
         action_space_upper_bounds = np.array(
-            [1.0] * 30 + [self.per_step_force_change], dtype=np.float32
+            [10.0] * 30 + [self.per_step_force_change], dtype=np.float32,
         )
         self.action_space = spaces.Box(
             low=action_space_lower_bounds,
@@ -90,7 +90,7 @@ class BoneRemodelingEnvironment(Env):
 
     def _get_observation(self) -> np.ndarray:
         density_difference = (self.target_density - self.last_predicted_density).astype(
-            np.float32
+            np.float32,
         )
         return np.vstack([density_difference, self.force_profile.astype(np.float32)])
 
@@ -154,9 +154,19 @@ class BoneRemodelingEnvironment(Env):
             tuple: A tuple containing the observation, reward, done flag, and additional info.
 
         """
-        location_index = np.argmax(action[:30])
-        side_index, peak_position = np.divmod(location_index, self._profile_length)
-        self.force_profile[side_index, peak_position] += action[30].item()
+        location_logits = action[:30]
+        magnitude_change = action[30].item()
+
+        exp_logits = np.exp(location_logits - np.max(location_logits)) # Subtract max for stability
+        probabilities = exp_logits / exp_logits.sum()
+
+        # 3. Distribute the force magnitude across the entire force profile
+        # Instead of one peak, we 'smear' the update based on the model's preference
+        for i, prob in enumerate(probabilities):
+            side_index, peak_position = divmod(i, self._profile_length)
+            if side_index < self.force_shape[0] and peak_position < self.force_shape[1]:
+                self.force_profile[side_index, peak_position] += magnitude_change * prob
+
         self.force_profile = np.clip(
             self.force_profile,
             -self.force_boundary,
