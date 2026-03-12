@@ -129,12 +129,8 @@ class BoneRemodelingEnvironment(Env):
             self.force_shape,
             dtype=np.float32,
         )
-        initial_ssim = calculate_similarity(
-            reference_matrix=self.target_density,
-            comparison_matrix=self.last_predicted_density,
-            method="ssim",
-        )
-        self.previous_ssim = initial_ssim
+
+        _, _ = self._calculate_reward(self.last_predicted_density)
 
         info: dict = {}
         info["sample_index"] = self.current_sample_index
@@ -160,12 +156,8 @@ class BoneRemodelingEnvironment(Env):
         exp_logits = np.exp(location_logits - np.max(location_logits)) # Subtract max for stability
         probabilities = exp_logits / exp_logits.sum()
 
-        # 3. Distribute the force magnitude across the entire force profile
-        # Instead of one peak, we 'smear' the update based on the model's preference
-        for i, prob in enumerate(probabilities):
-            side_index, peak_position = divmod(i, self._profile_length)
-            if side_index < self.force_shape[0] and peak_position < self.force_shape[1]:
-                self.force_profile[side_index, peak_position] += magnitude_change * prob
+        prob_reshaped = probabilities.reshape(self.force_shape)
+        self.force_profile += magnitude_change * prob_reshaped
 
         self.force_profile = np.clip(
             self.force_profile,
@@ -176,19 +168,10 @@ class BoneRemodelingEnvironment(Env):
         predicted_density = self.forwarder.forward_pass(
             force_profile=self.force_profile,
         )
-        current_ssim = calculate_similarity(
-            reference_matrix=self.target_density,
-            comparison_matrix=predicted_density,
-            method="ssim",
-            baseline=0.1,
-            threshold=0.5,
-        )
 
         self.last_predicted_density = predicted_density.astype(np.float32)
-
         self.current_step += 1
-        self.reward = current_ssim - self.previous_ssim
-        self.previous_ssim = current_ssim
+        self.reward, current_ssim = self._calculate_reward(predicted_density)
 
         # base termination: either out of steps or success
         ssim_threshold = 0.99
@@ -206,6 +189,20 @@ class BoneRemodelingEnvironment(Env):
         }
 
         return self._get_observation(), self.reward, terminated, truncated, info
+
+    def _calculate_reward(self, predicted_density: np.ndarray) -> tuple[float, float]:
+        """Calculate the reward based on the change in SSIM."""
+        current_ssim = calculate_similarity(
+            reference_matrix=self.target_density,
+            comparison_matrix=predicted_density,
+            method="ssim",
+            baseline=0.1,
+            threshold=0.5,
+        )
+        epsilon = 1e-6
+        reward = -np.log(1 - current_ssim + epsilon) - (-np.log(1 - self.previous_ssim + epsilon))
+        self.previous_ssim = current_ssim
+        return reward, current_ssim
 
     def get_data_for_visualization(
         self,

@@ -41,7 +41,7 @@ class RLParameters:
     seed: int = 1
     verbose: int = 1
     device: str = "cpu"
-    patience: int = 20
+    patience: int = 5
     per_step_force_change: float = 100.0
 
 
