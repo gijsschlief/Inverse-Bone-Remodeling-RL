@@ -174,7 +174,7 @@ class BoneRemodelingEnvironment(Env):
         self.reward, current_ssim = self._calculate_reward(predicted_density)
 
         # base termination: either out of steps or success
-        ssim_threshold = 0.875
+        ssim_threshold = 0.95
         success = current_ssim >= ssim_threshold
         terminated = self.current_step >= self.max_steps or success
         truncated = False
