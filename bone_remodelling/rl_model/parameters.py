@@ -38,9 +38,9 @@ class RLParameters:
     ent_coef: float = 0.005
     target_kl: float | None = None # Set to None to disable KL divergence early stopping
     max_grad_norm: float = 0.5
-    learning_rate: float = 3e-5
+    learning_rate: float = 1e-5
     learning_rate_decay: float = 0.1
-    minimum_learning_rate: float = 1e-6
+    minimum_learning_rate: float = 1e-7
     seed: int = 1
     verbose: int = 1
     device: str = "cpu"
