@@ -87,6 +87,50 @@ class BoneRemodelingEnvironment(Env):
         self.target_density = target_densities[0]
         self.target_force = target_forces[0]
         self.reward = 0.0
+        self.max_curriculum_complexity = 10
+        self._build_curriculum_learning_groups()
+
+    def _build_curriculum_learning_groups(self) -> None:
+        """Curriculum learning implementation.
+
+        This method organizes the training samples into groups based on their complexity (e.g., number of active forces). It also slowly expands the steps the model can make in line with the number of forces.
+        """
+        self.groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity)}
+        self.current_max_complexity = 1
+        for i, force in enumerate(self.target_forces):
+            threshold_force = 1e-3
+            num_active_points = np.sum(np.any(np.abs(force) > threshold_force, axis=0))
+            complexity = min(num_active_points, self.max_curriculum_complexity)
+            if complexity == 0:
+                complexity = 1
+            self.groups[complexity].append(i)
+
+    def increase_curriculum_complexity(self) -> None:
+        """Advance the curriculum."""
+        if self.current_max_complexity <= self.max_curriculum_complexity:
+            self.current_max_complexity += 1
+            self.max_steps = self.current_max_complexity * 5
+            logger.info(f"--- Curriculum Advanced to Complexity {self.current_max_complexity} --- (increasing max steps to {self.max_steps})")
+
+    def _select_sample(self) -> int:
+        """Select a sample index either from the current curriculum learning group or a previous group."""
+        sample_from_previous_groups = 0.3
+
+        if np.random.rand() < sample_from_previous_groups and self.current_max_complexity > 1:
+            complexity = np.random.randint(0, self.current_max_complexity)
+            if self.groups[complexity]:
+                return np.random.choice(self.groups[complexity])
+
+        if self.current_max_complexity <= self.max_curriculum_complexity and self.groups[self.current_max_complexity]:
+            return np.random.choice(self.groups[self.current_max_complexity])
+
+        return np.random.randint(0, self.num_samples - 1)
+
+    def _update_sample(self) -> None:
+        """Update the current sample index and corresponding target density and force."""
+        self.current_sample_index = self._select_sample()
+        self.target_density = self.target_densities[self.current_sample_index]
+        self.target_force = self.target_forces[self.current_sample_index]
 
     def _get_observation(self) -> np.ndarray:
         density_difference = (self.target_density - self.last_predicted_density).astype(
@@ -117,10 +161,7 @@ class BoneRemodelingEnvironment(Env):
         super().reset(seed=seed)
         np.random.seed(seed)
 
-        # Pick a new random sample
-        self.current_sample_index = np.random.randint(self.num_samples)
-        self.target_density = self.target_densities[self.current_sample_index]
-        self.target_force = self.target_forces[self.current_sample_index]
+        self._update_sample()
 
         # Reset predictions
         self.current_step = 0

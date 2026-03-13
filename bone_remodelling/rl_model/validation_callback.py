@@ -9,7 +9,7 @@ from bone_remodelling.rl_model.forward_pass import (
     ForwardPass,
 )
 from bone_remodelling.rl_model.metrics import MetricsContainer
-from bone_remodelling.rl_model.parameters import RLParameters
+from bone_remodelling.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.rl_model.validation_environment_builder import (
     ValidationEnvironmentBuilder,
@@ -28,7 +28,7 @@ class ValidationCallback(BaseCallback):
         validation_data: tuple[np.ndarray, np.ndarray],
         validation_environment_builder: ValidationEnvironmentBuilder,
         final_forwarder: ForwardPass,
-        validation_frequency: int = 100_000,
+        run_config: RunConfiguration,
         rl_parameters: RLParameters = RLParameters(),
     ) -> None:
         """Initialize the validation callback."""
@@ -40,30 +40,62 @@ class ValidationCallback(BaseCallback):
         self.validation_environment_builder = validation_environment_builder
         self.fenics_forwarder = final_forwarder
         self.validation_forces, self.validation_densities = validation_data
-        self.validation_frequency = validation_frequency
+        self.run_config = run_config
         self.rl_parameters = rl_parameters
 
         self.best_ssim = -np.inf
         self.patience_counter = 0
+        self.max_curriculum_complexity = 10
+        self.current_complexity = 1
+        self._group_validation_samples()
+
+    def _group_validation_samples(self) -> None:
+        """Group validation samples by complexity (e.g., number of active forces) for curriculum learning."""
+        self.validation_groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity + 1)}
+        force_threshold = 1e-3
+        for i, force in enumerate(self.validation_forces):
+            complexity = int(np.sum(force > force_threshold))
+            if complexity > 0:
+                self.validation_groups[complexity].append(i)
+
+    def _select_validation_sample(self) -> int:
+        """Select validation samples based on current curriculum complexity."""
+        if self.validation_groups[self.current_complexity]:
+            return np.random.choice(self.validation_groups[self.current_complexity])
+        return np.random.choice(len(self.validation_forces))
 
     def _on_step(self) -> bool:
-        if self.num_timesteps % self.validation_frequency != 0:
+        if self.num_timesteps % self.run_config.validation_frequency != 0:
             return True
 
+        self.current_complexity = self.training_env.get_attr("current_max_complexity")[0]
         mean_ssim = self._ssim_calculation()
         logger.info(f"[Val @ {self.num_timesteps}] mean final SSIM = {mean_ssim:.4f}")
+
+        curriculum_threshold = 0.85
+        if mean_ssim >= curriculum_threshold and self.current_complexity <= self.max_curriculum_complexity:
+            logger.warning(f"Mastery of Level {self.current_complexity} achieved! Advancing...")
+            self.training_env.env_method("increase_curriculum_complexity")
+            self.best_ssim = -np.inf
+            self.patience_counter = 0
+            self.learning_rate_container["value"] = self.rl_parameters.learning_rate
 
         self.metrics.validation_steps.append(self.num_timesteps)
         self.metrics.validation_ssim.append(mean_ssim)
         return self._detect_plateau(mean_ssim)
 
     def _ssim_calculation(self) -> float:
+        """Calculate mean SSIM over a set of validation samples."""
+        current_training_max_steps = self.training_env.get_attr("max_steps")[0]
         ssim_scores = []
-        for force, target in zip(self.validation_forces, self.validation_densities):
+        for _ in range(self.run_config.validation_size):
             # 1) surrogate rollout
+            index = self._select_validation_sample()
+            force = self.validation_forces[index]
+            target = self.validation_densities[index]
             validation_environment = self.validation_environment_builder(force, target)
             observation, _ = validation_environment.reset()
-            for _ in range(self.rl_parameters.max_steps - 1):
+            for _ in range(current_training_max_steps - 1):
                 action, _ = self.model.predict(observation, deterministic=True)
                 observation, _, done, _, _ = validation_environment.step(action)
                 if done:

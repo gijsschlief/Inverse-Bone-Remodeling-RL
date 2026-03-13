@@ -259,13 +259,13 @@ def train_rl_agent(
                 metrics=metrics,
                 learning_rate_container=current_learning_rate,
                 validation_data=(
-                    validation_forces[: run_parameters.validation_size],
-                    validation_densities[: run_parameters.validation_size],
+                    validation_forces,
+                    validation_densities,
                 ),
                 validation_environment_builder=validation_environment_builder,
                 final_forwarder=forwarder,
+                run_config=run_parameters,
                 rl_parameters=rl_parameters,
-                validation_frequency=run_parameters.validation_frequency,
             ),
         )
         model.learn(

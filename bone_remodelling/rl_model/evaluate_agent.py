@@ -194,12 +194,15 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     predicted_densities = np.array(evaluation_result["predicted_densities"])
 
     # Plot distribution of SSIM scores
+    figures_dir = config.output_dir / "figures"
+    figures_dir.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(10, 6))
     plt.hist(evaluation_result["ssim_scores"], bins=30, color='skyblue', edgecolor='black')
     plt.title("Distribution of SSIM Scores across Test Set")
     plt.xlabel("SSIM")
     plt.ylabel("Frequency")
-    plt.show()
+    plt.savefig(figures_dir / Path("ssim_distribution.png"))
+    plt.close()
 
     # Calculate average metrics
     avg_rewards = sum(evaluation_result["rewards"]) / len(evaluation_result["rewards"])
@@ -217,7 +220,7 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     # Plot representative samples from evaluation
     force_generator = ForceProfileGenerator()
     force_mask = force_generator.generate_force_mask()
-    for _ in range(100):
+    for _ in range(20):
         k = np.random.randint(0, len(sample_forces))
         logger.info(
             f"Sample {k}: SSIM = {evaluation_result['ssim_scores'][k]:.6f}, MSE = {evaluation_result['mse_errors'][k]:.6f}",
@@ -230,7 +233,8 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
             (predicted_forces[k], force_mask),
             (sample_forces[k], force_mask),
         )
-        plt.show()
+        plt.savefig(figures_dir / Path(f"eval_sample_{k}.png"))
+        plt.close()
 
 
 def plot_inverse_model(
