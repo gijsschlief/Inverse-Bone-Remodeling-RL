@@ -117,7 +117,7 @@ class BoneRemodelingEnvironment(Env):
         sample_from_previous_groups = 0.3
 
         if np.random.rand() < sample_from_previous_groups and self.current_max_complexity > 1:
-            complexity = np.random.randint(0, self.current_max_complexity)
+            complexity = np.random.randint(1, self.current_max_complexity)
             if self.groups[complexity]:
                 return np.random.choice(self.groups[complexity])
 

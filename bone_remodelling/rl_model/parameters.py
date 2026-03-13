@@ -66,7 +66,7 @@ class RunConfiguration:
     render_frequency: int =  102_400
     validation_frequency: int = 200_000
     validation_size: int = 100
-    number_of_environments: int = 2
+    number_of_environments: int = 4
     random_state: int = 0
     reward_plot_path: Path = field(init=False)
     agent_path: Path = field(init=False)
