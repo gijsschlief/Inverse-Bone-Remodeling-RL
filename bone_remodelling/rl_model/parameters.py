@@ -33,9 +33,10 @@ class RLParameters:
     force_boundary: float = 200
     density_constraint: float = 1.73
     n_steps: int = 2048
+    n_epochs: int = 1
     batch_size: int = 1024
     ent_coef: float = 0.005
-    target_kl: float = 0.01
+    target_kl: float | None = None # Set to None to disable KL divergence early stopping
     max_grad_norm: float = 0.5
     learning_rate: float = 3e-5
     learning_rate_decay: float = 0.1

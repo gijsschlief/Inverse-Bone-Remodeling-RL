@@ -132,6 +132,7 @@ def initialize_new_model(
         batch_size=rl_parameters.batch_size,
         ent_coef=rl_parameters.ent_coef,
         learning_rate=learning_rate_container,
+        n_epochs=rl_parameters.n_epochs,
         target_kl=rl_parameters.target_kl,
         max_grad_norm=rl_parameters.max_grad_norm,
         seed=rl_parameters.seed,
