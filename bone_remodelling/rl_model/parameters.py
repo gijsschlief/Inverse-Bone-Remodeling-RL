@@ -29,7 +29,7 @@ class RLParameters:
 
     """
 
-    max_steps: int = 50
+    max_steps: int = 5
     force_boundary: float = 200
     density_constraint: float = 1.73
     n_steps: int = 2048
@@ -63,10 +63,10 @@ class RunConfiguration:
     output_dir: Path
     forward_type: str = "surrogate"
     total_timesteps: int = 10_000_001
-    render_frequency: int = 102_400
+    render_frequency: int =  1024 # 102_400
     validation_frequency: int = 10_000 # 200_000
     validation_size: int = 100
-    number_of_environments: int = 10
+    number_of_environments: int = 1 # 10
     random_state: int = 0
     reward_plot_path: Path = field(init=False)
     agent_path: Path = field(init=False)
