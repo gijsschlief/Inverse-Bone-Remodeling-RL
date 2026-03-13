@@ -64,7 +64,7 @@ class RunConfiguration:
     forward_type: str = "surrogate"
     total_timesteps: int = 10_000_001
     render_frequency: int = 102_400
-    validation_frequency: int = 200_000
+    validation_frequency: int = 10_000 # 200_000
     validation_size: int = 100
     number_of_environments: int = 10
     random_state: int = 0

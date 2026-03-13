@@ -95,10 +95,10 @@ class BoneRemodelingEnvironment(Env):
 
         This method organizes the training samples into groups based on their complexity (e.g., number of active forces). It also slowly expands the steps the model can make in line with the number of forces.
         """
-        self.groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity)}
+        self.groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity + 1)}
         self.current_max_complexity = 1
+        threshold_force = 1e-3
         for i, force in enumerate(self.target_forces):
-            threshold_force = 1e-3
             num_active_points = np.sum(np.any(np.abs(force) > threshold_force, axis=0))
             complexity = min(num_active_points, self.max_curriculum_complexity)
             if complexity == 0:

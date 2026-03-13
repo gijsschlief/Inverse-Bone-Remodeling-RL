@@ -52,11 +52,13 @@ class ValidationCallback(BaseCallback):
     def _group_validation_samples(self) -> None:
         """Group validation samples by complexity (e.g., number of active forces) for curriculum learning."""
         self.validation_groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity + 1)}
-        force_threshold = 1e-3
+        threshold_force = 1e-3
         for i, force in enumerate(self.validation_forces):
-            complexity = int(np.sum(force > force_threshold))
-            if complexity > 0:
-                self.validation_groups[complexity].append(i)
+            num_active_points = np.sum(np.any(np.abs(force) > threshold_force, axis=0))
+            complexity = min(num_active_points, self.max_curriculum_complexity)
+            if complexity == 0:
+                complexity = 1
+            self.validation_groups[complexity].append(i)
 
     def _select_validation_sample(self) -> int:
         """Select validation samples based on current curriculum complexity."""
