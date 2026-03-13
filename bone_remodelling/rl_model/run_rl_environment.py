@@ -132,6 +132,8 @@ def initialize_new_model(
         batch_size=rl_parameters.batch_size,
         ent_coef=rl_parameters.ent_coef,
         learning_rate=learning_rate_container,
+        target_kl=rl_parameters.target_kl,
+        max_grad_norm=rl_parameters.max_grad_norm,
         seed=rl_parameters.seed,
         device=rl_parameters.device,
         policy_kwargs=policy_kwargs,

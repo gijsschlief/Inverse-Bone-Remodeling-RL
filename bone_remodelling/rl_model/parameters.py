@@ -35,7 +35,9 @@ class RLParameters:
     n_steps: int = 2048
     batch_size: int = 1024
     ent_coef: float = 0.005
-    learning_rate: float = 1e-4
+    target_kl: float = 0.01
+    max_grad_norm: float = 0.5
+    learning_rate: float = 3e-5
     learning_rate_decay: float = 0.1
     minimum_learning_rate: float = 1e-6
     seed: int = 1
@@ -62,9 +64,9 @@ class RunConfiguration:
 
     output_dir: Path
     forward_type: str = "surrogate"
-    total_timesteps: int = 10_000_001
+    total_timesteps: int = 10_240_001
     render_frequency: int =  102_400
-    validation_frequency: int = 200_000
+    validation_frequency: int = 204_800
     validation_size: int = 100
     number_of_environments: int = 4
     random_state: int = 0
