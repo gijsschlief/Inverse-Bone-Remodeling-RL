@@ -70,7 +70,7 @@ class RunConfiguration:
     total_timesteps: int = 10_240_001
     render_frequency: int = 102_400
     validation_frequency: int = 204_800
-    validation_size: int = 100
+    validation_size: int = 256
     number_of_environments: int = 10
     random_state: int = 0
     reward_plot_path: Path = field(init=False)

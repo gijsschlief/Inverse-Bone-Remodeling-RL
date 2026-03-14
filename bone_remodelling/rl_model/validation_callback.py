@@ -67,11 +67,11 @@ class ValidationCallback(BaseCallback):
                 complexity = 1
             self.validation_groups[complexity].append(i)
 
-    def _select_validation_sample(self) -> int:
+    def _select_validation_sample(self, sample_index: int) -> int:
         """Select validation samples based on current curriculum complexity."""
         if self.validation_groups[self.current_complexity]:
-            return np.random.choice(self.validation_groups[self.current_complexity])
-        return np.random.choice(len(self.validation_forces))
+            return self.validation_groups[self.current_complexity][sample_index % len(self.validation_groups[self.current_complexity])]
+        return sample_index % len(self.validation_forces)
 
     def _on_step(self) -> bool:
         """Perform validation at specified intervals and adjust learning rate if performance plateaus."""
@@ -104,8 +104,8 @@ class ValidationCallback(BaseCallback):
         """Calculate mean SSIM over a set of validation samples."""
         current_training_max_steps = self.training_env.get_attr("max_steps")[0]
         ssim_scores = []
-        for _ in range(self.run_config.validation_size):
-            index = self._select_validation_sample()
+        for sample_counter in range(self.run_config.validation_size):
+            index = self._select_validation_sample(sample_counter)
             force = self.validation_forces[index]
             target = self.validation_densities[index]
             validation_environment: BoneRemodelingEnvironment = self.validation_environment_builder(force, target)
