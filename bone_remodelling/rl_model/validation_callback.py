@@ -5,6 +5,7 @@ import logging
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
+from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import (
     ForwardPass,
 )
@@ -38,20 +39,26 @@ class ValidationCallback(BaseCallback):
         self.metrics.validation_ssim.append(0.0)
         self.learning_rate_container = learning_rate_container
         self.validation_environment_builder = validation_environment_builder
-        self.fenics_forwarder = final_forwarder
+        self.final_forwarder = final_forwarder
         self.validation_forces, self.validation_densities = validation_data
         self.run_config = run_config
         self.rl_parameters = rl_parameters
 
-        self.best_ssim = -np.inf
-        self.patience_counter = 0
         self.max_curriculum_complexity = 10
         self.current_complexity = 1
+        self._reset_patience()
         self._group_validation_samples()
+
+    def _reset_patience(self) -> None:
+        """Reset patience counter and best SSIM when curriculum complexity increases."""
+        self.patience_counter = 0
+        self.best_ssim = -np.inf
 
     def _group_validation_samples(self) -> None:
         """Group validation samples by complexity (e.g., number of active forces) for curriculum learning."""
-        self.validation_groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity + 1)}
+        self.validation_groups: dict[int, list[int]] = {
+            i: [] for i in range(1, self.max_curriculum_complexity + 1)
+        }
         threshold_force = 1e-3
         for i, force in enumerate(self.validation_forces):
             num_active_points = np.sum(np.any(np.abs(force) > threshold_force, axis=0))
@@ -67,19 +74,26 @@ class ValidationCallback(BaseCallback):
         return np.random.choice(len(self.validation_forces))
 
     def _on_step(self) -> bool:
+        """Perform validation at specified intervals and adjust learning rate if performance plateaus."""
         if self.num_timesteps % self.run_config.validation_frequency != 0:
             return True
 
-        self.current_complexity = self.training_env.get_attr("current_max_complexity")[0]
+        self.current_complexity = self.training_env.get_attr("current_max_complexity")[
+            0
+        ]
         mean_ssim = self._ssim_calculation()
         logger.info(f"[Val @ {self.num_timesteps}] mean final SSIM = {mean_ssim:.4f}")
 
         curriculum_threshold = 0.85
-        if mean_ssim >= curriculum_threshold and self.current_complexity <= self.max_curriculum_complexity:
-            logger.warning(f"Mastery of Level {self.current_complexity} achieved! Advancing...")
+        if (
+            mean_ssim >= curriculum_threshold
+            and self.current_complexity <= self.max_curriculum_complexity
+        ):
+            logger.warning(
+                f"Mastery of Level {self.current_complexity} achieved! Advancing...",
+            )
             self.training_env.env_method("increase_curriculum_complexity")
-            self.best_ssim = -np.inf
-            self.patience_counter = 0
+            self._reset_patience()
             self.learning_rate_container["value"] = self.rl_parameters.learning_rate
 
         self.metrics.validation_steps.append(self.num_timesteps)
@@ -91,11 +105,10 @@ class ValidationCallback(BaseCallback):
         current_training_max_steps = self.training_env.get_attr("max_steps")[0]
         ssim_scores = []
         for _ in range(self.run_config.validation_size):
-            # 1) surrogate rollout
             index = self._select_validation_sample()
             force = self.validation_forces[index]
             target = self.validation_densities[index]
-            validation_environment = self.validation_environment_builder(force, target)
+            validation_environment: BoneRemodelingEnvironment = self.validation_environment_builder(force, target)
             observation, _ = validation_environment.reset()
             for _ in range(current_training_max_steps - 1):
                 action, _ = self.model.predict(observation, deterministic=True)
@@ -103,15 +116,13 @@ class ValidationCallback(BaseCallback):
                 if done:
                     break
 
-            # 2) true FEniCS solve of the final force profile
-            true_density = self.fenics_forwarder.forward_pass(
+            predicted_density = self.final_forwarder.forward_pass(
                 validation_environment.force_profile,
             )
 
-            # 3) compute SSIM vs target
             score = calculate_similarity(
                 reference_matrix=target,
-                comparison_matrix=true_density,
+                comparison_matrix=predicted_density,
                 method="ssim",
                 baseline=0.1,
                 threshold=0.5,
@@ -120,14 +131,13 @@ class ValidationCallback(BaseCallback):
         return float(np.mean(ssim_scores))
 
     def _detect_plateau(self, last_ssim: float) -> bool:
+        """Detect if validation performance has plateaued and decide whether to reduce learning rate."""
         if last_ssim > self.best_ssim:
             self.best_ssim = last_ssim
             self.patience_counter = 0
             logger.info(f"[New best SSIM: {self.best_ssim:.4f}")
             return True
 
-        # If the SSIM is not improving, increase patience counter, reduce learning rate or stop training
-        # increase patience counter
         if self.patience_counter < self.rl_parameters.patience:
             self.patience_counter += 1
             logger.warning(
@@ -135,13 +145,11 @@ class ValidationCallback(BaseCallback):
             )
             return True
 
-        # reduce learning rate if patience is exceeded
         if self.patience_counter >= self.rl_parameters.patience:
             logger.warning(
                 f"[SSIM did not improve, best SSIM: {self.best_ssim:.4f}] Validation plateau detected, reducing learning rate.",
             )
-            self.best_ssim = -np.inf
-            self.patience_counter = 0
+            self._reset_patience()
             return self._learning_rate_reducer()
         return False
 

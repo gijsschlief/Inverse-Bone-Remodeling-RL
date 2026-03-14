@@ -49,10 +49,12 @@ class BoneRemodelingEnvironment(Env):
         # Define the action space
         self.per_step_force_change = rl_parameters.per_step_force_change
         action_space_lower_bounds = np.array(
-            [-10.0] * 30 + [-self.per_step_force_change], dtype=np.float32,
+            [-10.0] * 30 + [-self.per_step_force_change],
+            dtype=np.float32,
         )
         action_space_upper_bounds = np.array(
-            [10.0] * 30 + [self.per_step_force_change], dtype=np.float32,
+            [10.0] * 30 + [self.per_step_force_change],
+            dtype=np.float32,
         )
         self.action_space = spaces.Box(
             low=action_space_lower_bounds,
@@ -95,7 +97,9 @@ class BoneRemodelingEnvironment(Env):
 
         This method organizes the training samples into groups based on their complexity (e.g., number of active forces). It also slowly expands the steps the model can make in line with the number of forces.
         """
-        self.groups: dict[int, list[int]] = {i: [] for i in range(1, self.max_curriculum_complexity + 1)}
+        self.groups: dict[int, list[int]] = {
+            i: [] for i in range(1, self.max_curriculum_complexity + 1)
+        }
         self.current_max_complexity = 1
         threshold_force = 1e-3
         for i, force in enumerate(self.target_forces):
@@ -110,18 +114,26 @@ class BoneRemodelingEnvironment(Env):
         if self.current_max_complexity <= self.max_curriculum_complexity:
             self.current_max_complexity += 1
             self.max_steps = self.current_max_complexity * 5
-            logger.info(f"--- Curriculum Advanced to Complexity {self.current_max_complexity} --- (increasing max steps to {self.max_steps})")
+            logger.info(
+                f"--- Curriculum Advanced to Complexity {self.current_max_complexity} --- (increasing max steps to {self.max_steps})",
+            )
 
     def _select_sample(self) -> int:
         """Select a sample index either from the current curriculum learning group or a previous group."""
         sample_from_previous_groups = 0.3
 
-        if np.random.rand() < sample_from_previous_groups and self.current_max_complexity > 1:
+        if (
+            np.random.rand() < sample_from_previous_groups
+            and self.current_max_complexity > 1
+        ):
             complexity = np.random.randint(1, self.current_max_complexity)
             if self.groups[complexity]:
                 return np.random.choice(self.groups[complexity])
 
-        if self.current_max_complexity <= self.max_curriculum_complexity and self.groups[self.current_max_complexity]:
+        if (
+            self.current_max_complexity <= self.max_curriculum_complexity
+            and self.groups[self.current_max_complexity]
+        ):
             return np.random.choice(self.groups[self.current_max_complexity])
 
         return np.random.randint(0, self.num_samples - 1)
@@ -194,7 +206,9 @@ class BoneRemodelingEnvironment(Env):
         location_logits = action[:30]
         magnitude_change = action[30].item()
 
-        exp_logits = np.exp(location_logits - np.max(location_logits)) # Subtract max for stability
+        exp_logits = np.exp(
+            location_logits - np.max(location_logits),
+        )  # Subtract max for stability
         probabilities = exp_logits / exp_logits.sum()
 
         prob_reshaped = probabilities.reshape(self.force_shape)
@@ -241,7 +255,9 @@ class BoneRemodelingEnvironment(Env):
             threshold=0.5,
         )
         epsilon = 1e-6
-        reward = -np.log(1 - current_ssim + epsilon) - (-np.log(1 - self.previous_ssim + epsilon))
+        reward = -np.log(1 - current_ssim + epsilon) - (
+            -np.log(1 - self.previous_ssim + epsilon)
+        )
         self.previous_ssim = current_ssim
         return reward, current_ssim
 

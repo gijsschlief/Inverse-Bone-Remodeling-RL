@@ -165,7 +165,9 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     rl_parameters = RLParameters()
 
     surrogate_parameters = SurrogateTrainParameters(
-        model_path=(config.output_dir / Path("surrogate_models", "surrogate.pth")).resolve(),
+        model_path=(
+            config.output_dir / Path("surrogate_models", "surrogate.pth")
+        ).resolve(),
         device=torch.device("cuda" if torch.cuda.is_available() else "cpu"),
     )
 
@@ -197,7 +199,9 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     figures_dir = config.output_dir / "figures"
     figures_dir.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(10, 6))
-    plt.hist(evaluation_result["ssim_scores"], bins=30, color='skyblue', edgecolor='black')
+    plt.hist(
+        evaluation_result["ssim_scores"], bins=30, color="skyblue", edgecolor="black",
+    )
     plt.title("Distribution of SSIM Scores across Test Set")
     plt.xlabel("SSIM")
     plt.ylabel("Frequency")

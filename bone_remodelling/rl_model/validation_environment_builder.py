@@ -1,7 +1,6 @@
 """Contains a class that builds the evaluator gym environment."""
 
 import numpy as np
-from gymnasium import Env
 
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.forward_pass import ForwardPass
@@ -24,7 +23,7 @@ class ValidationEnvironmentBuilder:
         self,
         force_profile: np.ndarray,
         target_density: np.ndarray,
-    ) -> Env:
+    ) -> BoneRemodelingEnvironment:
         """Build and return a new BoneRemodellingEnvironment that contains exactly one sample (the provided force & density)."""
         forces = np.expand_dims(force_profile.astype(np.float32), axis=0)
         densities = np.expand_dims(target_density.astype(np.float32), axis=0)

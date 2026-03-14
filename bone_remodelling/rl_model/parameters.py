@@ -36,7 +36,9 @@ class RLParameters:
     n_epochs: int = 10
     batch_size: int = 1024
     ent_coef: float = 0.005
-    target_kl: float | None = None # Set to None to disable KL divergence early stopping
+    target_kl: float | None = (
+        None  # Set to None to disable KL divergence early stopping
+    )
     max_grad_norm: float = 0.5
     learning_rate: float = 1e-4
     learning_rate_decay: float = 0.5
@@ -66,7 +68,7 @@ class RunConfiguration:
     output_dir: Path
     forward_type: str = "surrogate"
     total_timesteps: int = 10_240_001
-    render_frequency: int =  102_400
+    render_frequency: int = 102_400
     validation_frequency: int = 204_800
     validation_size: int = 100
     number_of_environments: int = 10

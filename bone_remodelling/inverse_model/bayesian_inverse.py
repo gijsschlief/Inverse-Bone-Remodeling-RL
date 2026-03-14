@@ -95,7 +95,7 @@ def map_inverse(
                     device=bayesian_parameters.device,
                 )
                 final_pred = surrogate_model.torch_prediction(
-                    final_force_tensor.unsqueeze(0)
+                    final_force_tensor.unsqueeze(0),
                 )
                 final_loss = torch.mean((final_pred - observed_density) ** 2).item()
 
@@ -165,7 +165,7 @@ def evaluate_bayesian(
     )
 
     bayesian_parameters = BayesianParameters(
-        device=device, config_parameters=configuration_parameters
+        device=device, config_parameters=configuration_parameters,
     )
 
     if sample_count is None:
