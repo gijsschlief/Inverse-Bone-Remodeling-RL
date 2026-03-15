@@ -61,10 +61,6 @@ class ValidationCallback(BaseCallback):
             if complexity == 0:
                 complexity = 1
             self.validation_groups[complexity].append(i)
-        logger.info("\n--- Validation Data Complexity Distribution ---")
-        for complexity_level, indices in self.validation_groups.items():
-            logger.info(f"Level {complexity_level}: {len(indices)} samples")
-        logger.info("-----------------------------------------------\n")
 
     def _select_validation_sample(self, sample_index: int) -> int:
         """Select validation samples based on current curriculum complexity."""
