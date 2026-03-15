@@ -108,6 +108,10 @@ class BoneRemodelingEnvironment(Env):
             if complexity == 0:
                 complexity = 1
             self.groups[complexity].append(i)
+        logger.info("\n--- Training Data Complexity Distribution ---")
+        for complexity_level, indices in self.groups.items():
+            logger.info(f"Level {complexity_level}: {len(indices)} samples")
+        logger.info("---------------------------------------------\n")
 
     def increase_curriculum_complexity(self) -> None:
         """Advance the curriculum."""
