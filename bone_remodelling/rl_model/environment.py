@@ -118,6 +118,12 @@ class BoneRemodelingEnvironment(Env):
                 f"--- Curriculum Advanced to Complexity {self.current_max_complexity} --- (increasing max steps to {self.max_steps})",
             )
 
+    def set_curriculum_complexity(self, complexity: int) -> None:
+        """Set the curriculum complexity level (used when resuming training)."""
+        self.current_max_complexity = min(complexity, self.max_curriculum_complexity)
+        self.max_steps = self.current_max_complexity * 5
+        logger.info(f"Environment complexity synchronized to Level {self.current_max_complexity}")
+
     def _select_sample(self) -> int:
         """Select a sample index either from the current curriculum learning group or a previous group."""
         sample_from_previous_groups = 0.3

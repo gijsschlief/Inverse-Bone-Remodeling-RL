@@ -103,9 +103,8 @@ class TrainingStats:
     current_learning_rate: float
     current_patience: int
     current_step: int
-    current_episode: int
     max_ssim: float
     current_complexity: int
-    complexity_jumps: list[int, int] = field(default_factory=list)  # step, complexity
+    complexity_jumps: list[tuple[int, int]] = field(default_factory=list)  # step, complexity
     validation_steps: list[int] = field(default_factory=list)
     validation_ssim: list[float] = field(default_factory=list)

@@ -1,13 +1,18 @@
 """Callback designed for validation the agent so learning rate is reduced when performance flattens."""
 
 import logging
+from dataclasses import asdict
 
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
 from bone_remodelling.rl_model.metrics import MetricsContainer
-from bone_remodelling.rl_model.parameters import RLParameters, RunConfiguration
+from bone_remodelling.rl_model.parameters import (
+    RLParameters,
+    RunConfiguration,
+    TrainingStats,
+)
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.rl_model.validation_environment_builder import (
     ValidationEnvironmentBuilder,
@@ -94,6 +99,8 @@ class ValidationCallback(BaseCallback):
             self.learning_rate_container["value"] = self.rl_parameters.learning_rate
             self.metrics.validation_steps.append(self.num_timesteps)
             self.metrics.validation_ssim.append(mean_ssim)
+            self.metrics.complexity_jumps.append((self.num_timesteps, self.current_complexity + 1))
+            self._save_checkpoint()
             return True
 
         self.metrics.validation_steps.append(self.num_timesteps)
@@ -132,12 +139,29 @@ class ValidationCallback(BaseCallback):
             ssim_scores.append(score)
         return float(np.mean(ssim_scores))
 
+    def _save_checkpoint(self) -> None:
+        """Save the agent and training stats at the current checkpoint."""
+        training_metrics = TrainingStats(
+            current_learning_rate=self.learning_rate_container["value"],
+            current_patience=self.patience_counter,
+            current_step=self.num_timesteps,
+            max_ssim=self.best_ssim,
+            current_complexity=self.current_complexity,
+            complexity_jumps=self.metrics.complexity_jumps,
+            validation_steps=self.metrics.validation_steps,
+            validation_ssim=self.metrics.validation_ssim,
+        )
+        self.model.training_metrics = asdict(training_metrics)
+        self.model.
+        self.model.save(self.run_config.agent_path)
+
     def _detect_plateau(self, last_ssim: float) -> bool:
         """Detect if validation performance has plateaued and decide whether to reduce learning rate."""
         if last_ssim > self.best_ssim:
             self.best_ssim = last_ssim
             self.patience_counter = 0
             logger.info(f"[New best SSIM: {self.best_ssim:.4f}")
+            self._save_checkpoint()
             return True
 
         if self.patience_counter < self.rl_parameters.patience:
@@ -145,6 +169,7 @@ class ValidationCallback(BaseCallback):
             logger.warning(
                 f"SSIM did not improve, patience counter: {self.patience_counter}, best SSIM: {self.best_ssim:.4f}",
             )
+            self._save_checkpoint()
             return True
 
         if self.patience_counter >= self.rl_parameters.patience:
@@ -169,7 +194,5 @@ class ValidationCallback(BaseCallback):
         logger.warning(
             f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}",
         )
+        self._save_checkpoint()
         return True
-
-
-## WRITE THE SAVING INSIDE THE VALIATION CALLBACK TO ENSURE CONSISTENCY WITH THE AGENT SAVING!

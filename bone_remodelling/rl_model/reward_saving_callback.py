@@ -59,6 +59,8 @@ class RewardSavingCallback(BaseCallback):
         episode_x = np.array(self.metrics.episode_end_timesteps)
         val_steps = self.metrics.validation_steps
         val_scores = self.metrics.validation_ssim
+        complexity_jumps = self.metrics.complexity_jumps
+
         self.out_path.parent.mkdir(parents=True, exist_ok=True)
 
         if len(rewards) == 0:
@@ -119,6 +121,10 @@ class RewardSavingCallback(BaseCallback):
             ax2.set_ylabel("SSIM")
             ax2.legend(loc="upper right")
 
+            for _, (step, level) in enumerate(complexity_jumps):
+                plt.axvline(x=step, color="red", linestyle="--", alpha=0.6)
+                plt.text(step, 0.05, f"Level {level}", color="red", rotation=90, verticalalignment='bottom')
+
         plt.title("Training Reward and Validation Performance")
         plt.tight_layout()
         plt.savefig(self.out_path)
@@ -144,6 +150,7 @@ if __name__ == "__main__":
         metrics.episode_rewards.append(random.uniform(-100, 100))
     metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
     metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
+    metrics.complexity_jumps = [(150_000, 2), (350_000, 3), (450_000, 4)]
     callback = RewardSavingCallback(
         metrics,
         out_path=figure_path,
