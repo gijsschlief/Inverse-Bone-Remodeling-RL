@@ -125,6 +125,8 @@ class BoneRemodelingEnvironment(Env):
     def _select_sample(self) -> int:
         """Select a sample index either from the current curriculum learning group or a previous group."""
         sample_from_previous_groups = 0.3
+        if self.num_samples == 1:
+            return 0
 
         if (
             np.random.rand() < sample_from_previous_groups
@@ -140,7 +142,7 @@ class BoneRemodelingEnvironment(Env):
         ):
             return np.random.choice(self.groups[self.current_max_complexity])
 
-        return np.random.randint(0, self.num_samples - 1)
+        return np.random.randint(0, self.num_samples)
 
     def _update_sample(self) -> None:
         """Update the current sample index and corresponding target density and force."""
