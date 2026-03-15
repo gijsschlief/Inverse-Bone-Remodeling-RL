@@ -101,31 +101,27 @@ class ValidationCallback(BaseCallback):
         return self._detect_plateau(mean_ssim)
 
     def _ssim_calculation(self) -> float:
-        """Calculate mean SSIM over a set of validation samples."""
-        current_training_max_steps = self.training_env.get_attr("max_steps")[0]
+        """Calculate mean SSIM over a set of validation samples using the same evaluation procedure as in evaluate_agent."""
         ssim_scores = []
         for sample_counter in range(self.run_config.validation_size):
             index = self._select_validation_sample(sample_counter)
             force = self.validation_forces[index]
             target = self.validation_densities[index]
-            validation_environment: BoneRemodelingEnvironment = self.validation_environment_builder(force, target)
-            observation, _ = validation_environment.reset()
-            for _ in range(current_training_max_steps - 1):
-                action, _ = self.model.predict(observation, deterministic=True)
-                observation, _, done, _, _ = validation_environment.step(action)
-                if done:
-                    break
 
-            predicted_density = self.final_forwarder.forward_pass(
-                validation_environment.force_profile,
-            )
+            validation_environment = self.validation_environment_builder(force, target)
+            observation, _ = validation_environment.reset()
+            done = False
+            while not done:
+                action, _ = self.model.predict(observation, deterministic=True)
+                observation, _, terminated, truncated, _ = validation_environment.step(action)
+                done = terminated or truncated
+
+            sample_info, estimate_info, _ = validation_environment.get_data_for_visualization()
 
             score = calculate_similarity(
-                reference_matrix=target,
-                comparison_matrix=predicted_density,
+                reference_matrix=sample_info[2],
+                comparison_matrix=estimate_info[2],
                 method="ssim",
-                baseline=0.1,
-                threshold=0.5,
             )
             ssim_scores.append(score)
         return float(np.mean(ssim_scores))
