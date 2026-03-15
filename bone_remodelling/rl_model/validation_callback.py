@@ -96,6 +96,9 @@ class ValidationCallback(BaseCallback):
             self.training_env.env_method("increase_curriculum_complexity")
             self._reset_patience()
             self.learning_rate_container["value"] = self.rl_parameters.learning_rate
+            self.metrics.validation_steps.append(self.num_timesteps)
+            self.metrics.validation_ssim.append(mean_ssim)
+            return True
 
         self.metrics.validation_steps.append(self.num_timesteps)
         self.metrics.validation_ssim.append(mean_ssim)
