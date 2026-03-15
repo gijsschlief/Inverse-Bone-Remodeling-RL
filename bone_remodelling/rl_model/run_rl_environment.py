@@ -266,7 +266,6 @@ def train_rl_agent(
                     validation_densities,
                 ),
                 validation_environment_builder=validation_environment_builder,
-                final_forwarder=forwarder,
                 run_config=run_parameters,
                 rl_parameters=rl_parameters,
             ),

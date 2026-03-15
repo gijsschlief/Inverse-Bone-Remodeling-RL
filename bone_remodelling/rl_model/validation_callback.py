@@ -6,9 +6,6 @@ import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
-from bone_remodelling.rl_model.forward_pass import (
-    ForwardPass,
-)
 from bone_remodelling.rl_model.metrics import MetricsContainer
 from bone_remodelling.rl_model.parameters import RLParameters, RunConfiguration
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
@@ -28,7 +25,6 @@ class ValidationCallback(BaseCallback):
         learning_rate_container: dict[str, float],
         validation_data: tuple[np.ndarray, np.ndarray],
         validation_environment_builder: ValidationEnvironmentBuilder,
-        final_forwarder: ForwardPass,
         run_config: RunConfiguration,
         rl_parameters: RLParameters = RLParameters(),
     ) -> None:
@@ -39,7 +35,6 @@ class ValidationCallback(BaseCallback):
         self.metrics.validation_ssim.append(0.0)
         self.learning_rate_container = learning_rate_container
         self.validation_environment_builder = validation_environment_builder
-        self.final_forwarder = final_forwarder
         self.validation_forces, self.validation_densities = validation_data
         self.run_config = run_config
         self.rl_parameters = rl_parameters
@@ -108,7 +103,7 @@ class ValidationCallback(BaseCallback):
             force = self.validation_forces[index]
             target = self.validation_densities[index]
 
-            validation_environment = self.validation_environment_builder(force, target)
+            validation_environment: BoneRemodelingEnvironment = self.validation_environment_builder(force, target)
             observation, _ = validation_environment.reset()
             done = False
             while not done:
