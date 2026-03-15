@@ -101,6 +101,9 @@ class TrainingStats:
     """Class to hold training statistics for checkpointing."""
 
     current_learning_rate: float
+    current_patience: int
+    current_step: int
+    current_episode: int
     max_ssim: float
     current_complexity: int
     complexity_jumps: list[int, int] = field(default_factory=list)  # step, complexity
