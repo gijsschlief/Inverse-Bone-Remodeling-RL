@@ -200,7 +200,10 @@ def run_agent_evaluation(config: ConfigurationParameters) -> None:
     figures_dir.mkdir(parents=True, exist_ok=True)
     plt.figure(figsize=(10, 6))
     plt.hist(
-        evaluation_result["ssim_scores"], bins=30, color="skyblue", edgecolor="black",
+        evaluation_result["ssim_scores"],
+        bins=30,
+        color="skyblue",
+        edgecolor="black",
     )
     plt.title("Distribution of SSIM Scores across Test Set")
     plt.xlabel("SSIM")

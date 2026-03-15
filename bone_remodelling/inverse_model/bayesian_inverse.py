@@ -165,7 +165,8 @@ def evaluate_bayesian(
     )
 
     bayesian_parameters = BayesianParameters(
-        device=device, config_parameters=configuration_parameters,
+        device=device,
+        config_parameters=configuration_parameters,
     )
 
     if sample_count is None:

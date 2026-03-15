@@ -65,7 +65,9 @@ class ValidationCallback(BaseCallback):
     def _select_validation_sample(self, sample_index: int) -> int:
         """Select validation samples based on current curriculum complexity."""
         if self.validation_groups[self.current_complexity]:
-            return self.validation_groups[self.current_complexity][sample_index % len(self.validation_groups[self.current_complexity])]
+            return self.validation_groups[self.current_complexity][
+                sample_index % len(self.validation_groups[self.current_complexity])
+            ]
         return sample_index % len(self.validation_forces)
 
     def _on_step(self) -> bool:
@@ -103,15 +105,21 @@ class ValidationCallback(BaseCallback):
             force = self.validation_forces[index]
             target = self.validation_densities[index]
 
-            validation_environment: BoneRemodelingEnvironment = self.validation_environment_builder(force, target)
+            validation_environment: BoneRemodelingEnvironment = (
+                self.validation_environment_builder(force, target)
+            )
             observation, _ = validation_environment.reset()
             done = False
             while not done:
                 action, _ = self.model.predict(observation, deterministic=True)
-                observation, _, terminated, truncated, _ = validation_environment.step(action)
+                observation, _, terminated, truncated, _ = validation_environment.step(
+                    action,
+                )
                 done = terminated or truncated
 
-            sample_info, estimate_info, _ = validation_environment.get_data_for_visualization()
+            sample_info, estimate_info, _ = (
+                validation_environment.get_data_for_visualization()
+            )
 
             score = calculate_similarity(
                 reference_matrix=sample_info[2],
