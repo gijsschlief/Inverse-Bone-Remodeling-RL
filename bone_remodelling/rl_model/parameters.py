@@ -95,3 +95,14 @@ class RunConfiguration:
             "surrogate_models",
             "surrogate.pth",
         )
+
+@dataclass
+class TrainingStats:
+    """Class to hold training statistics for checkpointing."""
+
+    current_learning_rate: float
+    max_ssim: float
+    current_complexity: int
+    complexity_jumps: list[int, int] = field(default_factory=list)  # step, complexity
+    validation_steps: list[int] = field(default_factory=list)
+    validation_ssim: list[float] = field(default_factory=list)

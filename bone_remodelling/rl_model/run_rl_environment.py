@@ -5,6 +5,7 @@ import os
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 import argparse
+import json
 import logging
 from functools import partial
 from pathlib import Path
@@ -26,7 +27,11 @@ from bone_remodelling.rl_model.forward_pass import (
     SurrogateForwarder,
 )
 from bone_remodelling.rl_model.metrics import MetricsContainer
-from bone_remodelling.rl_model.parameters import RLParameters, RunConfiguration
+from bone_remodelling.rl_model.parameters import (
+    RLParameters,
+    RunConfiguration,
+    TrainingStats,
+)
 from bone_remodelling.rl_model.render_callback import RenderCallback
 from bone_remodelling.rl_model.reward_saving_callback import RewardSavingCallback
 from bone_remodelling.rl_model.validation_callback import ValidationCallback
@@ -91,14 +96,26 @@ def find_latest_agent(path: Path) -> Path:
     ext = path.suffix
     logger.info(f"Directory: {directory}, Base: {base_path}, Ext: {ext}")
     counter = 1
-    # Check for existing files and increment the counter until a unique name is found
     while Path(f"{directory}/{base_path}_{counter}{ext}").exists():
         counter += 1
     if counter == 1:
-        # If no files exist, return the original path
         return path
-
     return Path(f"{directory}/{base_path}_{counter - 1}{ext}")
+
+
+def load_training_stats(agent_path: Path) -> TrainingStats | None:
+    """Load training statistics from a file corresponding to the agent."""
+    stats_path = agent_path.with_suffix(".json")
+    if stats_path.exists():
+        try:
+            with Path.open(stats_path, "r") as f:
+                stats_data = json.load(f)
+            return TrainingStats(**stats_data)
+        except (json.JSONDecodeError, TypeError, OSError) as e:
+            logger.warning(f"Failed to load training stats from {stats_path}: {e}")
+    else:
+        logger.info(f"No training stats found at {stats_path}. Starting fresh.")
+    return None
 
 
 def initialize_new_model(
@@ -228,6 +245,9 @@ def train_rl_agent(
         try:
             model = PPO.load(latest_agent_path, env=vectorized_environment)
             model.set_env(vectorized_environment)
+            training_stats = load_training_stats(latest_agent_path)
+            if training_stats is not None:
+                model.learning_rate = training_stats.current_learning_rate
         except FileNotFoundError:
             logger.warning(
                 f"Agent file {latest_agent_path} not found. Starting with a new model.",

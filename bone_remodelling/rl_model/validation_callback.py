@@ -170,3 +170,6 @@ class ValidationCallback(BaseCallback):
             f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}",
         )
         return True
+
+
+## WRITE THE SAVING INSIDE THE VALIATION CALLBACK TO ENSURE CONSISTENCY WITH THE AGENT SAVING!
