@@ -99,7 +99,9 @@ class ValidationCallback(BaseCallback):
             self.learning_rate_container["value"] = self.rl_parameters.learning_rate
             self.metrics.validation_steps.append(self.num_timesteps)
             self.metrics.validation_ssim.append(mean_ssim)
-            self.metrics.complexity_jumps.append((self.num_timesteps, self.current_complexity + 1))
+            self.metrics.complexity_jumps.append(
+                (self.num_timesteps, self.current_complexity + 1),
+            )
             self._save_checkpoint()
             return True
 
@@ -153,7 +155,7 @@ class ValidationCallback(BaseCallback):
         )
 
         # Intentionally adding a dynamic attribute
-        self.model.custom_stats = asdict(training_metrics) # pyright: ignore[reportAttributeAccessIssue]
+        self.model.custom_stats = asdict(training_metrics)  # pyright: ignore[reportAttributeAccessIssue]
         self.model.save(self.run_config.agent_path, include=["custom_stats"])
 
     def _detect_plateau(self, last_ssim: float) -> bool:

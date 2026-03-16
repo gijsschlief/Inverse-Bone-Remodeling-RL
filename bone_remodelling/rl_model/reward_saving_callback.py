@@ -123,7 +123,14 @@ class RewardSavingCallback(BaseCallback):
 
             for _, (step, level) in enumerate(complexity_jumps):
                 plt.axvline(x=step, color="red", linestyle="--", alpha=0.6)
-                plt.text(step, 0.05, f"Level {level}", color="red", rotation=90, verticalalignment='bottom')
+                plt.text(
+                    step,
+                    0.05,
+                    f"Level {level}",
+                    color="red",
+                    rotation=90,
+                    verticalalignment="bottom",
+                )
 
         plt.title("Training Reward and Validation Performance")
         plt.tight_layout()

@@ -96,6 +96,7 @@ class RunConfiguration:
             "surrogate.pth",
         )
 
+
 @dataclass
 class TrainingStats:
     """Class to hold training statistics for checkpointing."""
@@ -105,6 +106,8 @@ class TrainingStats:
     current_step: int
     max_ssim: float
     current_complexity: int
-    complexity_jumps: list[tuple[int, int]] = field(default_factory=list)  # step, complexity
+    complexity_jumps: list[tuple[int, int]] = field(
+        default_factory=list,
+    )  # step, complexity
     validation_steps: list[int] = field(default_factory=list)
     validation_ssim: list[float] = field(default_factory=list)

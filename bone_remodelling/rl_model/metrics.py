@@ -11,4 +11,6 @@ class MetricsContainer:
         self.validation_ssim: list[float] = []
         self.episode_indices: list[int] = []
         self.episode_end_timesteps: list[int] = []
-        self.complexity_jumps: list[tuple[int, int]] = []  # List of (step, complexity) when curriculum complexity increases
+        self.complexity_jumps: list[
+            tuple[int, int]
+        ] = []  # List of (step, complexity) when curriculum complexity increases
