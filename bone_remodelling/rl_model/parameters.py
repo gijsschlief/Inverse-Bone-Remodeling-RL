@@ -69,7 +69,7 @@ class RunConfiguration:
 
     output_dir: Path
     forward_type: str = "surrogate"
-    total_timesteps: int = 10_240_001
+    total_timesteps: int = 20_480_001
     render_frequency: int = 102_400
     validation_frequency: int = 204_800
     validation_size: int = 256
