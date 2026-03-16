@@ -151,9 +151,10 @@ class ValidationCallback(BaseCallback):
             validation_steps=self.metrics.validation_steps,
             validation_ssim=self.metrics.validation_ssim,
         )
-        self.model.training_metrics = asdict(training_metrics)
-        self.model.
-        self.model.save(self.run_config.agent_path)
+
+        # Intentionally adding a dynamic attribute
+        self.model.custom_stats = asdict(training_metrics) # pyright: ignore[reportAttributeAccessIssue]
+        self.model.save(self.run_config.agent_path, include=["custom_stats"])
 
     def _detect_plateau(self, last_ssim: float) -> bool:
         """Detect if validation performance has plateaued and decide whether to reduce learning rate."""
