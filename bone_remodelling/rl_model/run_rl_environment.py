@@ -181,7 +181,9 @@ def train_rl_agent(
 
     metrics = MetricsContainer()
 
-    forwarder: ForwardPass = _build_forwarder(config, run_parameters, train_forces, surrogate_parameters)
+    forwarder: ForwardPass = _build_forwarder(
+        config, run_parameters, train_forces, surrogate_parameters,
+    )
 
     number_of_environments: int = run_parameters.number_of_environments
     base_seed = run_parameters.random_state
@@ -233,13 +235,25 @@ def train_rl_agent(
         model.learn(
             total_timesteps=run_parameters.total_timesteps,
             callback=_build_callbacks(
-                config, run_parameters, rl_parameters, metrics, current_learning_rate, forwarder, validation_data,
+                config,
+                run_parameters,
+                rl_parameters,
+                metrics,
+                current_learning_rate,
+                forwarder,
+                validation_data,
             ),
         )
     finally:
         vectorized_environment.close()
 
-def _build_forwarder(config: ConfigurationParameters, run_parameters: RunConfiguration, train_forces: np.ndarray, surrogate_parameters: TrainParameters) -> ForwardPass:
+
+def _build_forwarder(
+    config: ConfigurationParameters,
+    run_parameters: RunConfiguration,
+    train_forces: np.ndarray,
+    surrogate_parameters: TrainParameters,
+) -> ForwardPass:
     if run_parameters.forward_type == "fenics":
         return FenicsForwarder(
             config=config,
@@ -250,6 +264,7 @@ def _build_forwarder(config: ConfigurationParameters, run_parameters: RunConfigu
         model_class=SurrogateModel,
         train_parameters=surrogate_parameters,
     )
+
 
 def _build_callbacks(
     config: ConfigurationParameters,
@@ -279,7 +294,8 @@ def _build_callbacks(
             ),
         )
     validation_environment_builder = ValidationEnvironmentBuilder(
-        forwarder, rl_parameters,
+        forwarder,
+        rl_parameters,
     )
     validation_forces, validation_densities = validation_data
     callbacks.append(
