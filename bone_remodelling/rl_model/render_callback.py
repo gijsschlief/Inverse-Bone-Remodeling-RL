@@ -67,11 +67,15 @@ class RenderCallback(BaseCallback):
         # On first call, create 3 grid
         if not hasattr(self, "_render_initialized"):
             self._render_fig, self._render_axes = plt.subplots(1, 3, figsize=(18, 6))
-            self._render_fig.suptitle("Bone Remodeling Environment", fontsize=16)
             plt.ion()
             self._render_initialized = True
             self._last_sample_idx = None
 
+        complexity = self.training_env.get_attr("current_max_complexity")[0]
+        self._render_fig.suptitle(
+            f"Bone Remodeling Environment | Level: {complexity} | Global Step: {self.num_timesteps}",
+            fontsize=16,
+        )
         ax_current, ax_target, ax_obs = self._render_axes
 
         # Redraw target density if the sample index has changed

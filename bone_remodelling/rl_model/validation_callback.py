@@ -158,7 +158,9 @@ class ValidationCallback(BaseCallback):
             "max_ssim": self.best_ssim,
             "current_complexity": self.current_complexity,
             "complexity_jumps": self.metrics.complexity_jumps,
-            "history": [asdict(s) for s in self.metrics.history],  # Serialization
+            "history": [asdict(s) for s in self.metrics.history],
+            "episode_rewards": self.metrics.episode_rewards,
+            "episode_end_timesteps": self.metrics.episode_end_timesteps,
         }
 
         # Intentionally adding a dynamic attribute

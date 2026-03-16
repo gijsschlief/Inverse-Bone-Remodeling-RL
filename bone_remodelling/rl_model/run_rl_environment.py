@@ -208,15 +208,14 @@ def train_rl_agent(
 
             stats_dict = getattr(model, "custom_stats", None)
             if stats_dict:
-                metrics.resume_from_history(
-                    stats_dict["validation_history"],
-                    stats_dict["complexity_jumps"],
-                )
+                metrics.resume_from_history(stats_dict)
                 current_learning_rate["value"] = stats_dict.get(
-                    "current_learning_rate", rl_parameters.learning_rate,
+                    "current_learning_rate",
+                    rl_parameters.learning_rate,
                 )
                 vectorized_environment.env_method(
-                    "set_curriculum_complexity", stats_dict.get("current_complexity", 1),
+                    "set_curriculum_complexity",
+                    stats_dict.get("current_complexity", 1),
                 )
 
                 logger.info(

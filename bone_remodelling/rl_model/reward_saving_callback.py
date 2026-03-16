@@ -45,11 +45,8 @@ class RewardSavingCallback(BaseCallback):
         self.current_episode_reward += reward
 
         if done:
-            # Store episode reward
             self.metrics.episode_rewards.append(self.current_episode_reward)
-            self.metrics.episode_indices.append(len(self.metrics.episode_rewards) - 1)
             self.metrics.episode_end_timesteps.append(self.num_timesteps)
-
             self.current_episode_reward = 0.0
 
         return True
@@ -139,29 +136,3 @@ class RewardSavingCallback(BaseCallback):
 
         if self.verbose:
             logger.info(f"Saved reward plot to {self.out_path}")
-
-
-if __name__ == "__main__":
-    # test the plotting function
-    import random
-
-    metrics = MetricsContainer()
-    figure_path = Path(__file__).parent.parent.parent / Path(
-        "data",
-        "figures",
-        "test_reward_curve.png",
-    )
-    for i in range(0, 500_000, 25):
-        metrics.episode_indices.append(i // 25)
-        metrics.episode_end_timesteps.append(i)
-        metrics.episode_rewards.append(random.uniform(-100, 100))
-    metrics.validation_steps = [0, 100_000, 200_000, 300_000, 400_000, 500_000]
-    metrics.validation_ssim = [0, 0.2, 0.4, 0.6, 0.8, 1.0]
-    metrics.complexity_jumps = [(150_000, 2), (350_000, 3), (450_000, 4)]
-    callback = RewardSavingCallback(
-        metrics,
-        out_path=figure_path,
-        smoothing_window=1000,
-        verbose=1,
-    )
-    callback._on_training_end()
