@@ -2,6 +2,7 @@
 
 import logging
 from dataclasses import asdict
+from pathlib import Path
 
 import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
@@ -48,6 +49,7 @@ class ValidationCallback(BaseCallback):
         self.current_complexity = 1
         self._reset_patience()
         self._group_validation_samples()
+        self._save_agent_path()
 
     def _reset_patience(self) -> None:
         """Reset patience counter and best SSIM when curriculum complexity increases."""
@@ -66,6 +68,20 @@ class ValidationCallback(BaseCallback):
             if complexity == 0:
                 complexity = 1
             self.validation_groups[complexity].append(i)
+
+    def _save_agent_path(self) -> None:
+        """Move the agents path to not overwrite previous agents."""
+        path: Path = self.run_config.agent_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists():
+            directory = path.parent
+            base_path = path.stem
+            ext = path.suffix
+            counter = 1
+            while Path(f"{directory}/{base_path}_{counter}{ext}").exists():
+                counter += 1
+            path = Path(f"{directory}/{base_path}_{counter}{ext}")
+        self.run_config.agent_path = path
 
     def _select_validation_sample(self, sample_index: int) -> int:
         """Select validation samples based on current curriculum complexity."""
@@ -199,3 +215,7 @@ class ValidationCallback(BaseCallback):
         )
         self._save_checkpoint()
         return True
+
+    def _on_training_end(self) -> None:
+        logger.info("Training finished. Saving final checkpoint...")
+        self._save_checkpoint()

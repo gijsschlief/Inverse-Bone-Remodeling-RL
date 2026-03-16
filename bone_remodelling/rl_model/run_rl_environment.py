@@ -51,21 +51,6 @@ logger = logging.getLogger(__name__)
 current_learning_rate = {"value": RLParameters().learning_rate}
 
 
-def save_model_safely(model: PPO, path: Path) -> Path:
-    """Save the model to a file, ensuring no overwriting of existing files."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if Path.exists(path):
-        directory = path.parent
-        base_path = path.stem
-        ext = path.suffix
-        counter = 1
-        while Path(f"{directory}/{base_path}_{counter}{ext}").exists():
-            counter += 1
-        path = Path(f"{directory}/{base_path}_{counter}{ext}")
-    model.save(path)
-    return Path(path)
-
-
 def _build_environment(
     train_forces: np.ndarray,
     train_densities: np.ndarray,
@@ -294,9 +279,6 @@ def train_rl_agent(
             total_timesteps=run_parameters.total_timesteps,
             callback=callbacks,
         )
-        logger.info("Training complete.")
-        saved_path = save_model_safely(model, run_parameters.agent_path)
-        logger.info(f"Model saved to {saved_path}")
     finally:
         vectorized_environment.close()
 
