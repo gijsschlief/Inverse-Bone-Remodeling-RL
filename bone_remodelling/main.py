@@ -2,6 +2,7 @@
 
 import argparse
 import logging
+import warnings
 from datetime import datetime
 from pathlib import Path
 
@@ -12,6 +13,9 @@ def setup_logging(output_dir: Path) -> logging.Logger:
     """Set up logging to both console and a file."""
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
+
+    # Suppress specific warnings from gym to keep the output clean
+    warnings.filterwarnings("ignore", category=UserWarning, module="gym")
 
     # Create formatters
     file_formatter = logging.Formatter(
