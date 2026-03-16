@@ -176,27 +176,12 @@ def train_rl_agent(
         forward_data_manager,
         random_state=run_parameters.random_state,
     )
+    validation_data = (validation_forces, validation_densities)
     logger.info(f"Training RL agent on {len(train_densities)} samples.")
 
     metrics = MetricsContainer()
 
-    forwarder: ForwardPass
-    if run_parameters.forward_type == "fenics":
-        forwarder = FenicsForwarder(
-            config=config,
-            force_profile=train_forces[0],
-        )
-    else:
-        forwarder = SurrogateForwarder(
-            config=config,
-            model_class=SurrogateModel,
-            train_parameters=surrogate_parameters,
-        )
-
-    validation_environment_builder = ValidationEnvironmentBuilder(
-        forwarder,
-        rl_parameters,
-    )
+    forwarder: ForwardPass = _build_forwarder(config, run_parameters, train_forces, surrogate_parameters)
 
     number_of_environments: int = run_parameters.number_of_environments
     base_seed = run_parameters.random_state
@@ -245,42 +230,72 @@ def train_rl_agent(
     )
 
     try:
-        callbacks: list[BaseCallback] = [
-            RenderCallback(
-                force_generator=ForceProfileGenerator(
-                    (config.force_top_resolution, config.force_side_resolution),
-                ),
-                render_freq=run_parameters.render_frequency,
-                environment_index=0,
-                rl_parameters=rl_parameters,
-            ),
-        ]
-        if run_parameters.reward_plot_path is not None:
-            callbacks.append(
-                RewardSavingCallback(
-                    metrics=metrics,
-                    out_path=run_parameters.reward_plot_path,
-                ),
-            )
-        callbacks.append(
-            ValidationCallback(
-                metrics=metrics,
-                learning_rate_container=current_learning_rate,
-                validation_data=(
-                    validation_forces,
-                    validation_densities,
-                ),
-                validation_environment_builder=validation_environment_builder,
-                run_config=run_parameters,
-                rl_parameters=rl_parameters,
-            ),
-        )
         model.learn(
             total_timesteps=run_parameters.total_timesteps,
-            callback=callbacks,
+            callback=_build_callbacks(
+                config, run_parameters, rl_parameters, metrics, current_learning_rate, forwarder, validation_data,
+            ),
         )
     finally:
         vectorized_environment.close()
+
+def _build_forwarder(config: ConfigurationParameters, run_parameters: RunConfiguration, train_forces: np.ndarray, surrogate_parameters: TrainParameters) -> ForwardPass:
+    if run_parameters.forward_type == "fenics":
+        return FenicsForwarder(
+            config=config,
+            force_profile=train_forces[0],
+        )
+    return SurrogateForwarder(
+        config=config,
+        model_class=SurrogateModel,
+        train_parameters=surrogate_parameters,
+    )
+
+def _build_callbacks(
+    config: ConfigurationParameters,
+    run_parameters: RunConfiguration,
+    rl_parameters: RLParameters,
+    metrics: MetricsContainer,
+    current_learning_rate: dict[str, float],
+    forwarder: ForwardPass,
+    validation_data: tuple[np.ndarray, np.ndarray],
+) -> list[BaseCallback]:
+    """Build the list of callbacks for training."""
+    callbacks: list[BaseCallback] = [
+        RenderCallback(
+            force_generator=ForceProfileGenerator(
+                (config.force_top_resolution, config.force_side_resolution),
+            ),
+            render_freq=run_parameters.render_frequency,
+            environment_index=0,
+            rl_parameters=rl_parameters,
+        ),
+    ]
+    if run_parameters.reward_plot_path is not None:
+        callbacks.append(
+            RewardSavingCallback(
+                metrics=metrics,
+                out_path=run_parameters.reward_plot_path,
+            ),
+        )
+    validation_environment_builder = ValidationEnvironmentBuilder(
+        forwarder, rl_parameters,
+    )
+    validation_forces, validation_densities = validation_data
+    callbacks.append(
+        ValidationCallback(
+            metrics=metrics,
+            learning_rate_container=current_learning_rate,
+            validation_data=(
+                validation_forces,
+                validation_densities,
+            ),
+            validation_environment_builder=validation_environment_builder,
+            run_config=run_parameters,
+            rl_parameters=rl_parameters,
+        ),
+    )
+    return callbacks
 
 
 def cli(config: ConfigurationParameters, remaining_args: list[str]) -> None:
