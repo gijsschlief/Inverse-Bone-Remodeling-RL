@@ -5,7 +5,6 @@ import os
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 
 import argparse
-import json
 import logging
 from functools import partial
 from pathlib import Path
@@ -30,7 +29,6 @@ from bone_remodelling.rl_model.metrics import MetricsContainer
 from bone_remodelling.rl_model.parameters import (
     RLParameters,
     RunConfiguration,
-    TrainingStats,
 )
 from bone_remodelling.rl_model.render_callback import RenderCallback
 from bone_remodelling.rl_model.reward_saving_callback import RewardSavingCallback
@@ -86,21 +84,6 @@ def find_latest_agent(path: Path) -> Path:
     if counter == 1:
         return path
     return Path(f"{directory}/{base_path}_{counter - 1}{ext}")
-
-
-def load_training_stats(agent_path: Path) -> TrainingStats | None:
-    """Load training statistics from a file corresponding to the agent."""
-    stats_path = agent_path.with_suffix(".json")
-    if stats_path.exists():
-        try:
-            with Path.open(stats_path, "r") as f:
-                stats_data = json.load(f)
-            return TrainingStats(**stats_data)
-        except (json.JSONDecodeError, TypeError, OSError) as e:
-            logger.warning(f"Failed to load training stats from {stats_path}: {e}")
-    else:
-        logger.info(f"No training stats found at {stats_path}. Starting fresh.")
-    return None
 
 
 def initialize_new_model(
@@ -182,7 +165,10 @@ def train_rl_agent(
     metrics = MetricsContainer()
 
     forwarder: ForwardPass = _build_forwarder(
-        config, run_parameters, train_forces, surrogate_parameters,
+        config,
+        run_parameters,
+        train_forces,
+        surrogate_parameters,
     )
 
     number_of_environments: int = run_parameters.number_of_environments
@@ -209,22 +195,40 @@ def train_rl_agent(
     )
 
     logger.info("Environment functions created, loading agent if it exists.")
+    stats_dict = None  # Ensure stats_dict is always defined
     if run_parameters.agent_path.is_dir():
         model = initialize_new_model(vectorized_environment, rl_parameters)
         latest_agent_path = None
+
     else:
         latest_agent_path = find_latest_agent(run_parameters.agent_path)
         try:
             model = PPO.load(latest_agent_path, env=vectorized_environment)
             model.set_env(vectorized_environment)
-            training_stats = load_training_stats(latest_agent_path)
-            if training_stats is not None:
-                model.learning_rate = training_stats.current_learning_rate
+
+            stats_dict = getattr(model, "custom_stats", None)
+            if stats_dict:
+                metrics.resume_from_history(
+                    stats_dict["validation_history"],
+                    stats_dict["complexity_jumps"],
+                )
+                current_learning_rate["value"] = stats_dict.get(
+                    "current_learning_rate", rl_parameters.learning_rate,
+                )
+                vectorized_environment.env_method(
+                    "set_curriculum_complexity", stats_dict.get("current_complexity", 1),
+                )
+
+                logger.info(
+                    f"Resumed from {latest_agent_path} at Level {stats_dict['current_complexity']}",
+                )
+
         except FileNotFoundError:
             logger.warning(
                 f"Agent file {latest_agent_path} not found. Starting with a new model.",
             )
             model = initialize_new_model(vectorized_environment, rl_parameters)
+
         model.set_env(vectorized_environment)
 
     logger.info(
@@ -242,7 +246,9 @@ def train_rl_agent(
                 current_learning_rate,
                 forwarder,
                 validation_data,
+                stats_dict,
             ),
+            reset_num_timesteps=False,
         )
     finally:
         vectorized_environment.close()
@@ -274,6 +280,7 @@ def _build_callbacks(
     current_learning_rate: dict[str, float],
     forwarder: ForwardPass,
     validation_data: tuple[np.ndarray, np.ndarray],
+    stats_dict: dict | None = None,
 ) -> list[BaseCallback]:
     """Build the list of callbacks for training."""
     callbacks: list[BaseCallback] = [
@@ -286,6 +293,7 @@ def _build_callbacks(
             rl_parameters=rl_parameters,
         ),
     ]
+
     if run_parameters.reward_plot_path is not None:
         callbacks.append(
             RewardSavingCallback(
@@ -293,24 +301,25 @@ def _build_callbacks(
                 out_path=run_parameters.reward_plot_path,
             ),
         )
+
     validation_environment_builder = ValidationEnvironmentBuilder(
         forwarder,
         rl_parameters,
     )
-    validation_forces, validation_densities = validation_data
-    callbacks.append(
-        ValidationCallback(
-            metrics=metrics,
-            learning_rate_container=current_learning_rate,
-            validation_data=(
-                validation_forces,
-                validation_densities,
-            ),
-            validation_environment_builder=validation_environment_builder,
-            run_config=run_parameters,
-            rl_parameters=rl_parameters,
-        ),
+    validation_callback = ValidationCallback(
+        metrics=metrics,
+        learning_rate_container=current_learning_rate,
+        validation_data=validation_data,
+        validation_environment_builder=validation_environment_builder,
+        run_config=run_parameters,
+        rl_parameters=rl_parameters,
     )
+    if stats_dict:
+        validation_callback.best_ssim = stats_dict.get("max_ssim", -np.inf)
+        validation_callback.patience_counter = stats_dict.get("current_patience", 0)
+        validation_callback.current_complexity = stats_dict.get("current_complexity", 1)
+
+    callbacks.append(validation_callback)
     return callbacks
 
 

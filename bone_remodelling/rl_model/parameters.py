@@ -40,6 +40,8 @@ class RLParameters:
         None  # Set to None to disable KL divergence early stopping
     )
     max_grad_norm: float = 0.5
+    curriculum_threshold: float = 0.85
+    force_threshold: float = 1e-3
     learning_rate: float = 1e-4
     learning_rate_decay: float = 0.5
     minimum_learning_rate: float = 1e-6
@@ -95,19 +97,3 @@ class RunConfiguration:
             "surrogate_models",
             "surrogate.pth",
         )
-
-
-@dataclass
-class TrainingStats:
-    """Class to hold training statistics for checkpointing."""
-
-    current_learning_rate: float
-    current_patience: int
-    current_step: int
-    max_ssim: float
-    current_complexity: int
-    complexity_jumps: list[tuple[int, int]] = field(
-        default_factory=list,
-    )  # step, complexity
-    validation_steps: list[int] = field(default_factory=list)
-    validation_ssim: list[float] = field(default_factory=list)

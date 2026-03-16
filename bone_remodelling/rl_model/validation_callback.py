@@ -8,11 +8,10 @@ import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 from bone_remodelling.rl_model.environment import BoneRemodelingEnvironment
-from bone_remodelling.rl_model.metrics import MetricsContainer
+from bone_remodelling.rl_model.metrics import MetricsContainer, ValidationSnapshot
 from bone_remodelling.rl_model.parameters import (
     RLParameters,
     RunConfiguration,
-    TrainingStats,
 )
 from bone_remodelling.rl_model.reward_calculation import calculate_similarity
 from bone_remodelling.rl_model.validation_environment_builder import (
@@ -37,8 +36,6 @@ class ValidationCallback(BaseCallback):
         """Initialize the validation callback."""
         super().__init__(rl_parameters.verbose)
         self.metrics = metrics
-        self.metrics.validation_steps.append(0)
-        self.metrics.validation_ssim.append(0.0)
         self.learning_rate_container = learning_rate_container
         self.validation_environment_builder = validation_environment_builder
         self.validation_forces, self.validation_densities = validation_data
@@ -61,9 +58,10 @@ class ValidationCallback(BaseCallback):
         self.validation_groups: dict[int, list[int]] = {
             i: [] for i in range(1, self.max_curriculum_complexity + 1)
         }
-        threshold_force = 1e-3
         for i, force in enumerate(self.validation_forces):
-            num_active_points = np.sum(np.any(np.abs(force) > threshold_force, axis=0))
+            num_active_points = np.sum(
+                np.any(np.abs(force) > self.rl_parameters.force_threshold, axis=0),
+            )
             complexity = min(num_active_points, self.max_curriculum_complexity)
             if complexity == 0:
                 complexity = 1
@@ -102,27 +100,21 @@ class ValidationCallback(BaseCallback):
         mean_ssim = self._ssim_calculation()
         logger.info(f"[Val @ {self.num_timesteps}] mean final SSIM = {mean_ssim:.4f}")
 
-        curriculum_threshold = 0.85
+        snapshot = ValidationSnapshot(
+            step=self.num_timesteps,
+            ssim=mean_ssim,
+            complexity=self.current_complexity,
+            learning_rate=self.learning_rate_container["value"],
+            patience=self.patience_counter,
+        )
+        self.metrics.add_snapshot(snapshot)
+
         if (
-            mean_ssim >= curriculum_threshold
+            mean_ssim >= self.rl_parameters.curriculum_threshold
             and self.current_complexity <= self.max_curriculum_complexity
         ):
-            logger.warning(
-                f"Mastery of Level {self.current_complexity} achieved! Advancing...",
-            )
-            self.training_env.env_method("increase_curriculum_complexity")
-            self._reset_patience()
-            self.learning_rate_container["value"] = self.rl_parameters.learning_rate
-            self.metrics.validation_steps.append(self.num_timesteps)
-            self.metrics.validation_ssim.append(mean_ssim)
-            self.metrics.complexity_jumps.append(
-                (self.num_timesteps, self.current_complexity + 1),
-            )
-            self._save_checkpoint()
-            return True
+            return self._next_curriculum_level()
 
-        self.metrics.validation_steps.append(self.num_timesteps)
-        self.metrics.validation_ssim.append(mean_ssim)
         return self._detect_plateau(mean_ssim)
 
     def _ssim_calculation(self) -> float:
@@ -159,19 +151,18 @@ class ValidationCallback(BaseCallback):
 
     def _save_checkpoint(self) -> None:
         """Save the agent and training stats at the current checkpoint."""
-        training_metrics = TrainingStats(
-            current_learning_rate=self.learning_rate_container["value"],
-            current_patience=self.patience_counter,
-            current_step=self.num_timesteps,
-            max_ssim=self.best_ssim,
-            current_complexity=self.current_complexity,
-            complexity_jumps=self.metrics.complexity_jumps,
-            validation_steps=self.metrics.validation_steps,
-            validation_ssim=self.metrics.validation_ssim,
-        )
+        stats_to_save = {
+            "current_learning_rate": self.learning_rate_container["value"],
+            "current_patience": self.patience_counter,
+            "current_step": self.num_timesteps,
+            "max_ssim": self.best_ssim,
+            "current_complexity": self.current_complexity,
+            "complexity_jumps": self.metrics.complexity_jumps,
+            "history": [asdict(s) for s in self.metrics.history],  # Serialization
+        }
 
         # Intentionally adding a dynamic attribute
-        self.model.custom_stats = asdict(training_metrics)  # pyright: ignore[reportAttributeAccessIssue]
+        self.model.custom_stats = stats_to_save  # pyright: ignore[reportAttributeAccessIssue]
         self.model.save(self.run_config.agent_path, include=["custom_stats"])
 
     def _detect_plateau(self, last_ssim: float) -> bool:
@@ -213,6 +204,20 @@ class ValidationCallback(BaseCallback):
         logger.warning(
             f"Reducing LR from {old_learning_rate:.2e} to {new_learning_rate:.2e}",
         )
+        self._save_checkpoint()
+        return True
+
+    def _next_curriculum_level(self) -> bool:
+        """Advance to the next curriculum complexity level if mastery is achieved."""
+        logger.info(
+            f"Mastery of Level {self.current_complexity} achieved! Advancing...",
+        )
+        self.metrics.complexity_jumps.append(
+            (self.num_timesteps, self.current_complexity + 1),
+        )
+        self.training_env.env_method("increase_curriculum_complexity")
+        self._reset_patience()
+        self.learning_rate_container["value"] = self.rl_parameters.learning_rate
         self._save_checkpoint()
         return True
 
