@@ -160,6 +160,8 @@ def _get_quiver_data(
         x = np.full_like(forces, width - 1 + offset)
         y = np.linspace(height - 1, 0, len(forces))
         u, v = forces, np.zeros_like(forces)
+        u = np.where(u == 0, 1e-15, u)
+        v = np.where(v == 0, 1e-15, v)
     return x, y, u, v, forces
 
 
@@ -189,6 +191,9 @@ def _plot_force_arrows(
 
     height, width = shape
 
+    max_force = np.max(np.abs(force_profile))
+    quiver_scale = max_force if max_force > 0 else 1.0
+
     for side, forces in zip(
         ["left", "top", "right"],
         [left_forces, top_forces, right_forces],
@@ -205,7 +210,7 @@ def _plot_force_arrows(
                 cmap="coolwarm",
                 angles="xy",
                 scale_units="xy",
-                scale=np.max(np.abs(force_profile)),
+                scale=quiver_scale,
                 pivot="middle",
                 width=0.025,
                 minshaft=2,
