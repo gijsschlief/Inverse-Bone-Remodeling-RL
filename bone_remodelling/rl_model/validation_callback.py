@@ -167,6 +167,7 @@ class ValidationCallback(BaseCallback):
         self.model.custom_stats = stats_to_save  # pyright: ignore[reportAttributeAccessIssue]
         self.model.save(self.run_config.agent_path, include=["custom_stats"])
 
+
     def _detect_plateau(self, last_ssim: float) -> bool:
         """Detect if validation performance has plateaued and decide whether to reduce learning rate."""
         if last_ssim > self.best_ssim:
